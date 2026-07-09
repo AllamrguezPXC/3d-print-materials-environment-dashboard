@@ -29,5 +29,8 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Playwright MCP verification artifacts (raw session logs, not evidence)
+.playwright-mcp/
+
 # Logs
 *.log

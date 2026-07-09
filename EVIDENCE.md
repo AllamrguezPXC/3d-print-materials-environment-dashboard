@@ -52,6 +52,30 @@ action (issue or PR) referencing completed backend work will be added once avail
    wrong serial, missing channel, non-numeric channel (`tests/sensors/test_dracal_vcp_parser.py`).
 6. Full suite: `cd backend && pytest` — 11 passed.
 
+## Frontend Browser Verification (Playwright MCP)
+
+With both `uvicorn` (backend) and `npm run dev` (frontend) running locally, drove the app with
+Playwright MCP rather than relying on `npm run build`/type-check alone:
+
+1. Dashboard (`/`) — confirmed live polling of `GET /readings/current` renders temperature/RH/
+   pressure/dew point cards, sensor serial `E25877`, and `source: mock`. Screenshot:
+   `evidence/frontend-verification/dashboard-dark.png`.
+2. Theme toggle — clicked "Light mode", confirmed the whole UI re-themes via the `data-theme`
+   attribute and persists. Screenshot: `evidence/frontend-verification/dashboard-light.png`.
+3. History (`/history`) — clicked "Capture reading now" twice, then loaded hourly history;
+   confirmed the three separate single-axis Recharts line charts (temperature/humidity/pressure)
+   render real data points. Screenshot: `evidence/frontend-verification/history-chart.png`.
+4. Materials (`/materials`) — confirmed all 10 seeded material profile families render in the
+   editable table. Screenshot: `evidence/frontend-verification/materials-page.png`.
+5. Printers & Locations (`/printers`) and Spools (`/spools`) — confirmed the 7 seeded printers, 3
+   demo locations, and 2 demo spools (with resolved assignment/location names) render correctly.
+6. End-to-end alert + drying flow — posted a manual reading with `relative_humidity_percent: 90`
+   at the seeded "AMS Slot 1 - A1 mini #1" location (PLA spool, critical RH max 60%) via
+   `POST /readings`; confirmed a `critical` humidity alert and a `warning` dew-point alert were
+   created, then navigated to `/drying` and confirmed the recommendation card renders with the
+   correct material, temperature/time, and the required "advisory only — does not control the
+   dryer" language. Screenshot: `evidence/frontend-verification/drying-recommendation.png`.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.
