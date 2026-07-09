@@ -160,6 +160,26 @@ def test_pva_critical_recommendation(client):
     assert ADVISORY_TEXT in rec.message
 
 
+def test_bvoh_critical_recommendation(client):
+    # BVOH seed: ideal RH max 10, warning RH max 20, critical RH max 30,
+    # drying_temp_c 50, 4-8h (shares thresholds with PVA). RH=32 -> critical.
+    with SessionLocal() as session:
+        profile, location, spool, _assignment = _seed_spool_with_reading(
+            session, material_name="BVOH", location_name="BVOH Test Box", rh_percent=32.0
+        )
+
+        recs = drying_service.get_drying_recommendations(session)
+
+    matching = [r for r in recs if r.spool_id == spool.id]
+    assert len(matching) == 1
+    rec = matching[0]
+    assert rec.current_status == "critical"
+    assert rec.drying_temp_c == 50.0
+    assert rec.drying_time_hours_min == 4.0
+    assert rec.drying_time_hours_max == 8.0
+    assert ADVISORY_TEXT in rec.message
+
+
 def test_ok_humidity_spool_is_not_recommended(client):
     # PETG ideal RH max is 30; RH=20 stays "ok" so no recommendation should
     # be produced for this spool.

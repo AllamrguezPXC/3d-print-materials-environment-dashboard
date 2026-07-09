@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HistoryChart } from "../components/HistoryChart";
 import { captureReading, getReadingsHistory } from "../api/readings";
-import type { HourlyAggregate } from "../types/api";
+import { locationsApi, sensorsApi } from "../api/config";
+import type { HourlyAggregate, Location, Sensor } from "../types/api";
 
 const CHART_COLORS = {
   temperature: "#e8813a",
@@ -22,10 +23,19 @@ function defaultTo(): string {
 export function History() {
   const [from, setFrom] = useState(defaultFrom());
   const [to, setTo] = useState(defaultTo());
+  const [sensorId, setSensorId] = useState("");
+  const [locationId, setLocationId] = useState("");
+  const [sensors, setSensors] = useState<Sensor[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [hourly, setHourly] = useState<HourlyAggregate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
+
+  useEffect(() => {
+    sensorsApi.list().then(setSensors).catch(() => {});
+    locationsApi.list().then(setLocations).catch(() => {});
+  }, []);
 
   async function loadHistory() {
     setLoading(true);
@@ -35,6 +45,8 @@ export function History() {
         from: new Date(from).toISOString(),
         to: new Date(to).toISOString(),
         aggregate: "hour",
+        sensorId: sensorId ? Number(sensorId) : undefined,
+        locationId: locationId ? Number(locationId) : undefined,
       });
       setHourly(result.hourly);
     } catch (err) {
@@ -67,6 +79,30 @@ export function History() {
           To
           <br />
           <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} />
+        </label>
+        <label>
+          Sensor
+          <br />
+          <select value={sensorId} onChange={(e) => setSensorId(e.target.value)}>
+            <option value="">All sensors</option>
+            {sensors.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Location
+          <br />
+          <select value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+            <option value="">All locations</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
         </label>
         <button className="primary" onClick={loadHistory} disabled={loading}>
           {loading ? "Loading…" : "Load history"}

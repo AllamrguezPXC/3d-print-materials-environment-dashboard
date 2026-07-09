@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { NoticeBanner } from "../components/NoticeBanner";
+import { useNotice } from "../hooks/useNotice";
 import { materialsApi } from "../api/config";
 import type { MaterialProfile } from "../types/api";
 
@@ -30,13 +32,13 @@ export function Materials() {
   const [profiles, setProfiles] = useState<MaterialProfile[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<DraftProfile>(EMPTY_DRAFT);
-  const [error, setError] = useState<string | null>(null);
+  const { notice, notifySuccess, notifyError } = useNotice();
 
   async function refresh() {
     try {
       setProfiles(await materialsApi.list());
     } catch (err) {
-      setError((err as Error).message);
+      notifyError((err as Error).message);
     }
   }
 
@@ -58,23 +60,33 @@ export function Materials() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.name.trim() || !draft.family.trim()) {
-      setError("Name and family are required.");
+      notifyError("Name and family are required.");
       return;
     }
-    setError(null);
-    if (editingId !== null) {
-      await materialsApi.update(editingId, draft);
-    } else {
-      await materialsApi.create(draft);
+    try {
+      if (editingId !== null) {
+        await materialsApi.update(editingId, draft);
+        notifySuccess(`Profile "${draft.name}" updated.`);
+      } else {
+        await materialsApi.create(draft);
+        notifySuccess(`Profile "${draft.name}" created.`);
+      }
+      cancelEdit();
+      refresh();
+    } catch (err) {
+      notifyError((err as Error).message);
     }
-    cancelEdit();
-    refresh();
   }
 
   async function handleDelete(id: number) {
-    await materialsApi.remove(id);
-    if (editingId === id) cancelEdit();
-    refresh();
+    try {
+      await materialsApi.remove(id);
+      notifySuccess("Profile deleted.");
+      if (editingId === id) cancelEdit();
+      refresh();
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
   }
 
   return (
@@ -84,7 +96,7 @@ export function Materials() {
         Thresholds and drying recommendations are editable — manufacturer-specific profiles
         should override generic family defaults.
       </p>
-      {error && <p className="error-state">{error}</p>}
+      <NoticeBanner notice={notice} />
 
       <div className="card" style={{ marginBottom: 20, overflowX: "auto" }}>
         <table>

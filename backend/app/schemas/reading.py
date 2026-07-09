@@ -28,12 +28,27 @@ class SensorInfo(BaseModel):
     sensor_type: Literal["real", "mock", "manual"]
 
 
+class LocationInfo(BaseModel):
+    id: int
+    name: str
+    location_type: str
+    printer_id: int | None = None
+
+
+class AffectedSpoolInfo(BaseModel):
+    spool_id: int
+    brand: str
+    color: str | None
+    material_profile_name: str
+    status: str
+
+
 class CurrentReadingResponse(BaseModel):
     """
     <summary>
     Response body for GET /readings/current: the latest environmental
-    sample plus sensor metadata, dew point, and (once wired) affected
-    spools/materials and active alerts.
+    sample plus sensor metadata, location metadata, dew point, affected
+    spools/materials, and active alerts.
     </summary>
     """
 
@@ -46,6 +61,8 @@ class CurrentReadingResponse(BaseModel):
     source: Literal["real", "mock", "manual"]
     sensor: SensorInfo
     location_id: int | None = None
+    location: LocationInfo | None = None
+    affected_spools: list[AffectedSpoolInfo] = []
     alerts: list[AlertRead] = []
 
 

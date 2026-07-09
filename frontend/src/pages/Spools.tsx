@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { NoticeBanner } from "../components/NoticeBanner";
+import { useNotice } from "../hooks/useNotice";
 import { assignmentsApi, locationsApi, materialsApi, spoolsApi } from "../api/config";
 import type { FilamentSpool, Location, MaterialProfile, SpoolAssignment } from "../types/api";
 
@@ -9,7 +11,7 @@ export function Spools() {
   const [materials, setMaterials] = useState<MaterialProfile[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [assignments, setAssignments] = useState<SpoolAssignment[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const { notice, notifySuccess, notifyError } = useNotice();
 
   const [newSpool, setNewSpool] = useState({
     material_profile_id: "",
@@ -32,7 +34,7 @@ export function Spools() {
       setLocations(l);
       setAssignments(a);
     } catch (err) {
-      setError((err as Error).message);
+      notifyError((err as Error).message);
     }
   }
 
@@ -42,22 +44,38 @@ export function Spools() {
 
   async function handleAddSpool(e: React.FormEvent) {
     e.preventDefault();
-    if (!newSpool.material_profile_id || !newSpool.brand.trim()) return;
-    await spoolsApi.create({
-      material_profile_id: Number(newSpool.material_profile_id),
-      brand: newSpool.brand,
-      color: newSpool.color || null,
-      status: newSpool.status,
-    });
-    setNewSpool({ material_profile_id: "", brand: "", color: "", status: "ready" });
-    refresh();
+    if (!newSpool.material_profile_id || !newSpool.brand.trim()) {
+      notifyError("Material and brand are required.");
+      return;
+    }
+    try {
+      await spoolsApi.create({
+        material_profile_id: Number(newSpool.material_profile_id),
+        brand: newSpool.brand,
+        color: newSpool.color || null,
+        status: newSpool.status,
+      });
+      setNewSpool({ material_profile_id: "", brand: "", color: "", status: "ready" });
+      notifySuccess(`Spool "${newSpool.brand}" added.`);
+      refresh();
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
   }
 
   async function handleAssign(spoolId: number) {
     const locationId = assignmentDraft[spoolId];
-    if (!locationId) return;
-    await assignmentsApi.create({ spool_id: spoolId, location_id: Number(locationId), is_active: true });
-    refresh();
+    if (!locationId) {
+      notifyError("Select a location before assigning.");
+      return;
+    }
+    try {
+      await assignmentsApi.create({ spool_id: spoolId, location_id: Number(locationId), is_active: true });
+      notifySuccess("Spool assigned.");
+      refresh();
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
   }
 
   function activeLocationFor(spoolId: number): Location | undefined {
@@ -68,7 +86,7 @@ export function Spools() {
   return (
     <div>
       <h2>Filament Spools</h2>
-      {error && <p className="error-state">{error}</p>}
+      <NoticeBanner notice={notice} />
 
       <div className="card" style={{ marginBottom: 20 }}>
         <table>

@@ -218,3 +218,8 @@ button.primary {
   color: var(--critical);
   padding: 12px 0;
 }
+
+.notice-success {
+  color: var(--ok);
+  padding: 12px 0;
+}

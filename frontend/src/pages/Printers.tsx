@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { NoticeBanner } from "../components/NoticeBanner";
+import { useNotice } from "../hooks/useNotice";
 import { locationsApi, printersApi } from "../api/config";
 import type { Location, Printer } from "../types/api";
 
@@ -8,7 +10,7 @@ const LOCATION_TYPES = ["printer_ams", "printer_external_spool", "storage_box", 
 export function Printers() {
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const { notice, notifySuccess, notifyError } = useNotice();
 
   const [newPrinter, setNewPrinter] = useState({ name: "", brand: "Bambu Lab", model: BAMBU_MODELS[0] });
   const [newLocation, setNewLocation] = useState({ name: "", location_type: LOCATION_TYPES[0], printer_id: "" });
@@ -19,7 +21,7 @@ export function Printers() {
       setPrinters(p);
       setLocations(l);
     } catch (err) {
-      setError((err as Error).message);
+      notifyError((err as Error).message);
     }
   }
 
@@ -29,38 +31,64 @@ export function Printers() {
 
   async function handleAddPrinter(e: React.FormEvent) {
     e.preventDefault();
-    if (!newPrinter.name.trim()) return;
-    await printersApi.create(newPrinter);
-    setNewPrinter({ name: "", brand: "Bambu Lab", model: BAMBU_MODELS[0] });
-    refresh();
+    if (!newPrinter.name.trim()) {
+      notifyError("Printer name is required.");
+      return;
+    }
+    try {
+      await printersApi.create(newPrinter);
+      setNewPrinter({ name: "", brand: "Bambu Lab", model: BAMBU_MODELS[0] });
+      notifySuccess(`Printer "${newPrinter.name}" added.`);
+      refresh();
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
   }
 
   async function handleAddLocation(e: React.FormEvent) {
     e.preventDefault();
-    if (!newLocation.name.trim()) return;
-    await locationsApi.create({
-      name: newLocation.name,
-      location_type: newLocation.location_type,
-      printer_id: newLocation.printer_id ? Number(newLocation.printer_id) : null,
-    });
-    setNewLocation({ name: "", location_type: LOCATION_TYPES[0], printer_id: "" });
-    refresh();
+    if (!newLocation.name.trim()) {
+      notifyError("Location name is required.");
+      return;
+    }
+    try {
+      await locationsApi.create({
+        name: newLocation.name,
+        location_type: newLocation.location_type,
+        printer_id: newLocation.printer_id ? Number(newLocation.printer_id) : null,
+      });
+      setNewLocation({ name: "", location_type: LOCATION_TYPES[0], printer_id: "" });
+      notifySuccess(`Location "${newLocation.name}" added.`);
+      refresh();
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
   }
 
   async function handleDeletePrinter(id: number) {
-    await printersApi.remove(id);
-    refresh();
+    try {
+      await printersApi.remove(id);
+      notifySuccess("Printer deleted.");
+      refresh();
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
   }
 
   async function handleDeleteLocation(id: number) {
-    await locationsApi.remove(id);
-    refresh();
+    try {
+      await locationsApi.remove(id);
+      notifySuccess("Location deleted.");
+      refresh();
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
   }
 
   return (
     <div>
       <h2>Printers & Locations</h2>
-      {error && <p className="error-state">{error}</p>}
+      <NoticeBanner notice={notice} />
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-label">Printers</div>

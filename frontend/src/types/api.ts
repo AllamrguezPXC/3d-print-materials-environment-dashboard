@@ -20,6 +20,21 @@ export interface AlertOut {
   resolved_at: string | null;
 }
 
+export interface LocationInfo {
+  id: number;
+  name: string;
+  location_type: string;
+  printer_id: number | null;
+}
+
+export interface AffectedSpoolInfo {
+  spool_id: number;
+  brand: string;
+  color: string | null;
+  material_profile_name: string;
+  status: string;
+}
+
 export interface CurrentReadingResponse {
   timestamp: string;
   temperature_c: number;
@@ -30,6 +45,8 @@ export interface CurrentReadingResponse {
   source: "real" | "mock" | "manual";
   sensor: SensorInfo;
   location_id: number | null;
+  location: LocationInfo | null;
+  affected_spools: AffectedSpoolInfo[];
   alerts: AlertOut[];
 }
 

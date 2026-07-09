@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { AffectedSpoolsPanel } from "../components/AffectedSpoolsPanel";
 import { AlertPanel } from "../components/AlertPanel";
 import { DryingRecommendationCard } from "../components/DryingRecommendationCard";
 import { ReadingCard } from "../components/ReadingCard";
@@ -33,6 +34,12 @@ export function Dashboard() {
         <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
           {new Date(data.timestamp).toLocaleString()} · source: <strong>{data.source}</strong> · sensor{" "}
           {data.sensor.serial_number}
+          {data.location ? (
+            <>
+              {" "}
+              · <strong>{data.location.name}</strong>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -45,6 +52,10 @@ export function Dashboard() {
 
       <div style={{ marginBottom: 20 }}>
         <AlertPanel alerts={data.alerts} />
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <AffectedSpoolsPanel spools={data.affected_spools} />
       </div>
 
       <h3>Drying Recommendations</h3>
