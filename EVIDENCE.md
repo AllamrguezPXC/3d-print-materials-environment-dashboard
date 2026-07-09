@@ -12,7 +12,7 @@ Use this file to document evidence required by the assignment.
 | `/init` and `CLAUDE.md` | Root `CLAUDE.md` audited and extended with Task Documentation, Git Workflow, Testing Requirements, and Playwright MCP sections adapted from `Inpiration CLAUDE.md` | Done |
 | TDD cycle | `/evidence/tdd-current-reading-fail.txt` and `/evidence/tdd-current-reading-pass.txt` — see summary below | Done |
 | Documentation | `README.md`, `docs/Requirements.md`, `docs/Tasks.md`, root `CLAUDE.md` | Started (will finalize with README setup instructions once frontend exists) |
-| Security review | `/evidence/security-review.md` | Pending |
+| Security review | `/evidence/security-review.md` — reviewed `POST /readings` and related sensor/CORS/secrets handling, fixed 2 medium findings | Done |
 | GitHub Integration | Repo created and pushed via `gh` CLI (no GitHub MCP server connected this session — see note below): https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard | Started (issue/PR evidence pending) |
 | Custom Skill | `.claude/skills/*/SKILL.md` — `context-handoff` skill adapted from an unrelated prior project to this one; `fastapi-endpoint-builder` used to build `GET /readings/current` | Done |
 | Custom Hook | `.claude/hooks/*`, `.claude/settings.json` — `guard-dangerous-commands.py` and `evidence-logger.py` active from the start; `pre-compact-context-handoff.py` adapted and wired into `PreCompact`, verified via `test-fixtures/precompact-auto.json` | Done |

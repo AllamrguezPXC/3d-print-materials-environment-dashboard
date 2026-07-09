@@ -1,9 +1,25 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.alert import AlertRead
+
+# Physically plausible bounds for manual/mock POST /readings payloads.
+# Intentionally wider than the mock sensor's normal drift range
+# (Requirements.md section 10.3) so material-profile warning/critical demo
+# values (e.g. RH up to ~90%) remain valid, while still rejecting nonsensical
+# input (e.g. RH=-5000 or temperature_c=-9999) that could otherwise crash the
+# Magnus-formula dew point calculation (division by zero near -243.12C) or
+# silently corrupt history charts. See evidence/security-review.md.
+TEMPERATURE_C_MIN = -40.0
+TEMPERATURE_C_MAX = 85.0
+RELATIVE_HUMIDITY_MIN = 0.0
+RELATIVE_HUMIDITY_MAX = 100.0
+PRESSURE_PA_MIN = 30_000.0
+PRESSURE_PA_MAX = 120_000.0
+PRESSURE_KPA_MIN = PRESSURE_PA_MIN / 1000
+PRESSURE_KPA_MAX = PRESSURE_PA_MAX / 1000
 
 
 class SensorInfo(BaseModel):
@@ -43,10 +59,10 @@ class ReadingCreate(BaseModel):
     sensor_id: int | None = None
     location_id: int | None = None
     timestamp: datetime | None = None
-    temperature_c: float
-    relative_humidity_percent: float
-    pressure_pa: float | None = None
-    pressure_kpa: float | None = None
+    temperature_c: float = Field(ge=TEMPERATURE_C_MIN, le=TEMPERATURE_C_MAX)
+    relative_humidity_percent: float = Field(ge=RELATIVE_HUMIDITY_MIN, le=RELATIVE_HUMIDITY_MAX)
+    pressure_pa: float | None = Field(default=None, ge=PRESSURE_PA_MIN, le=PRESSURE_PA_MAX)
+    pressure_kpa: float | None = Field(default=None, ge=PRESSURE_KPA_MIN, le=PRESSURE_KPA_MAX)
     source: Literal["mock", "manual"] = "manual"
 
     @model_validator(mode="after")

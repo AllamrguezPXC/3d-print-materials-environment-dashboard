@@ -34,7 +34,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
+    # No cookie/session auth is used anywhere in this app (see
+    # frontend/src/api/client.ts), so credentialed CORS is unnecessary
+    # attack surface and is disabled. See evidence/security-review.md.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
