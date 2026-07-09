@@ -1,0 +1,9 @@
+{
+  "session_id": "abc123def456",
+  "hook_event_name": "PreCompact",
+  "trigger": "auto",
+  "cwd": "C:\\Users\\AllamRodriguez\\Desktop\\Programas\\3D Print Materials Environment Data Monitoring Dashboard",
+  "transcript_path": "",
+  "permission_mode": "default",
+  "context_remaining_percent": 12.5
+}
