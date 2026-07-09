@@ -4,7 +4,8 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import readings
+from app.api.v1 import drying, readings
+from app.api.v1 import alerts, assignments, locations, materials, printers, sensors, spools
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.seed import seed
@@ -39,6 +40,16 @@ app.add_middleware(
 )
 
 app.include_router(readings.router)
+app.include_router(drying.router)
+
+# CRUD routers for the extended entities (Requirements.md section 12.2).
+app.include_router(sensors.router)
+app.include_router(printers.router)
+app.include_router(locations.router)
+app.include_router(materials.router)
+app.include_router(spools.router)
+app.include_router(assignments.router)
+app.include_router(alerts.router)
 
 
 @app.get("/health")

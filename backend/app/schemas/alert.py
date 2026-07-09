@@ -20,3 +20,7 @@ class AlertRead(BaseModel):
     is_active: bool = True
     created_at: datetime | None = None
     resolved_at: datetime | None = None
+
+
+class AlertResolveResponse(BaseModel):
+    alert: AlertRead
