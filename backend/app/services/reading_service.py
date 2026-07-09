@@ -1,0 +1,162 @@
+from collections import defaultdict
+from datetime import datetime, timezone
+
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+
+from app.core.config import Settings
+from app.models.sensor import Sensor
+from app.repositories.reading_repository import get_or_create_sensor, query_readings, save_reading
+from app.schemas.alert import AlertRead
+from app.schemas.reading import HourlyAggregate, ReadingCreate, ReadingCreateResponse, ReadingRead
+from app.sensors.base import SensorParseError
+from app.sensors.factory import get_sensor_reader
+from app.services.alert_service import build_alert_drafts, persist_alerts
+from app.services.environment_service import compute_dew_point_c
+
+
+def capture_and_persist_reading(session: Session, settings: Settings) -> ReadingCreateResponse:
+    """POST /readings with an empty body: read from the default configured
+    sensor and persist it. Raises 503 if a real sensor is configured but
+    unavailable (Requirements.md §13.2).
+    """
+    reader = get_sensor_reader(settings)
+    try:
+        raw = reader.read_current()
+    except (SensorParseError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=f"Sensor unavailable: {exc}") from exc
+
+    sensor = get_or_create_sensor(
+        session,
+        serial_number=raw.sensor_serial,
+        sensor_type=raw.source,
+        model="VCP-PTH450-CAL" if raw.source == "real" else "mock",
+    )
+    dew_point_c = compute_dew_point_c(raw.temperature_c, raw.relative_humidity_percent)
+
+    reading = save_reading(
+        session,
+        sensor_id=sensor.id,
+        location_id=sensor.location_id,
+        timestamp=raw.timestamp,
+        temperature_c=raw.temperature_c,
+        relative_humidity_percent=raw.relative_humidity_percent,
+        pressure_pa=raw.pressure_pa,
+        pressure_kpa=raw.pressure_kpa,
+        dew_point_c=dew_point_c,
+        source=raw.source,
+        raw_payload=raw.raw_payload,
+    )
+
+    alerts = _evaluate_and_persist_alerts(session, reading, dew_point_c)
+    session.commit()
+
+    return ReadingCreateResponse(
+        reading=ReadingRead.model_validate(reading),
+        alerts=[AlertRead.model_validate(a) for a in alerts],
+    )
+
+
+def persist_manual_reading(session: Session, payload: ReadingCreate) -> ReadingCreateResponse:
+    """POST /readings with a manual/mock payload in the body."""
+    if payload.sensor_id is not None:
+        sensor = session.get(Sensor, payload.sensor_id)
+        if sensor is None:
+            raise HTTPException(status_code=404, detail=f"Sensor {payload.sensor_id} not found.")
+    else:
+        sensor = get_or_create_sensor(
+            session,
+            serial_number=f"MANUAL-{payload.source}",
+            sensor_type=payload.source,
+            model="manual",
+        )
+
+    location_id = payload.location_id if payload.location_id is not None else sensor.location_id
+    timestamp = payload.timestamp or datetime.now(timezone.utc)
+    dew_point_c = compute_dew_point_c(payload.temperature_c, payload.relative_humidity_percent)
+
+    reading = save_reading(
+        session,
+        sensor_id=sensor.id,
+        location_id=location_id,
+        timestamp=timestamp,
+        temperature_c=payload.temperature_c,
+        relative_humidity_percent=payload.relative_humidity_percent,
+        pressure_pa=payload.pressure_pa,
+        pressure_kpa=payload.pressure_kpa,
+        dew_point_c=dew_point_c,
+        source=payload.source,
+        raw_payload=None,
+    )
+
+    alerts = _evaluate_and_persist_alerts(session, reading, dew_point_c)
+    session.commit()
+
+    return ReadingCreateResponse(
+        reading=ReadingRead.model_validate(reading),
+        alerts=[AlertRead.model_validate(a) for a in alerts],
+    )
+
+
+def _evaluate_and_persist_alerts(session: Session, reading, dew_point_c: float | None):
+    if reading.location_id is None or dew_point_c is None:
+        return []
+
+    drafts = build_alert_drafts(
+        session,
+        location_id=reading.location_id,
+        temperature_c=reading.temperature_c,
+        relative_humidity_percent=reading.relative_humidity_percent,
+        pressure_pa=reading.pressure_pa,
+        dew_point_c=dew_point_c,
+    )
+    if not drafts:
+        return []
+    return persist_alerts(
+        session,
+        reading_id=reading.id,
+        sensor_id=reading.sensor_id,
+        location_id=reading.location_id,
+        drafts=drafts,
+    )
+
+
+def get_readings_history(
+    session: Session,
+    from_dt: datetime,
+    to_dt: datetime,
+    sensor_id: int | None,
+    location_id: int | None,
+    aggregate: str,
+) -> tuple[list[ReadingRead], list[HourlyAggregate]]:
+    if to_dt < from_dt:
+        raise HTTPException(status_code=400, detail="`to` must not be earlier than `from`.")
+
+    rows = query_readings(session, from_dt, to_dt, sensor_id=sensor_id, location_id=location_id)
+
+    if aggregate != "hour":
+        return [ReadingRead.model_validate(r) for r in rows], []
+
+    buckets: dict[datetime, list] = defaultdict(list)
+    for row in rows:
+        hour_key = row.timestamp.replace(minute=0, second=0, microsecond=0)
+        buckets[hour_key].append(row)
+
+    hourly = [
+        HourlyAggregate(
+            hour=hour,
+            temperature_c=round(sum(r.temperature_c for r in bucket) / len(bucket), 2),
+            relative_humidity_percent=round(
+                sum(r.relative_humidity_percent for r in bucket) / len(bucket), 2
+            ),
+            pressure_pa=round(sum(r.pressure_pa for r in bucket) / len(bucket), 2),
+            dew_point_c=(
+                round(sum(r.dew_point_c for r in bucket if r.dew_point_c is not None) / len(bucket), 2)
+                if any(r.dew_point_c is not None for r in bucket)
+                else None
+            ),
+            sample_count=len(bucket),
+        )
+        for hour, bucket in sorted(buckets.items())
+    ]
+    return [], hourly
