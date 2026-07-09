@@ -11,9 +11,9 @@ Use this file to document evidence required by the assignment.
 | Plan Mode + Ask Mode | Plan Mode used to audit `.claude`/produce the build plan (see below); Ask Mode used via `AskUserQuestion` for .claude cleanup strategy, Git/GitHub setup, and dryer modeling decisions | Done |
 | `/init` and `CLAUDE.md` | Root `CLAUDE.md` audited and extended with Task Documentation, Git Workflow, Testing Requirements, and Playwright MCP sections adapted from `Inpiration CLAUDE.md` | Done |
 | TDD cycle | `/evidence/tdd-current-reading-fail.txt` and `/evidence/tdd-current-reading-pass.txt` — see summary below | Done |
-| Documentation | `README.md`, `docs/Requirements.md`, `docs/Tasks.md`, root `CLAUDE.md` | Started (will finalize with README setup instructions once frontend exists) |
+| Documentation | Root `README.md` (setup, stack, sensor modes, endpoints, structure), `backend/README.md`, `frontend/README.md`, `docs/Requirements.md`, `docs/Tasks.md`, root `CLAUDE.md`, structured `<summary>` docstring on `MaterialProfile` (`backend/app/models/material_profile.py`) | Done |
 | Security review | `/evidence/security-review.md` — reviewed `POST /readings` and related sensor/CORS/secrets handling, fixed 2 medium findings | Done |
-| GitHub Integration | Repo created and pushed via `gh` CLI (no GitHub MCP server connected this session — see note below): https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard | Started (issue/PR evidence pending) |
+| GitHub Integration | Repo: https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard. Real action: [Issue #1](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/issues/1) "Add automated frontend tests (vitest) for Dashboard and theme toggle" | Done |
 | Custom Skill | `.claude/skills/*/SKILL.md` — `context-handoff` skill adapted from an unrelated prior project to this one; `fastapi-endpoint-builder` used to build `GET /readings/current` | Done |
 | Custom Hook | `.claude/hooks/*`, `.claude/settings.json` — `guard-dangerous-commands.py` and `evidence-logger.py` active from the start; `pre-compact-context-handoff.py` adapted and wired into `PreCompact`, verified via `test-fixtures/precompact-auto.json` | Done |
 
@@ -33,8 +33,13 @@ GitHub MCP server was connected, and how to model dryer capability in the data m
 No GitHub MCP server was connected in this Claude Code session (only `markitdown` and
 `playwright` MCP tools were available). Per explicit user instruction, GitHub setup was performed
 directly with the `gh` CLI instead: `git init`, initial commit, `gh repo create ... --push`. This
-is documented here as satisfying the GitHub-integration requirement in spirit; a further `gh`
-action (issue or PR) referencing completed backend work will be added once available.
+is documented here as satisfying the GitHub-integration requirement in spirit.
+
+Real GitHub action performed: `gh issue create` opened
+[Issue #1](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/issues/1),
+tracking genuine follow-up work (automated frontend test coverage per Requirements.md §15.2,
+optional for this assignment but a real gap — the frontend was only verified manually via
+Playwright MCP, see below) rather than a retroactive issue for work already completed.
 
 ## TDD Cycle — `GET /readings/current`
 
