@@ -19,9 +19,10 @@ interface SpoolFormProps {
   onSubmit: (e: React.FormEvent) => void;
   materials: MaterialProfile[];
   submitting?: boolean;
+  submitLabel?: string;
 }
 
-export function SpoolForm({ value, onChange, onSubmit, materials, submitting }: SpoolFormProps) {
+export function SpoolForm({ value, onChange, onSubmit, materials, submitting, submitLabel = "Add spool" }: SpoolFormProps) {
   return (
     <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1.5">
@@ -74,7 +75,7 @@ export function SpoolForm({ value, onChange, onSubmit, materials, submitting }: 
         </Select>
       </div>
       <Button type="submit" disabled={submitting}>
-        Add spool
+        {submitLabel}
       </Button>
     </form>
   );

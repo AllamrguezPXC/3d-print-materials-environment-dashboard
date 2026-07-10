@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 class FilamentSpoolBase(BaseModel):
     material_profile_id: int
     brand: str
-    color: str
+    color: str | None = None
     diameter_mm: float = 1.75
     initial_weight_g: float | None = None
     remaining_weight_g: float | None = None

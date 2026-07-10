@@ -204,6 +204,37 @@ confirmed a single submit created 2 real spools assigned to `AMS Slot 1`/`AMS Sl
 visible immediately in both `/spools`'s table and `PrinterDetail`'s AMS grid (A1/A2 now loaded,
 A3/A4 still empty, no fabricated data).
 
+## Filament Manager: Filters, Search, Grouping, Edit/Delete
+
+Full task record: `docs/Tareas/filament-manager-redesign/TASK.md`. Second item picked from Phase
+18's deferred list, chosen at Claude's own discretion per the user's explicit "continue with
+whichever you think is best." Frontend-only (no planned backend changes; see the bug fix below).
+
+Playwright MCP verification, screenshot `evidence/frontend-verification/filament-manager-filters.png`:
+- AMS scope filter correctly reduced the table to only the spool assigned to a `printer_ams`
+  location; free-text search for a non-matching string correctly showed "No filaments match your
+  filters." (distinct from the "no spools at all" empty state).
+- Grouping by printer split the table into an "A1 mini #1" card and a "No printer" card (for the
+  spool assigned to `Storage Box A`, which has no `printer_id`).
+- Edit: changed a spool's color, confirmed the change persisted in the table immediately, and
+  confirmed the reused `SpoolForm`'s submit button correctly read "Save changes" here (not the
+  Manual-Add tab's "Add spool" — added a `submitLabel` prop to disambiguate).
+- Delete: confirmed the native `window.confirm` prompt, then verified both outcomes — deleting a
+  spool with an active assignment correctly returned the backend's existing friendly 400
+  ("cannot be deleted because it is referenced by other records"); deleting an unassigned spool
+  succeeded and removed it from the table.
+
+**Pre-existing bug found and fixed during this verification** (not part of the original task
+scope, but directly blocking it): `backend/app/schemas/filament_spool.py`'s `FilamentSpoolBase`
+declared `color: str` (required) and `backend/app/models/filament_spool.py`'s column was
+non-nullable — while every frontend surface (types, `SpoolForm`, `ReadFromAmsPanel`, display
+fallbacks like `s.color ?? "—"`) already treated color as optional. Submitting "Add Filament" with
+a blank color silently returned a 422 the UI didn't surface clearly. Confirmed via
+`POST /spools` returning `422 Unprocessable Content` in the backend log, then fixed both files to
+`str | None = None`, added two regression tests (create-without-color succeeds; delete blocked by
+an active assignment returns 400), and re-verified the exact same "Add Filament" flow succeeds
+end-to-end with an empty Color field. Full backend suite: 126 passed.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

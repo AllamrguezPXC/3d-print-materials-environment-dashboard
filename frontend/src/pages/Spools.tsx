@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AddFilamentModal } from "@/components/AddFilamentModal";
+import { EditSpoolModal } from "@/components/EditSpoolModal";
+import { EMPTY_FILAMENT_FILTERS, FilamentFilters, type FilamentFiltersValue } from "@/components/FilamentFilters";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { SpoolAssignmentForm } from "@/components/SpoolAssignmentForm";
 import type { AmsImportValues } from "@/components/ReadFromAmsPanel";
@@ -13,10 +16,13 @@ import { useAssignments, useCreateAssignment } from "@/hooks/resources/assignmen
 import { useLocations } from "@/hooks/resources/locations";
 import { useMaterials } from "@/hooks/resources/materials";
 import { usePrinters } from "@/hooks/resources/printers";
-import { useCreateSpool, useSpools } from "@/hooks/resources/spools";
-import type { Location } from "@/types/api";
+import { useCreateSpool, useRemoveSpool, useSpools, useUpdateSpool } from "@/hooks/resources/spools";
+import type { FilamentSpool, Location } from "@/types/api";
 
 const EMPTY_SPOOL: SpoolFormValues = { material_profile_id: "", brand: "", color: "", status: "ready" };
+
+const AMS_LOCATION_TYPES = new Set(["printer_ams", "printer_external_spool"]);
+const STORAGE_LOCATION_TYPES = new Set(["storage_box", "dry_box", "room", "dryer"]);
 
 export function Spools() {
   const { data: spools = [] } = useSpools();
@@ -27,11 +33,26 @@ export function Spools() {
   const { notice, notifySuccess, notifyError } = useNotice();
 
   const createSpool = useCreateSpool();
+  const updateSpool = useUpdateSpool();
+  const removeSpool = useRemoveSpool();
   const createAssignment = useCreateAssignment();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [newSpool, setNewSpool] = useState<SpoolFormValues>(EMPTY_SPOOL);
   const [assignmentDraft, setAssignmentDraft] = useState<Record<number, string>>({});
+  const [filters, setFilters] = useState<FilamentFiltersValue>(EMPTY_FILAMENT_FILTERS);
+  const [editingSpool, setEditingSpool] = useState<FilamentSpool | null>(null);
+  const [editDraft, setEditDraft] = useState<SpoolFormValues>(EMPTY_SPOOL);
+
+  function activeLocationFor(spoolId: number): Location | undefined {
+    const assignment = assignments.find((a) => a.spool_id === spoolId && a.is_active);
+    return assignment ? locations.find((l) => l.id === assignment.location_id) : undefined;
+  }
+
+  function printerNameFor(location: Location | undefined): string {
+    if (!location?.printer_id) return "No printer";
+    return printers.find((p) => p.id === location.printer_id)?.name ?? "No printer";
+  }
 
   function handleAddSpool(e: React.FormEvent) {
     e.preventDefault();
@@ -90,9 +111,121 @@ export function Spools() {
     );
   }
 
-  function activeLocationFor(spoolId: number): Location | undefined {
-    const assignment = assignments.find((a) => a.spool_id === spoolId && a.is_active);
-    return assignment ? locations.find((l) => l.id === assignment.location_id) : undefined;
+  function openEdit(spool: FilamentSpool) {
+    setEditingSpool(spool);
+    setEditDraft({
+      material_profile_id: String(spool.material_profile_id),
+      brand: spool.brand,
+      color: spool.color ?? "",
+      status: spool.status,
+    });
+  }
+
+  function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingSpool || !editDraft.material_profile_id || !editDraft.brand.trim()) {
+      notifyError("Material and brand are required.");
+      return;
+    }
+    updateSpool.mutate(
+      {
+        id: editingSpool.id,
+        body: {
+          material_profile_id: Number(editDraft.material_profile_id),
+          brand: editDraft.brand,
+          color: editDraft.color || null,
+          status: editDraft.status,
+        },
+      },
+      {
+        onSuccess: () => {
+          notifySuccess(`Spool "${editDraft.brand}" updated.`);
+          setEditingSpool(null);
+        },
+        onError: (err) => notifyError(err.message),
+      },
+    );
+  }
+
+  function handleDelete(spool: FilamentSpool) {
+    if (!window.confirm(`Delete this ${spool.brand} spool? This cannot be undone.`)) return;
+    removeSpool.mutate(spool.id, {
+      onSuccess: () => notifySuccess("Spool deleted."),
+      onError: (err) => notifyError(err.message),
+    });
+  }
+
+  const brands = Array.from(new Set(spools.map((s) => s.brand))).sort();
+
+  const filteredSpools = spools.filter((s) => {
+    const material = materials.find((m) => m.id === s.material_profile_id);
+    const location = activeLocationFor(s.id);
+
+    if (filters.scope === "ams" && !(location && AMS_LOCATION_TYPES.has(location.location_type))) return false;
+    if (filters.scope === "storage" && !(location && STORAGE_LOCATION_TYPES.has(location.location_type))) return false;
+    if (filters.brand !== "all" && s.brand !== filters.brand) return false;
+    if (filters.materialFamily !== "all" && material?.family !== filters.materialFamily) return false;
+    if (filters.materialProfileId !== "all" && String(s.material_profile_id) !== filters.materialProfileId) return false;
+    if (filters.status !== "all" && s.status !== filters.status) return false;
+
+    if (filters.search.trim()) {
+      const haystack = `${s.brand} ${s.color ?? ""} ${material?.name ?? ""}`.toLowerCase();
+      if (!haystack.includes(filters.search.trim().toLowerCase())) return false;
+    }
+
+    return true;
+  });
+
+  function groupLabelFor(spool: FilamentSpool): string {
+    const location = activeLocationFor(spool.id);
+    if (filters.groupBy === "location") return location?.name ?? "Unassigned";
+    if (filters.groupBy === "printer") return printerNameFor(location);
+    if (filters.groupBy === "material") {
+      return materials.find((m) => m.id === spool.material_profile_id)?.name ?? "Unknown material";
+    }
+    return "";
+  }
+
+  const groups =
+    filters.groupBy === "none"
+      ? [{ label: null as string | null, spools: filteredSpools }]
+      : Array.from(new Set(filteredSpools.map((s) => groupLabelFor(s))))
+          .sort()
+          .map((label) => ({ label, spools: filteredSpools.filter((s) => groupLabelFor(s) === label) }));
+
+  function renderSpoolRow(s: FilamentSpool) {
+    const material = materials.find((m) => m.id === s.material_profile_id);
+    const currentLocation = activeLocationFor(s.id);
+    return (
+      <TableRow key={s.id}>
+        <TableCell className="font-medium">{material?.name ?? s.material_profile_id}</TableCell>
+        <TableCell>{s.brand}</TableCell>
+        <TableCell>{s.color ?? "—"}</TableCell>
+        <TableCell>
+          <StatusBadge status={s.status} />
+        </TableCell>
+        <TableCell>{currentLocation?.name ?? "Unassigned"}</TableCell>
+        <TableCell>
+          <SpoolAssignmentForm
+            locations={locations}
+            value={assignmentDraft[s.id] ?? ""}
+            onChange={(locationId) => setAssignmentDraft({ ...assignmentDraft, [s.id]: locationId })}
+            onAssign={() => handleAssign(s.id)}
+            submitting={createAssignment.isPending}
+          />
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon-sm" onClick={() => openEdit(s)} title="Edit">
+              <Pencil className="size-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(s)} title="Delete">
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
   }
 
   return (
@@ -103,48 +236,41 @@ export function Spools() {
       </div>
       <NoticeBanner notice={notice} />
 
-      <Card>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Material</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead>Color</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Assigned location</TableHead>
-                <TableHead>Assign to…</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {spools.map((s) => {
-                const material = materials.find((m) => m.id === s.material_profile_id);
-                const currentLocation = activeLocationFor(s.id);
-                return (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">{material?.name ?? s.material_profile_id}</TableCell>
-                    <TableCell>{s.brand}</TableCell>
-                    <TableCell>{s.color ?? "—"}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={s.status} />
-                    </TableCell>
-                    <TableCell>{currentLocation?.name ?? "Unassigned"}</TableCell>
-                    <TableCell>
-                      <SpoolAssignmentForm
-                        locations={locations}
-                        value={assignmentDraft[s.id] ?? ""}
-                        onChange={(locationId) => setAssignmentDraft({ ...assignmentDraft, [s.id]: locationId })}
-                        onAssign={() => handleAssign(s.id)}
-                        submitting={createAssignment.isPending}
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <FilamentFilters value={filters} onChange={setFilters} brands={brands} materials={materials} />
+
+      {spools.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No filaments registered yet. Add one to get started.</p>
+      ) : filteredSpools.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No filaments match your filters.</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {groups.map((group) => (
+            <Card key={group.label ?? "all"}>
+              {group.label !== null && (
+                <div className="border-b border-border px-4 py-2 text-sm font-medium text-muted-foreground">
+                  {group.label}
+                </div>
+              )}
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Material</TableHead>
+                      <TableHead>Brand</TableHead>
+                      <TableHead>Color</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Assigned location</TableHead>
+                      <TableHead>Assign to…</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>{group.spools.map(renderSpoolRow)}</TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <AddFilamentModal
         open={modalOpen}
@@ -160,6 +286,18 @@ export function Spools() {
         onImportFromAms={handleImportFromAms}
         importSubmitting={createSpool.isPending || createAssignment.isPending}
       />
+
+      {editingSpool && (
+        <EditSpoolModal
+          open
+          onOpenChange={(open) => !open && setEditingSpool(null)}
+          value={editDraft}
+          onChange={setEditDraft}
+          onSubmit={handleEditSubmit}
+          materials={materials}
+          submitting={updateSpool.isPending}
+        />
+      )}
     </div>
   );
 }

@@ -19,7 +19,7 @@ class FilamentSpool(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     material_profile_id: Mapped[int] = mapped_column(ForeignKey("material_profiles.id"))
     brand: Mapped[str] = mapped_column(String(120))
-    color: Mapped[str] = mapped_column(String(60))
+    color: Mapped[str | None] = mapped_column(String(60), default=None)
     diameter_mm: Mapped[float] = mapped_column(default=1.75)
     initial_weight_g: Mapped[float | None] = mapped_column(default=None)
     remaining_weight_g: Mapped[float | None] = mapped_column(default=None)

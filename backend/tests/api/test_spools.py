@@ -32,6 +32,32 @@ def test_create_and_fetch_spool(client):
     assert get_response.json()["brand"] == "Test Brand"
 
 
+def test_create_spool_without_color_succeeds(client):
+    # color is optional -- the frontend (Add Filament, Read from AMS) always
+    # allows an empty color, so the backend must accept a missing/null one.
+    material_id = _first_material_profile_id(client)
+    payload = {"material_profile_id": material_id, "brand": "No Color Brand"}
+    response = client.post("/spools", json=payload)
+    assert response.status_code == 200
+    assert response.json()["color"] is None
+
+
+def test_delete_spool_rejected_with_friendly_400_when_referenced_by_assignment(client):
+    material_id = _first_material_profile_id(client)
+    spool = client.post(
+        "/spools",
+        json={"material_profile_id": material_id, "brand": "Assigned Brand", "color": "Yellow"},
+    ).json()
+    location = client.get("/locations").json()[0]
+    client.post(
+        "/assignments",
+        json={"spool_id": spool["id"], "location_id": location["id"], "is_active": True},
+    )
+
+    response = client.delete(f"/spools/{spool['id']}")
+    assert response.status_code == 400
+
+
 def test_get_spool_404_for_missing_id(client):
     response = client.get("/spools/999999")
     assert response.status_code == 404

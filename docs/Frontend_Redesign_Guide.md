@@ -208,8 +208,11 @@ does not control the dryer directly — this is validation/tracking only.
 - **Deferred from `docs/Tareas/printer-ams-sensor-config/TASK.md` (Phase 1 of the Bambu-Studio-inspired
   printer/AMS/filament redesign)** — not built, by explicit scope decision against this project's
   "keep the MVP focused" constraint:
-  - Full "Filament Manager" redesign (filters/search/grouping) — `/spools` stays a plain table.
-    ("Add Filament" itself — Manual Add + Read from AMS — is now built; see
+  - ~~Full "Filament Manager" redesign (filters/search/grouping)~~ — **done**, see
+    `docs/Tareas/filament-manager-redesign/TASK.md`: `FilamentFilters` (scope All/AMS/Storage,
+    brand, material type, filament type, status, search) + optional grouping (location/printer/
+    material) + Edit/Delete actions, still on the existing (proven, accessible) table, not a card
+    grid. ("Add Filament" itself — Manual Add + Read from AMS — was built earlier; see
     `docs/Tareas/read-from-ams-flow/TASK.md`. Read from AMS reads the AMS slots this project
     already tracks explicitly (`Location.slot_index`), not any real Bambu Studio/AMS integration.)
   - Sensor-inheritance resolution UI (printer → AMS → slot → location) — a slot's sensor is whatever
