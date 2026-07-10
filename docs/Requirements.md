@@ -587,26 +587,45 @@ These must exist exactly as written.
 
 #### GET `/readings/current`
 
-Returns current reading from configured default sensor or selected sensor.
+Sensors are configured per-row in the `sensors` table (no global sensor mode).
+This endpoint returns one entry per **active** (`is_active=true`) sensor —
+never a single reading, and never a synthesized reading for a sensor that
+isn't configured.
 
 Query parameters:
 
-- `sensor_id`, optional
-- `location_id`, optional
 - `include_alerts`, optional, default true
 
-Response includes:
+Response:
 
-- sensor info
-- location info
-- timestamp
-- temperature
-- relative humidity
-- pressure
-- dew point
-- source mode
-- affected materials/spools
-- alerts
+```json
+{
+  "sensors": [
+    {
+      "sensor": { "id": 1, "serial_number": "...", "model": "...", "sensor_type": "real|mock|manual" },
+      "location_id": 1,
+      "location": { "...": "..." },
+      "timestamp": "...",
+      "temperature_c": 23.1,
+      "relative_humidity_percent": 31.2,
+      "pressure_pa": 100700.0,
+      "pressure_kpa": 100.7,
+      "dew_point_c": 5.1,
+      "source": "real|mock|manual",
+      "affected_spools": ["..."],
+      "alerts": ["..."],
+      "error": null
+    }
+  ],
+  "message": null
+}
+```
+
+`error` is non-null exactly when that sensor's reader failed (e.g. real
+hardware unplugged) — its other fields stay null but the request still
+returns 200 and the other sensors' entries are unaffected. `sensors` is `[]`
+with an explanatory `message` (e.g. "No active sensors configured.") when no
+sensor rows are active — no reading is ever invented.
 
 #### POST `/readings`
 
@@ -614,13 +633,16 @@ Captures and persists a reading.
 
 MVP behavior:
 
-- If body is empty, read from the default configured sensor and persist it.
-- If body includes a manual/mock reading, validate and persist it.
+- If body is empty, capture and persist a reading from **every active
+  sensor** in one call, returning one result per sensor (each with its own
+  `reading`/`alerts`/`error`). Never invents a reading for a sensor that
+  isn't configured — returns an empty list with `message` if none are active.
+- If body includes a manual/mock reading, validate and persist it against an
+  explicit `sensor_id` (or a named manual pseudo-sensor if omitted).
 
-Response:
-
-- saved reading
-- created alerts
+Response (empty body): `{"readings": [...], "message"?: "..."}`, one entry
+per active sensor.
+Response (manual payload): `{"reading": {...}, "alerts": [...]}`, unchanged.
 
 #### GET `/readings?from=&to=`
 
@@ -723,10 +745,15 @@ Use a clear separation:
 
 Use consistent errors:
 
-- 400 for invalid user input
+- 400 for invalid user input, including a conflicting/duplicate sensor `serial_number`
 - 404 for missing entities
-- 422 for validation errors
-- 503 when a real sensor is configured but unavailable
+- 422 for validation errors, including an internally-invalid sensor configuration
+  (unknown `sensor_type`, a mock sensor using the reserved real serial or a
+  non-`MOCK-` serial, or a Dracal-type sensor missing its `port`)
+
+A sensor read failure (e.g. real hardware unplugged) is never a 503 — it's
+recorded per-entry in `GET /readings/current` / `POST /readings` (see
+section 12.1) so one failing sensor never blocks the others.
 
 ### 13.3 Configuration
 
@@ -735,12 +762,18 @@ Use environment variables through Pydantic Settings or equivalent:
 ```text
 APP_ENV=development
 DATABASE_URL=sqlite:///./environment_monitor.db
-SENSOR_MODE=mock
 DRACAL_SERIAL_NUMBER=E25877
 DRACAL_VCP_PORT=COM3
 MOCK_SENSOR_COUNT=3
 CORS_ORIGINS=http://localhost:5173
 ```
+
+There is no `SENSOR_MODE` (or any other global sensor-mode toggle). Every
+sensor is configured per-row in the `sensors` table (type, serial, port,
+active flag, assigned location) via `GET/POST/PATCH/DELETE /sensors`.
+`DRACAL_SERIAL_NUMBER`, `DRACAL_VCP_PORT`, and `MOCK_SENSOR_COUNT` are
+consumed only by the startup seed script (section 13.4) to create the
+initial rows on first run — no request-handling code reads them.
 
 ### 13.4 Startup Seed
 
@@ -749,10 +782,13 @@ On first run, seed:
 - default material profiles
 - 7 printers from the user’s current Bambu Lab access
 - one real Dracal sensor entry with serial `E25877`
-- a few mock sensors for demo locations
+- a few mock sensors for demo locations, with serials that unambiguously
+  identify them as mock (`MOCK-0001`, `MOCK-0002`, ...) and are never
+  `E25877`
 - sample spool assignments
 
-Seed should be idempotent.
+Seed should be idempotent, and every seeded sensor row passes the same
+validation rules enforced by `POST/PATCH /sensors` (section 13.2).
 
 ## 14. Frontend Architecture Requirements
 
@@ -773,7 +809,10 @@ Recommended routes:
 Suggested components:
 
 - `ReadingCard`
-- `SensorStatusGrid`
+- `SensorStatusGrid` — the per-sensor cards on Dashboard (`SensorReadingSection`,
+  one per active sensor with an isolated error state) satisfy this need; a
+  dedicated `/sensors` admin CRUD page/grid remains an optional, still-unbuilt
+  enhancement (the `/sensors` CRUD API already exists and is usable via `/docs`)
 - `AlertPanel`
 - `DryingRecommendationCard`
 - `HistoryChart`

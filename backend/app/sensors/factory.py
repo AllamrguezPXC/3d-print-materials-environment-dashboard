@@ -1,22 +1,47 @@
-from app.core.config import Settings
+import hashlib
+import random
+
+from app.models.sensor import Sensor
 from app.sensors.base import SensorReader
 from app.sensors.dracal_vcp import DracalVcpSensorReader
 from app.sensors.mock import MockSensorReader
 
-_mock_reader_cache: MockSensorReader | None = None
+# Cached per (id, sensor_type, serial_number, port) so a mock reader's drift
+# state survives repeated polls, while an edit to any of those fields via
+# PATCH /sensors/{id} naturally produces a fresh cache key -> a fresh reader.
+_reader_cache: dict[tuple, SensorReader] = {}
 
 
-def get_sensor_reader(settings: Settings) -> SensorReader:
-    if settings.sensor_mode == "dracal_vcp":
-        return DracalVcpSensorReader(
-            port=settings.dracal_vcp_port,
-            expected_serial=settings.dracal_serial_number,
+def _seed_for_serial(serial_number: str) -> int:
+    """Deterministic, reproducible-across-restarts seed derived from the
+    sensor's own serial number. Never Python's builtin hash() -- that's
+    salted per-process (PYTHONHASHSEED) and would make mock drift
+    non-reproducible between runs.
+    """
+    return int(hashlib.sha256(serial_number.encode()).hexdigest()[:16], 16)
+
+
+def _build_reader(sensor: Sensor) -> SensorReader:
+    if sensor.sensor_type == "dracal_vcp":
+        return DracalVcpSensorReader(port=sensor.port, expected_serial=sensor.serial_number)
+
+    if sensor.sensor_type == "mock":
+        seed = _seed_for_serial(sensor.serial_number)
+        return MockSensorReader(
+            sensor_serial=sensor.serial_number,
+            seed_temp_c=24.0 + (seed % 7) - 3,
+            seed_rh_percent=35.0 + (seed % 11) - 5,
+            seed_pressure_pa=101_000.0 + (seed % 501) - 250,
+            rng=random.Random(seed),
         )
 
-    if settings.sensor_mode == "mock":
-        global _mock_reader_cache
-        if _mock_reader_cache is None:
-            _mock_reader_cache = MockSensorReader(sensor_serial=settings.dracal_serial_number)
-        return _mock_reader_cache
+    raise ValueError(f"Unsupported sensor_type: {sensor.sensor_type!r}")
 
-    raise ValueError(f"Unsupported SENSOR_MODE: {settings.sensor_mode!r}")
+
+def get_sensor_reader_for_sensor(sensor: Sensor) -> SensorReader:
+    key = (sensor.id, sensor.sensor_type, sensor.serial_number, sensor.port)
+    reader = _reader_cache.get(key)
+    if reader is None:
+        reader = _build_reader(sensor)
+        _reader_cache[key] = reader
+    return reader

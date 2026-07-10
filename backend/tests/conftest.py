@@ -3,7 +3,6 @@ import os
 # Must be set before `app.main`/`app.db.session` are imported anywhere, since
 # their module-level `get_settings()` calls are cached for the process lifetime.
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
-os.environ.setdefault("SENSOR_MODE", "mock")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

@@ -63,7 +63,9 @@ Do not break these endpoints while adding extended features.
 - Use pytest under `backend/tests/`.
 - Do not let API routes contain complex business logic.
 - Do not access Dracal hardware directly from routes.
-- Default `SENSOR_MODE` must be `mock`.
+- Sensors are configured per-row in the `sensors` table (no global mode
+  toggle) — seeded mock sensors must remain active by default so the app
+  runs without real hardware.
 
 ## Frontend Conventions
 

@@ -81,6 +81,49 @@ Playwright MCP rather than relying on `npm run build`/type-check alone:
    correct material, temperature/time, and the required "advisory only — does not control the
    dryer" language. Screenshot: `evidence/frontend-verification/drying-recommendation.png`.
 
+## Sensor Architecture Refactor — Remove Global `SENSOR_MODE`
+
+Full task record: `docs/Tareas/eliminar-sensor-mode-global/TASK.md`.
+
+**Motivation (security-relevant bug found during audit):** the previous global `get_sensor_reader(settings)`
+factory seeded the single cached `MockSensorReader` with `settings.dracal_serial_number` — meaning
+in `SENSOR_MODE=mock`, the mock sensor reported the *real* hardware serial `E25877`
+(`backend/tests/api/test_readings_current.py` previously asserted this directly). A mock sensor
+impersonating the real hardware's identity is a data-integrity/trust problem worth fixing on its
+own, independent of the rest of the refactor.
+
+**Plan Mode:** used again for this task — 3 parallel Explore agents audited the backend sensor
+model/factory/endpoints, the readings services, and the frontend/docs impact before any file was
+touched; a Plan agent then produced the concrete design (per-row `Sensor` validation, new
+`get_sensor_reader_for_sensor(sensor)` factory, list-shaped `GET /readings/current`/`POST /readings`
+responses); the plan was saved and approved via `ExitPlanMode` before implementation began.
+
+**TDD-style cycle:** for each phase, tests were written/rewritten alongside the implementation and
+the full suite re-run before moving to the next phase (`backend/tests/sensors/test_factory.py` and
+`backend/tests/services/test_environment_service.py` are new; `test_sensors.py`,
+`test_readings_current.py`, `test_readings_post.py`, `test_seed_idempotent.py` were extended/rewritten).
+Final backend suite: **110 passed, 0 failed** (`cd backend && pytest -q`).
+
+**Security-relevant validation added** (`backend/app/services/sensor_validation.py`, wired into
+`sensor_service.create_sensor`/`update_sensor` and the startup seed script): a mock sensor can never
+be created or updated to use the real serial `E25877`; mock sensors must use an unambiguous
+`MOCK-`-prefixed serial; Dracal-type sensors require a non-empty `port`; duplicate serials are
+rejected with a friendly 400 instead of surfacing a raw `IntegrityError` as an unhandled 500.
+
+**Frontend verification (Playwright MCP):** with both dev servers running against a fresh seeded
+database, confirmed (screenshots in `evidence/frontend-verification/`):
+- `dashboard-multi-sensor.png` — 4 sensor sections render (1 real + 3 mock); the real Dracal
+  sensor's section shows an isolated `Sensor unavailable: ...` error banner while the 3 mock
+  sensors show independent, differing temperature/humidity/pressure values and the topbar badge
+  reads "3/4 sensors online".
+- Deactivating all sensors via a direct DB update and reloading showed the empty state ("No active
+  sensors configured.") and a "No sensors configured" topbar badge — confirmed no reading is ever
+  synthesized when zero sensors are active.
+- `dashboard-light-theme-alert.png` — theme toggle still re-themes the whole page correctly, and a
+  live humidity warning alert appears scoped to only the affected mock sensor's section.
+- `/settings` — the rewritten "Sensors" card correctly describes per-row configuration instead of
+  the removed `SENSOR_MODE` env var.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

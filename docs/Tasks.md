@@ -36,7 +36,7 @@ This task list is designed for an intermediate developer working with Claude Cod
 - [x] Ensure mock values drift realistically over time.
 - [x] Add tests confirming mock readings include temperature, humidity, pressure, and timestamps.
 - [x] Add tests confirming mock readings remain within configured safe bounds.
-- [ ] Add a sensor factory that chooses `mock`, `dracal_vcp`, or `dracal_cli` from settings. (`mock` and `dracal_vcp` implemented and tested; `dracal_cli` intentionally not implemented — Requirements.md section 10.1 marks `DracalCliSensorReader` as optional and it was out of scope for this MVP. Factory raises a clear `ValueError` if `dracal_cli` is configured.)
+- [x] Add a sensor factory that chooses `mock`, `dracal_vcp`, or `dracal_cli` per Sensor DB row (superseded: `get_sensor_reader_for_sensor(sensor)` replaced the earlier settings/`SENSOR_MODE`-driven `get_sensor_reader(settings)` — see Phase 15). `mock` and `dracal_vcp` implemented and tested; `dracal_cli` intentionally not implemented — Requirements.md section 10.1 marks `DracalCliSensorReader` as optional and it was out of scope for this MVP. Factory raises a clear `ValueError` if `dracal_cli` is configured.
 
 ## Phase 3 — TDD Cycle for Required Endpoint
 
@@ -112,7 +112,7 @@ This task list is designed for an intermediate developer working with Claude Cod
 - [x] Add pytest coverage for valid line, invalid line, wrong serial, missing channel.
 - [x] Implement optional pyserial reader if hardware is available.
 - [x] Add `.env.example` with `DRACAL_VCP_PORT=COM3` and `DRACAL_SERIAL_NUMBER=E25877`.
-- [x] Keep mock mode as default.
+- [x] Keep mock mode as default. (Superseded: there is no global mode anymore — seeded mock sensor rows are `is_active=true` by default, so the app still runs fully without hardware. See Phase 17.)
 
 ## Phase 10 — Frontend Foundation
 
@@ -133,7 +133,7 @@ This task list is designed for an intermediate developer working with Claude Cod
 - [x] Display affected spools and material profiles. (`AffectedSpoolsPanel`, backed by `affected_spools` on `GET /readings/current`.)
 - [x] Display alert panel with severity styling.
 - [x] Display drying recommendation cards.
-- [x] Show timestamp and source mode: mock or real.
+- [x] Show timestamp and source mode: mock or real. (Updated for Phase 17: shown per sensor section, since `GET /readings/current` now returns one entry per active sensor instead of a single reading.)
 - [x] Add loading and error states.
 
 ## Phase 12 — History Chart UI
@@ -154,14 +154,14 @@ This task list is designed for an intermediate developer working with Claude Cod
 - [x] Build material profiles management screen.
 - [x] Build spools management screen.
 - [x] Build spool assignment form.
-- [x] Build settings screen for sensor mode and refresh interval.
+- [x] Build settings screen for sensor mode and refresh interval. (Updated for Phase 17: the sensor-mode card now explains per-row `/sensors` configuration instead of a `SENSOR_MODE` env var, since that global toggle no longer exists.)
 - [x] Validate forms before submit. (Consistent user-facing validation errors via the shared `useNotice` hook across Printers, Materials, Spools.)
 - [x] Show success/error notifications. (`useNotice` + `NoticeBanner`, wired into create/update/delete/assign actions.)
 
 ## Phase 14 — Documentation and Evidence
 
 - [x] Generate `README.md` with setup instructions for backend and frontend.
-- [x] Document mock mode and real Dracal VCP mode.
+- [x] Document mock mode and real Dracal VCP mode. (Updated for Phase 17: documented as per-row `sensor_type` configuration, not a global mode.)
 - [x] Document the three required endpoints.
 - [x] Document material profile assumptions and editability.
 - [x] Add screenshots of dashboard, history chart, and settings screens. (`evidence/frontend-verification/`: dashboard-dark/light, history-chart, materials-page, drying-recommendation, printers-validation, settings-page.)
@@ -192,6 +192,39 @@ This task list is designed for an intermediate developer working with Claude Cod
 - [x] Verify README instructions work from a clean clone. (Commands cross-checked against `backend/requirements.txt` and `frontend/package.json` scripts for consistency; not re-run from an actual fresh clone in this session.)
 - [x] Confirm no secrets or local DB files are committed.
 - [x] Prepare final evidence summary.
+
+## Phase 17 — Remove Global SENSOR_MODE, Move to Per-Sensor DB Configuration
+
+See `docs/Tareas/eliminar-sensor-mode-global/TASK.md` for the full task record.
+
+- [x] Add `Sensor` field/cross-field validation (`sensor_type` enum, mock serial
+  can't be `E25877`, mock serial must start with `MOCK-`, Dracal-type sensors
+  require a `port`, friendly 400 on duplicate serial) in
+  `backend/app/services/sensor_validation.py`, wired into `sensor_service.py`
+  create/update and into the startup seed script.
+- [x] Replace the global `get_sensor_reader(settings)` factory with a per-row
+  `get_sensor_reader_for_sensor(sensor)`; independent, reproducible mock drift
+  per sensor derived from its own serial number.
+- [x] Remove `Settings.sensor_mode`; `DRACAL_SERIAL_NUMBER`/`DRACAL_VCP_PORT`/
+  `MOCK_SENSOR_COUNT` are now consumed only by the seed script.
+- [x] Rewrite `GET /readings/current` to return `{"sensors": [...], "message"?: ...}`
+  — one entry per active sensor, with its own `error` field so one failing
+  sensor never blocks the others, and never a synthesized reading when no
+  sensor rows are active.
+- [x] Rewrite `POST /readings` (empty body) to capture-and-persist from every
+  active sensor in one call, returning one result per sensor.
+- [x] Rewrite/extend backend tests: sensor factory, `/sensors` validation,
+  `environment_service`, `GET /readings/current`, `POST /readings`, seed
+  idempotency (no mock uses `E25877`, all use `MOCK-`).
+- [x] Update frontend: new list-shaped types, `Dashboard.tsx` renders one
+  `SensorReadingSection` per active sensor with an isolated error state and an
+  empty state, `SystemStatusBadge` now reports sensors-online count instead of
+  a single mock/real toggle, `Settings.tsx`'s sensor card rewritten.
+- [x] Update `docs/Requirements.md` (§12.1, §13.2, §13.3, §13.4, §14.2),
+  `CLAUDE.md`, `README.md`, root `.env.example`.
+- [x] Full backend `pytest` green (110 passed), frontend `tsc -b`/`build`/`lint`
+  clean, Playwright MCP verification (multi-sensor view, empty state, isolated
+  real-sensor error, theme toggle, Settings page).
 
 ## Suggested Commit Sequence
 

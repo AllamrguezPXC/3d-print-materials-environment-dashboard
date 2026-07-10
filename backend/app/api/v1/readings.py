@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.config import Settings, get_settings
 from app.core.time import parse_iso_datetime
 from app.db.session import get_db
 from app.schemas.reading import (
-    CurrentReadingResponse,
+    CurrentReadingsResponse,
     ReadingCreate,
     ReadingCreateResponse,
+    ReadingsCaptureResponse,
     ReadingsHistoryResponse,
 )
-from app.services.environment_service import build_current_reading
+from app.services.environment_service import build_current_readings
 from app.services.reading_service import (
-    capture_and_persist_reading,
+    capture_and_persist_all_active_sensors,
     get_readings_history,
     persist_manual_reading,
 )
@@ -20,24 +20,24 @@ from app.services.reading_service import (
 router = APIRouter(prefix="/readings", tags=["readings"])
 
 
-@router.get("/current", response_model=CurrentReadingResponse)
+@router.get("/current", response_model=CurrentReadingsResponse)
 def get_current_reading(
     include_alerts: bool = True,
-    settings: Settings = Depends(get_settings),
     db: Session = Depends(get_db),
-) -> CurrentReadingResponse:
-    return build_current_reading(settings, session=db, include_alerts=include_alerts)
+) -> CurrentReadingsResponse:
+    return build_current_readings(db, include_alerts=include_alerts)
 
 
-@router.post("", response_model=ReadingCreateResponse)
-@router.post("/", response_model=ReadingCreateResponse, include_in_schema=False)
+@router.post("", response_model=ReadingCreateResponse | ReadingsCaptureResponse)
+@router.post(
+    "/", response_model=ReadingCreateResponse | ReadingsCaptureResponse, include_in_schema=False
+)
 def create_reading(
     payload: ReadingCreate | None = None,
-    settings: Settings = Depends(get_settings),
     db: Session = Depends(get_db),
-) -> ReadingCreateResponse:
+) -> ReadingCreateResponse | ReadingsCaptureResponse:
     if payload is None:
-        return capture_and_persist_reading(db, settings)
+        return capture_and_persist_all_active_sensors(db)
     return persist_manual_reading(db, payload)
 
 

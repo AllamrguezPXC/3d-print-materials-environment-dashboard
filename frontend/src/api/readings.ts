@@ -1,8 +1,8 @@
 import { api } from "./client";
-import type { CurrentReadingResponse, ReadingsHistoryResponse } from "../types/api";
+import type { CurrentReadingsResponse, ReadingsHistoryResponse } from "../types/api";
 
-export function getCurrentReading(): Promise<CurrentReadingResponse> {
-  return api.get<CurrentReadingResponse>("/readings/current");
+export function getCurrentReading(): Promise<CurrentReadingsResponse> {
+  return api.get<CurrentReadingsResponse>("/readings/current");
 }
 
 export function captureReading(): Promise<unknown> {
