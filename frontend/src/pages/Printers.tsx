@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Printer as PrinterIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,11 @@ export function Printers() {
             <TableBody>
               {printers.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link to={`/printers/${p.id}`} className="hover:underline">
+                      {p.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>{p.brand}</TableCell>
                   <TableCell>{p.model}</TableCell>
                   <TableCell>

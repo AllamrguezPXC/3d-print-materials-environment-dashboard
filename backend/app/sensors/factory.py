@@ -3,6 +3,7 @@ import random
 
 from app.models.sensor import Sensor
 from app.sensors.base import SensorReader
+from app.sensors.dracal_cli import DracalCliSensorReader
 from app.sensors.dracal_vcp import DracalVcpSensorReader
 from app.sensors.mock import MockSensorReader
 
@@ -24,6 +25,9 @@ def _seed_for_serial(serial_number: str) -> int:
 def _build_reader(sensor: Sensor) -> SensorReader:
     if sensor.sensor_type == "dracal_vcp":
         return DracalVcpSensorReader(port=sensor.port, expected_serial=sensor.serial_number)
+
+    if sensor.sensor_type == "dracal_cli":
+        return DracalCliSensorReader(serial_number=sensor.serial_number)
 
     if sensor.sensor_type == "mock":
         seed = _seed_for_serial(sensor.serial_number)

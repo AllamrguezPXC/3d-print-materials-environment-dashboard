@@ -37,8 +37,10 @@ copy ..\.env.example .env   # Windows; cp ../.env.example .env on macOS/Linux �
 The API is now at `http://localhost:8000` (interactive docs at `http://localhost:8000/docs`).
 On first run it creates `backend/environment_monitor.db` (SQLite) and seeds default material
 profiles, 7 Bambu Lab printers, the real Dracal sensor record (serial `E25877`), a few
-independently-simulated mock sensors/locations (serials `MOCK-0001`, `MOCK-0002`, ...), and demo
-filament spools — safe to restart repeatedly (seeding is idempotent).
+independently-simulated mock sensors/locations (serials `MOCK-0001`, `MOCK-0002`, ...), a full
+4-slot AMS demo on `P1S #1`, and demo filament spools — safe to restart repeatedly (seeding is
+idempotent). If you're updating from an older clone, delete `backend/environment_monitor.db` before
+restarting `uvicorn` — this project has no migration tool, so schema changes require a fresh DB.
 
 ### Frontend
 
@@ -58,8 +60,9 @@ cd backend
 .venv\Scripts\python -m pytest -q
 ```
 
-87+ tests cover the three required endpoints, the sensor abstraction (mock drift/bounds, Dracal
-VCP parser), material profile alert evaluation, drying recommendations, and CRUD for every entity.
+116+ tests cover the three required endpoints, the sensor abstraction (mock drift/bounds, Dracal
+VCP parser, per-sensor factory), material profile alert evaluation, drying recommendations, serial
+port detection/test-read (mocked, no real hardware dependency), and CRUD for every entity.
 
 ## Sensors
 
@@ -74,6 +77,11 @@ is no global sensor mode. Each row picks its own implementation via `sensor_type
 - `dracal_vcp` — reads real Dracal VCP-PTH450 serial lines over the sensor row's own `port` (e.g.
   `COM3`) and validates against its own `serial_number` (e.g. `E25877`). Requires a non-empty
   `port`, enforced on create/update.
+- `dracal_cli` — reads a real Dracal USB sensor via the vendor's `dracal-usb-get` CLI tool instead
+  of a virtual COM port, for devices whose Windows driver binds to the generic USB class rather
+  than CDC/VCP (so no serial port is ever exposed). Identifies its device via `serial_number` only
+  — no `port` required. Configure the CLI tool's location once via `DRACAL_CLI_EXECUTABLE` if it
+  isn't on `PATH`.
 
 `GET /readings/current` returns one entry per active sensor (see the endpoint table below) — a
 failing physical sensor's error is isolated to its own entry and never blocks the others or
@@ -89,8 +97,10 @@ These three endpoints are mandatory and are covered by pytest:
 | `POST /readings` | Capture-and-persist from every active sensor (empty body), or persist a validated manual/mock reading (body present) |
 | `GET /readings?from=&to=` | Historical readings, optionally `aggregate=hour` for hourly averages |
 
-Extended REST endpoints exist for sensors, printers, locations, materials, spools, assignments,
-alerts, and drying recommendations/sessions — see `http://localhost:8000/docs` once running.
+Extended REST endpoints exist for sensors (including `GET /sensors/ports` serial-port detection and
+`POST /sensors/{id}/test-read`), printers, locations (including AMS `slot_index`), materials,
+spools, assignments, alerts, and drying recommendations/sessions — see `http://localhost:8000/docs`
+once running.
 
 ## Project structure
 
@@ -107,7 +117,8 @@ frontend/src/
   api/             typed fetch client + per-resource wrappers
   components/ui/   shadcn/ui primitives (Button, Card, Badge, Select, Dialog, Table, ...)
   components/      app-specific UI (StatusBadge, forms, panels, charts, layout, theme toggle)
-  pages/           one file per route (Dashboard, History, Printers, Materials, Spools, Drying, Settings)
+  pages/           one file per route (Dashboard, History, Printers, PrinterDetail, Materials,
+                   Spools, Sensors, Drying, Settings)
   hooks/           useTheme, useNotice, useRefreshInterval, useResource + hooks/resources/*
   lib/             cn() helper, status-variant map, TanStack Query client
   types/           TypeScript interfaces mirroring backend schemas

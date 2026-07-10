@@ -9,6 +9,7 @@ import {
   Menu,
   Package,
   Printer,
+  Radio,
   Settings as SettingsIcon,
   Thermometer,
   WifiOff,
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { to: "/printers", label: "Printers & Locations", end: false, icon: Printer },
   { to: "/materials", label: "Materials", end: false, icon: Boxes },
   { to: "/spools", label: "Spools", end: false, icon: Package },
+  { to: "/sensors", label: "Sensors", end: false, icon: Radio },
   { to: "/drying", label: "Drying", end: false, icon: Droplets },
   { to: "/settings", label: "Settings", end: false, icon: SettingsIcon },
 ] as const;

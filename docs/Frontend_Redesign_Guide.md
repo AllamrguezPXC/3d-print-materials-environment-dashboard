@@ -192,18 +192,32 @@ does not control the dryer directly — this is validation/tracking only.
 
 ## 9. Known limitations / deferred ideas
 
-- **`SensorStatusGrid`** (suggested by Requirements.md §14.2) was deliberately not built —
-  `GET /readings/current` reflects one configured sensor at a time, so a multi-sensor grid would
-  require N parallel per-sensor queries not motivated by any pain point found in the audit. Revisit
-  if the app grows a genuine multi-sensor-at-a-glance need.
+- **`SensorStatusGrid`** (suggested by Requirements.md §14.2) — superseded. `GET /readings/current`
+  now returns one entry per active sensor (see `docs/Tareas/eliminar-sensor-mode-global/`), and the
+  per-sensor `SensorReadingSection` cards on Dashboard satisfy the original need. The `/sensors`
+  admin CRUD page (`pages/Sensors.tsx`), previously listed here as deferred, is now built as part of
+  `docs/Tareas/printer-ams-sensor-config/TASK.md`, including serial-port detection and test-read.
 - No live sensor-trend chart *during* an active drying session — Requirements §11.6 only asks to
   "review measured trend," which the existing `/history` page (filterable by sensor/location)
   already covers well enough for this MVP.
 - No `react-hook-form`/`zod` — forms are simple `useState` objects; revisit only if a form grows
   complex cross-field validation.
-- The main JS bundle is ~790 kB (Vite warns above 500 kB) — acceptable for a local-first assignment
+- The main JS bundle is ~808 kB (Vite warns above 500 kB) — acceptable for a local-first assignment
   app; code-splitting via route-based `React.lazy()` would be the next step if bundle size ever
   becomes a real concern.
+- **Deferred from `docs/Tareas/printer-ams-sensor-config/TASK.md` (Phase 1 of the Bambu-Studio-inspired
+  printer/AMS/filament redesign)** — not built, by explicit scope decision against this project's
+  "keep the MVP focused" constraint:
+  - Full "Filament Manager" redesign (filters/search/grouping) — `/spools` stays a plain table.
+  - A simulated "Read from AMS" import flow (no real Bambu Studio/AMS integration exists to read from).
+  - Sensor-inheritance resolution UI (printer → AMS → slot → location) — a slot's sensor is whatever
+    sensor row has that slot's `location_id`, resolved implicitly, not surfaced as an explicit chain.
+  - `MaterialProfile` nozzle/bed print-temperature fields and a manufacturer-override chain — the
+    model remains environmental/drying-only; no schema migration tool exists to add these safely yet.
+  - A `Printer`-level filament-system-type selector (AMS / External Spool / Storage-only / Manual) —
+    `Printer` has no such column; AMS-ness today is inferred from whether `printer_ams`-typed
+    `Location` rows exist for that printer.
+  - A color picker for filament color — still a free-text string, no new dependency added.
 
 ## 10. Migration notes for contributors
 

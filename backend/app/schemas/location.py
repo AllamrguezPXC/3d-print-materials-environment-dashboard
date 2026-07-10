@@ -8,6 +8,7 @@ class LocationBase(BaseModel):
     description: str | None = None
     max_temp_c: float | None = None
     notes: str | None = None
+    slot_index: int | None = None  # only meaningful for location_type == "printer_ams"
 
 
 class LocationCreate(LocationBase):
@@ -21,6 +22,7 @@ class LocationUpdate(BaseModel):
     description: str | None = None
     max_temp_c: float | None = None
     notes: str | None = None
+    slot_index: int | None = None
 
 
 class LocationRead(LocationBase):

@@ -9,6 +9,8 @@ import type {
   MaterialProfile,
   Printer,
   Sensor,
+  SensorPortInfo,
+  SensorTestReadResult,
   SpoolAssignment,
 } from "../types/api";
 
@@ -52,6 +54,11 @@ export const assignmentsApi = {
 
 export const sensorsApi = {
   list: () => api.get<Sensor[]>("/sensors"),
+  create: (body: Partial<Sensor>) => api.post<Sensor>("/sensors", body),
+  update: (id: number, body: Partial<Sensor>) => api.patch<Sensor>(`/sensors/${id}`, body),
+  remove: (id: number) => api.delete(`/sensors/${id}`),
+  ports: () => api.get<SensorPortInfo[]>("/sensors/ports"),
+  testRead: (id: number) => api.post<SensorTestReadResult>(`/sensors/${id}/test-read`),
 };
 
 export const dryingApi = {

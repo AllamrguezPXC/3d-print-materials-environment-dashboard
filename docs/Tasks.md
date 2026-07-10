@@ -36,7 +36,7 @@ This task list is designed for an intermediate developer working with Claude Cod
 - [x] Ensure mock values drift realistically over time.
 - [x] Add tests confirming mock readings include temperature, humidity, pressure, and timestamps.
 - [x] Add tests confirming mock readings remain within configured safe bounds.
-- [x] Add a sensor factory that chooses `mock`, `dracal_vcp`, or `dracal_cli` per Sensor DB row (superseded: `get_sensor_reader_for_sensor(sensor)` replaced the earlier settings/`SENSOR_MODE`-driven `get_sensor_reader(settings)` — see Phase 15). `mock` and `dracal_vcp` implemented and tested; `dracal_cli` intentionally not implemented — Requirements.md section 10.1 marks `DracalCliSensorReader` as optional and it was out of scope for this MVP. Factory raises a clear `ValueError` if `dracal_cli` is configured.
+- [x] Add a sensor factory that chooses `mock`, `dracal_vcp`, or `dracal_cli` per Sensor DB row (superseded: `get_sensor_reader_for_sensor(sensor)` replaced the earlier settings/`SENSOR_MODE`-driven `get_sensor_reader(settings)` — see Phase 15). `mock`, `dracal_vcp`, and `dracal_cli` all implemented and tested (`dracal_cli` added in Phase 19 — see `backend/app/sensors/dracal_cli.py` — for Dracal devices whose Windows driver exposes them as a generic USB device rather than a virtual COM port, so no `port` is required for that type).
 
 ## Phase 3 — TDD Cycle for Required Endpoint
 
@@ -225,6 +225,79 @@ See `docs/Tareas/eliminar-sensor-mode-global/TASK.md` for the full task record.
 - [x] Full backend `pytest` green (110 passed), frontend `tsc -b`/`build`/`lint`
   clean, Playwright MCP verification (multi-sensor view, empty state, isolated
   real-sensor error, theme toggle, Settings page).
+
+## Phase 18 — Printer Detail View, AMS Slot Grid, Sensor Port Detection (Phase 1)
+
+See `docs/Tareas/printer-ams-sensor-config/TASK.md` for the full task record. A
+Bambu-Studio-inspired redesign was requested (17 sections); scoped to a
+right-sized Phase 1 per CLAUDE.md's "keep the MVP focused" constraint, agreed
+with the user via `AskUserQuestion`. Phase 2+ items are documented as deferred
+in `docs/Frontend_Redesign_Guide.md` §9, not built here.
+
+- [x] Add `Location.slot_index: int | None` (only meaningful for
+  `location_type == "printer_ams"`) so a printer's AMS slots render in a
+  stable order; no new `AmsUnit`/slot model.
+- [x] Seed: backfill `slot_index=0` on the existing `A1 mini #1` AMS location;
+  seed a full 4-slot AMS (`slot_index` 0-3) for `P1S #1` as a real multi-slot
+  demo. Every other printer has no seeded AMS and shows an explicit "No AMS
+  configured" state — never a fabricated grid.
+- [x] Add `GET /sensors/ports` (wraps `serial.tools.list_ports.comports()`,
+  zero new dependencies) and `POST /sensors/{id}/test-read` (wraps the
+  existing per-sensor reader factory; never persists a `Reading`, never
+  raises a 5xx for a hardware failure).
+- [x] Frontend: `PrinterDetail.tsx` (`/printers/:id`) reusing
+  `SensorReadingSection`/`AlertPanel`/`AffectedSpoolsPanel` unmodified;
+  `AmsSlotGrid`/`AmsSlotButton` (real spool/material data per slot);
+  `SlotAssignmentModal` (composes existing `Dialog`/`Select`, not a new modal
+  system); `HumidityScale` (client-side A-E "DRY → WET" grade, no backend
+  change); `Sensors.tsx` admin page (closes the previously-deferred
+  `/sensors` CRUD gap) with `PortSelect` (detected-port dropdown + manual
+  "Scan", pairs with a plain text input so a port can always be typed
+  manually) and an inline test-read button.
+- [x] New/extended backend tests: `test_locations.py` (`slot_index`
+  create/seed ordering), `test_sensors.py` (ports mocked via
+  `serial.tools.list_ports`, test-read success/error/404, no real hardware
+  dependency).
+- [x] Full backend `pytest` green (116 passed), frontend `tsc -b`/`build`/`lint`
+  clean, Playwright MCP verification: P1S #1 shows 4 real slots, A1 mini #2
+  (no seeded AMS) shows the explicit empty state, mock sensor creation with
+  serial `E25877` still rejected (422), live port scan returns real detected
+  COM ports, test-read returns a real mock-sensor reading inline.
+- [x] Update `docs/Requirements.md` (§6, §12.2, §14.1, §14.2),
+  `docs/Frontend_Redesign_Guide.md` §9 (reconciled the `SensorStatusGrid`
+  note, listed Phase 2+ deferred items), `README.md`.
+
+## Phase 19 — Implement DracalCliSensorReader (Real-Hardware Validation)
+
+See `docs/Tareas/dracal-cli-sensor-reader/TASK.md` for the full task record.
+Live validation of Phase 18's port detection against the user's real Dracal
+sensor (serial `E27297`) found it exposes no COM port at all — its Windows
+driver binds to the generic USB class, not CDC/VCP (confirmed via
+`HKLM\HARDWARE\DEVICEMAP\SERIALCOMM` and Device Manager). The user pointed to
+Dracal's own `dracal-usb-get` CLI tool as the correct interface for this case
+— exactly the `sensor_type="dracal_cli"` already reserved in the schema
+(`VALID_SENSOR_TYPES`) but previously left unimplemented (factory raised
+`ValueError`).
+
+- [x] `DracalCliSensorReader` (`backend/app/sensors/dracal_cli.py`) — wraps
+  `subprocess.check_output(["dracal-usb-get", "-i", "0,1,2", "-s", serial])`,
+  parses `pressure_kPa, temperature_C, rh_percent`; a missing executable
+  propagates as `OSError` (already handled the same way `dracal_vcp` errors
+  are), malformed/non-numeric output raises `SensorParseError`.
+- [x] Relaxed `sensor_validation.py`: only `dracal_vcp` requires a non-empty
+  `port` — `dracal_cli` identifies its device via `serial_number` alone.
+- [x] New `Settings.dracal_cli_executable` (default `dracal-usb-get`, relies
+  on `PATH`; overridable for machines where the tool isn't on `PATH`).
+- [x] `SensorForm.tsx`'s port field/`PortSelect` no longer shown for
+  `dracal_cli`.
+- [x] New tests (`test_dracal_cli.py`, extended `test_factory.py`/
+  `test_sensors.py`) with `subprocess.check_output` mocked — no dependency
+  on the real CLI binary or hardware in CI. Full suite: 124 passed.
+- [x] Registered the user's real sensor (serial `E27297`, `sensor_type=dracal_cli`)
+  at a new location and confirmed a live, non-fabricated reading through
+  `GET /readings/current`.
+- [x] Updated `docs/Requirements.md` §10.1, `docs/Tasks.md`, `.env.example`,
+  `README.md`.
 
 ## Suggested Commit Sequence
 

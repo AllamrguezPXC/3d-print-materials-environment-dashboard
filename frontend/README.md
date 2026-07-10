@@ -24,8 +24,9 @@ npm run lint    # oxlint
 
 ## Routes
 
-`/` Dashboard · `/history` · `/printers` · `/materials` · `/spools` · `/drying` (recommendations +
-drying session workflow) · `/settings`
+`/` Dashboard · `/history` · `/printers` · `/printers/:id` (per-printer detail: environment, AMS
+slot grid, slot assignment) · `/materials` · `/spools` · `/sensors` (CRUD, serial-port detection,
+test-read) · `/drying` (recommendations + drying session workflow) · `/settings`
 
 ## Adding a shadcn/ui component
 
