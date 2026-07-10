@@ -150,6 +150,7 @@ Frontend:
 cd frontend
 npm install
 npm run dev
+npm run test    # vitest run
 ```
 
 ## Evidence Requirements
