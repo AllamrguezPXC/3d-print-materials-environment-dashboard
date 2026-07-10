@@ -191,6 +191,19 @@ suite: 124 passed.
   `E27297` section renders with real temperature/RH/pressure/dew-point values under location
   "P1S-003", and the topbar badge correctly reads "4/5 sensors online".
 
+## Add Filament: Manual Add / Read from AMS
+
+Full task record: `docs/Tareas/read-from-ams-flow/TASK.md`. First item picked (via
+`AskUserQuestion`) from Phase 18's documented Phase 2+ deferred list. Frontend-only, no backend
+changes — reuses the AMS slot data (`Location.slot_index`) and `spoolsApi`/`assignmentsApi` already
+built. Playwright MCP verification, screenshot `evidence/frontend-verification/read-from-ams-import.png`:
+opened "Add Filament" on `/spools`, switched to "Read from AMS", selected `P1S #1` (the only other
+seeded AMS besides `A1 mini #1`, whose single slot correctly showed as disabled/"Assigned"),
+multi-selected 2 of its 4 empty slots, filled in one shared material (ASA / Bambu Lab / Gray), and
+confirmed a single submit created 2 real spools assigned to `AMS Slot 1`/`AMS Slot 2 - P1S #1` —
+visible immediately in both `/spools`'s table and `PrinterDetail`'s AMS grid (A1/A2 now loaded,
+A3/A4 still empty, no fabricated data).
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

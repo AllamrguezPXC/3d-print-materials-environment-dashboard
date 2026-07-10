@@ -299,6 +299,33 @@ Dracal's own `dracal-usb-get` CLI tool as the correct interface for this case
 - [x] Updated `docs/Requirements.md` §10.1, `docs/Tasks.md`, `.env.example`,
   `README.md`.
 
+## Phase 20 — Add Filament: Manual Add / Read from AMS
+
+See `docs/Tareas/read-from-ams-flow/TASK.md` for the full task record. The
+first item picked from Phase 18's documented Phase 2+ deferred list (user
+chose via `AskUserQuestion` from three options).
+
+- [x] `ReadFromAmsPanel.tsx` — reads the AMS slots this project already
+  tracks explicitly (`Location.slot_index`, from Phase 18), not any real
+  hardware auto-detection; only printers with at least one seeded AMS
+  location appear in the picker; only currently-empty slots are selectable
+  (occupied ones already render correctly on the printer's own AMS grid);
+  supports multi-select ("Select all detected"/"Clear selection") and
+  batch-creates a spool + assignment per selected slot with one shared
+  material/brand/color/status entry.
+- [x] `AddFilamentModal.tsx` — `Dialog` + `Tabs` composing the existing
+  `SpoolForm` (Manual Add, unchanged) and the new `ReadFromAmsPanel` (Read
+  from AMS) — not a new form system.
+- [x] `Spools.tsx` — the former inline "Add spool" card is replaced by an
+  "Add Filament" button opening the modal; the assignment table and
+  per-row `SpoolAssignmentForm` are untouched. No backend changes.
+- [x] `tsc -b`/`build`/`lint` clean. Playwright MCP verification: `P1S #1`
+  (4 empty AMS slots) — selected 2, filled in ASA/Bambu Lab/Gray once,
+  submitted, and confirmed 2 new spools appeared in both `/spools`'s table
+  and `PrinterDetail`'s AMS grid (A1/A2 now loaded, A3/A4 still empty).
+- [x] Updated `docs/Frontend_Redesign_Guide.md` §9 (marked "Read from AMS"
+  done, reconciled the deferred-list entry).
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

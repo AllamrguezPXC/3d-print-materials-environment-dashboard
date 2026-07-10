@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AddFilamentModal } from "@/components/AddFilamentModal";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { SpoolAssignmentForm } from "@/components/SpoolAssignmentForm";
-import { SpoolForm, type SpoolFormValues } from "@/components/SpoolForm";
+import type { AmsImportValues } from "@/components/ReadFromAmsPanel";
+import { type SpoolFormValues } from "@/components/SpoolForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useNotice } from "@/hooks/useNotice";
 import { useAssignments, useCreateAssignment } from "@/hooks/resources/assignments";
 import { useLocations } from "@/hooks/resources/locations";
 import { useMaterials } from "@/hooks/resources/materials";
+import { usePrinters } from "@/hooks/resources/printers";
 import { useCreateSpool, useSpools } from "@/hooks/resources/spools";
 import type { Location } from "@/types/api";
 
@@ -19,11 +23,13 @@ export function Spools() {
   const { data: materials = [] } = useMaterials();
   const { data: locations = [] } = useLocations();
   const { data: assignments = [] } = useAssignments();
+  const { data: printers = [] } = usePrinters();
   const { notice, notifySuccess, notifyError } = useNotice();
 
   const createSpool = useCreateSpool();
   const createAssignment = useCreateAssignment();
 
+  const [modalOpen, setModalOpen] = useState(false);
   const [newSpool, setNewSpool] = useState<SpoolFormValues>(EMPTY_SPOOL);
   const [assignmentDraft, setAssignmentDraft] = useState<Record<number, string>>({});
 
@@ -44,10 +50,29 @@ export function Spools() {
         onSuccess: () => {
           notifySuccess(`Spool "${newSpool.brand}" added.`);
           setNewSpool(EMPTY_SPOOL);
+          setModalOpen(false);
         },
         onError: (err) => notifyError(err.message),
       },
     );
+  }
+
+  async function handleImportFromAms(slotLocationIds: number[], values: AmsImportValues) {
+    try {
+      for (const locationId of slotLocationIds) {
+        const spool = await createSpool.mutateAsync({
+          material_profile_id: values.material_profile_id,
+          brand: values.brand,
+          color: values.color || null,
+          status: values.status,
+        });
+        await createAssignment.mutateAsync({ spool_id: spool.id, location_id: locationId, is_active: true });
+      }
+      notifySuccess(`${slotLocationIds.length} filament${slotLocationIds.length > 1 ? "s" : ""} added from AMS.`);
+      setModalOpen(false);
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
   }
 
   function handleAssign(spoolId: number) {
@@ -72,7 +97,10 @@ export function Spools() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-heading font-semibold">Filament Spools</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-heading font-semibold">Filament Spools</h1>
+        <Button onClick={() => setModalOpen(true)}>Add Filament</Button>
+      </div>
       <NoticeBanner notice={notice} />
 
       <Card>
@@ -118,17 +146,20 @@ export function Spools() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent>
-          <SpoolForm
-            value={newSpool}
-            onChange={setNewSpool}
-            onSubmit={handleAddSpool}
-            materials={materials}
-            submitting={createSpool.isPending}
-          />
-        </CardContent>
-      </Card>
+      <AddFilamentModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        materials={materials}
+        printers={printers}
+        locations={locations}
+        assignments={assignments}
+        manualValue={newSpool}
+        onManualChange={setNewSpool}
+        onManualSubmit={handleAddSpool}
+        manualSubmitting={createSpool.isPending}
+        onImportFromAms={handleImportFromAms}
+        importSubmitting={createSpool.isPending || createAssignment.isPending}
+      />
     </div>
   );
 }
