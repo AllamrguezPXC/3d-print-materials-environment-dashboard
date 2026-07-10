@@ -1,6 +1,9 @@
 import { api } from "./client";
 import type {
   DryingRecommendation,
+  DryingSessionCreate,
+  DryingSessionRead,
+  DryingSessionUpdate,
   FilamentSpool,
   Location,
   MaterialProfile,
@@ -53,4 +56,16 @@ export const sensorsApi = {
 
 export const dryingApi = {
   recommendations: () => api.get<DryingRecommendation[]>("/drying/recommendations"),
+  sessions: {
+    list: (params?: { spoolId?: number; status?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.spoolId !== undefined) query.set("spool_id", String(params.spoolId));
+      if (params?.status) query.set("status", params.status);
+      const qs = query.toString();
+      return api.get<DryingSessionRead[]>(`/drying/sessions${qs ? `?${qs}` : ""}`);
+    },
+    create: (body: DryingSessionCreate) => api.post<DryingSessionRead>("/drying/sessions", body),
+    update: (id: number, body: DryingSessionUpdate) =>
+      api.patch<DryingSessionRead>(`/drying/sessions/${id}`, body),
+  },
 };

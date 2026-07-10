@@ -1,19 +1,34 @@
-import type { DryingRecommendation } from "../types/api";
+import { Droplets } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { StatusBadge } from "@/components/StatusBadge";
+import type { DryingRecommendation } from "@/types/api";
 
-function statusBadgeClass(status: DryingRecommendation["current_status"]): string {
-  if (status === "critical") return "badge badge-critical";
-  if (status === "warning") return "badge badge-warning";
-  return "badge badge-ok";
+interface DryingRecommendationCardProps {
+  rec: DryingRecommendation;
+  onStartSession?: (rec: DryingRecommendation) => void;
 }
 
-export function DryingRecommendationCard({ rec }: { rec: DryingRecommendation }) {
+export function DryingRecommendationCard({ rec, onStartSession }: DryingRecommendationCardProps) {
   return (
-    <div className="card" style={{ marginBottom: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong>{rec.material_profile_name} — spool #{rec.spool_id}</strong>
-        <span className={statusBadgeClass(rec.current_status)}>{rec.current_status}</span>
-      </div>
-      <p style={{ marginTop: 8 }}>{rec.message}</p>
-    </div>
+    <Card>
+      <CardContent className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 font-medium">
+            <Droplets className="size-4 text-muted-foreground" />
+            {rec.material_profile_name} — spool #{rec.spool_id}
+          </div>
+          <StatusBadge status={rec.current_status} />
+        </div>
+        <p className="text-sm text-muted-foreground">{rec.message}</p>
+        {onStartSession && (
+          <div>
+            <Button size="sm" variant="outline" onClick={() => onStartSession(rec)}>
+              Start drying session
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

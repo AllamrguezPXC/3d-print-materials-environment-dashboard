@@ -1,43 +1,52 @@
 import { useState } from "react";
-
-const REFRESH_STORAGE_KEY = "dashboard-refresh-interval-ms";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getStoredRefreshInterval, REFRESH_STORAGE_KEY } from "@/hooks/useRefreshInterval";
 
 export function Settings() {
-  const [refreshMs, setRefreshMs] = useState(
-    Number(localStorage.getItem(REFRESH_STORAGE_KEY)) || 3000,
-  );
+  const [refreshMs, setRefreshMs] = useState(getStoredRefreshInterval);
 
-  function handleChange(value: number) {
-    setRefreshMs(value);
-    localStorage.setItem(REFRESH_STORAGE_KEY, String(value));
+  function handleChange(value: string) {
+    const ms = Number(value);
+    setRefreshMs(ms);
+    localStorage.setItem(REFRESH_STORAGE_KEY, String(ms));
   }
 
   return (
-    <div>
-      <h2>Settings</h2>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-heading font-semibold">Settings</h1>
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-label">Sensor mode</div>
-        <p>
-          Sensor mode is configured server-side via the <code>SENSOR_MODE</code> environment
-          variable (default <code>mock</code>). See <code>backend/.env.example</code>.
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Sensor mode</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Sensor mode is configured server-side via the <code className="rounded bg-muted px-1 py-0.5">SENSOR_MODE</code> environment
+            variable (default <code className="rounded bg-muted px-1 py-0.5">mock</code>). See{" "}
+            <code className="rounded bg-muted px-1 py-0.5">backend/.env.example</code>.
+          </p>
+        </CardContent>
+      </Card>
 
-      <div className="card">
-        <div className="card-label">Dashboard refresh interval</div>
-        <label>
-          Poll every{" "}
-          <select value={refreshMs} onChange={(e) => handleChange(Number(e.target.value))}>
-            <option value={2000}>2 seconds</option>
-            <option value={3000}>3 seconds</option>
-            <option value={5000}>5 seconds</option>
-          </select>
-        </label>
-        <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 8 }}>
-          Applies on next Dashboard page load.
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Dashboard refresh interval</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <Select value={String(refreshMs)} onValueChange={handleChange}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2000">Every 2 seconds</SelectItem>
+              <SelectItem value="3000">Every 3 seconds</SelectItem>
+              <SelectItem value="5000">Every 5 seconds</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Applies next time the Dashboard page loads.</p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

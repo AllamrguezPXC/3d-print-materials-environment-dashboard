@@ -1,46 +1,46 @@
-import type { AlertOut } from "../types/api";
-
-function severityBadgeClass(severity: AlertOut["severity"]): string {
-  if (severity === "critical") return "badge badge-critical";
-  if (severity === "warning") return "badge badge-warning";
-  return "badge badge-ok";
-}
+import { AlertTriangle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { AlertOut } from "@/types/api";
 
 export function AlertPanel({ alerts }: { alerts: AlertOut[] }) {
-  if (alerts.length === 0) {
-    return (
-      <div className="card">
-        <div className="card-label">Alerts</div>
-        <p className="empty-state">No active alerts.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="card">
-      <div className="card-label">Alerts</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Severity</th>
-            <th>Metric</th>
-            <th>Message</th>
-            <th>Recommended action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {alerts.map((alert, idx) => (
-            <tr key={alert.id ?? idx}>
-              <td>
-                <span className={severityBadgeClass(alert.severity)}>{alert.severity}</span>
-              </td>
-              <td>{alert.metric}</td>
-              <td>{alert.message}</td>
-              <td>{alert.recommended_action ?? "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <AlertTriangle className="size-4 text-muted-foreground" />
+          Alerts
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {alerts.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">No active alerts.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Severity</TableHead>
+                <TableHead>Metric</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead>Recommended action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {alerts.map((alert, idx) => (
+                <TableRow key={alert.id ?? idx}>
+                  <TableCell>
+                    <StatusBadge status={alert.severity} />
+                  </TableCell>
+                  <TableCell className="capitalize">{alert.metric.replaceAll("_", " ")}</TableCell>
+                  <TableCell className="whitespace-normal">{alert.message}</TableCell>
+                  <TableCell className="whitespace-normal">{alert.recommended_action ?? "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }

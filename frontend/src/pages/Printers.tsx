@@ -1,202 +1,170 @@
-import { useEffect, useState } from "react";
-import { NoticeBanner } from "../components/NoticeBanner";
-import { useNotice } from "../hooks/useNotice";
-import { locationsApi, printersApi } from "../api/config";
-import type { Location, Printer } from "../types/api";
+import { useState } from "react";
+import { Printer as PrinterIcon } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { NoticeBanner } from "@/components/NoticeBanner";
+import { LocationForm, type LocationFormValues } from "@/components/LocationForm";
+import { PrinterForm, type PrinterFormValues } from "@/components/PrinterForm";
+import { useNotice } from "@/hooks/useNotice";
+import {
+  useCreateLocation,
+  useLocations,
+  useRemoveLocation,
+} from "@/hooks/resources/locations";
+import { useCreatePrinter, usePrinters, useRemovePrinter } from "@/hooks/resources/printers";
 
-const BAMBU_MODELS = ["A1 mini", "P1S", "P1P", "X1 Carbon", "Other"];
-const LOCATION_TYPES = ["printer_ams", "printer_external_spool", "storage_box", "dry_box", "dryer", "room"];
+const EMPTY_PRINTER: PrinterFormValues = { name: "", brand: "Bambu Lab", model: "A1 mini" };
+const EMPTY_LOCATION: LocationFormValues = { name: "", location_type: "printer_ams", printer_id: "" };
 
 export function Printers() {
-  const [printers, setPrinters] = useState<Printer[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
+  const { data: printers = [] } = usePrinters();
+  const { data: locations = [] } = useLocations();
   const { notice, notifySuccess, notifyError } = useNotice();
 
-  const [newPrinter, setNewPrinter] = useState({ name: "", brand: "Bambu Lab", model: BAMBU_MODELS[0] });
-  const [newLocation, setNewLocation] = useState({ name: "", location_type: LOCATION_TYPES[0], printer_id: "" });
+  const createPrinter = useCreatePrinter();
+  const removePrinter = useRemovePrinter();
+  const createLocation = useCreateLocation();
+  const removeLocation = useRemoveLocation();
 
-  async function refresh() {
-    try {
-      const [p, l] = await Promise.all([printersApi.list(), locationsApi.list()]);
-      setPrinters(p);
-      setLocations(l);
-    } catch (err) {
-      notifyError((err as Error).message);
-    }
-  }
+  const [newPrinter, setNewPrinter] = useState(EMPTY_PRINTER);
+  const [newLocation, setNewLocation] = useState(EMPTY_LOCATION);
 
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  async function handleAddPrinter(e: React.FormEvent) {
+  function handleAddPrinter(e: React.FormEvent) {
     e.preventDefault();
     if (!newPrinter.name.trim()) {
       notifyError("Printer name is required.");
       return;
     }
-    try {
-      await printersApi.create(newPrinter);
-      setNewPrinter({ name: "", brand: "Bambu Lab", model: BAMBU_MODELS[0] });
-      notifySuccess(`Printer "${newPrinter.name}" added.`);
-      refresh();
-    } catch (err) {
-      notifyError((err as Error).message);
-    }
+    createPrinter.mutate(newPrinter, {
+      onSuccess: () => {
+        notifySuccess(`Printer "${newPrinter.name}" added.`);
+        setNewPrinter(EMPTY_PRINTER);
+      },
+      onError: (err) => notifyError(err.message),
+    });
   }
 
-  async function handleAddLocation(e: React.FormEvent) {
+  function handleAddLocation(e: React.FormEvent) {
     e.preventDefault();
     if (!newLocation.name.trim()) {
       notifyError("Location name is required.");
       return;
     }
-    try {
-      await locationsApi.create({
+    createLocation.mutate(
+      {
         name: newLocation.name,
         location_type: newLocation.location_type,
         printer_id: newLocation.printer_id ? Number(newLocation.printer_id) : null,
-      });
-      setNewLocation({ name: "", location_type: LOCATION_TYPES[0], printer_id: "" });
-      notifySuccess(`Location "${newLocation.name}" added.`);
-      refresh();
-    } catch (err) {
-      notifyError((err as Error).message);
-    }
+      },
+      {
+        onSuccess: () => {
+          notifySuccess(`Location "${newLocation.name}" added.`);
+          setNewLocation(EMPTY_LOCATION);
+        },
+        onError: (err) => notifyError(err.message),
+      },
+    );
   }
 
-  async function handleDeletePrinter(id: number) {
-    try {
-      await printersApi.remove(id);
-      notifySuccess("Printer deleted.");
-      refresh();
-    } catch (err) {
-      notifyError((err as Error).message);
-    }
+  function handleDeletePrinter(id: number) {
+    removePrinter.mutate(id, {
+      onSuccess: () => notifySuccess("Printer deleted."),
+      onError: (err) => notifyError(err.message),
+    });
   }
 
-  async function handleDeleteLocation(id: number) {
-    try {
-      await locationsApi.remove(id);
-      notifySuccess("Location deleted.");
-      refresh();
-    } catch (err) {
-      notifyError((err as Error).message);
-    }
+  function handleDeleteLocation(id: number) {
+    removeLocation.mutate(id, {
+      onSuccess: () => notifySuccess("Location deleted."),
+      onError: (err) => notifyError(err.message),
+    });
   }
 
   return (
-    <div>
-      <h2>Printers & Locations</h2>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-heading font-semibold">Printers & Locations</h1>
       <NoticeBanner notice={notice} />
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-label">Printers</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Brand</th>
-              <th>Model</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {printers.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td>{p.brand}</td>
-                <td>{p.model}</td>
-                <td>
-                  <button onClick={() => handleDeletePrinter(p.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <form onSubmit={handleAddPrinter} style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <input
-            placeholder="Name (e.g. A1 mini #5)"
-            value={newPrinter.name}
-            onChange={(e) => setNewPrinter({ ...newPrinter, name: e.target.value })}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PrinterIcon className="size-4 text-muted-foreground" />
+            Printers
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Brand</TableHead>
+                <TableHead>Model</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {printers.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell>{p.brand}</TableCell>
+                  <TableCell>{p.model}</TableCell>
+                  <TableCell>
+                    <Button variant="destructive" size="sm" onClick={() => handleDeletePrinter(p.id)}>
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <PrinterForm
+            value={newPrinter}
+            onChange={setNewPrinter}
+            onSubmit={handleAddPrinter}
+            submitting={createPrinter.isPending}
           />
-          <input
-            placeholder="Brand"
-            value={newPrinter.brand}
-            onChange={(e) => setNewPrinter({ ...newPrinter, brand: e.target.value })}
-          />
-          <select
-            value={newPrinter.model}
-            onChange={(e) => setNewPrinter({ ...newPrinter, model: e.target.value })}
-          >
-            {BAMBU_MODELS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-          <button className="primary" type="submit">
-            Add printer
-          </button>
-        </form>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="card">
-        <div className="card-label">Locations</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Printer</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {locations.map((l) => (
-              <tr key={l.id}>
-                <td>{l.name}</td>
-                <td>{l.location_type}</td>
-                <td>{printers.find((p) => p.id === l.printer_id)?.name ?? "—"}</td>
-                <td>
-                  <button onClick={() => handleDeleteLocation(l.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <form onSubmit={handleAddLocation} style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <input
-            placeholder="Name (e.g. AMS Slot 2)"
-            value={newLocation.name}
-            onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+      <Card>
+        <CardHeader>
+          <CardTitle>Locations</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Printer</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {locations.map((l) => (
+                <TableRow key={l.id}>
+                  <TableCell className="font-medium">{l.name}</TableCell>
+                  <TableCell className="capitalize">{l.location_type.replaceAll("_", " ")}</TableCell>
+                  <TableCell>{printers.find((p) => p.id === l.printer_id)?.name ?? "—"}</TableCell>
+                  <TableCell>
+                    <Button variant="destructive" size="sm" onClick={() => handleDeleteLocation(l.id)}>
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <LocationForm
+            value={newLocation}
+            onChange={setNewLocation}
+            onSubmit={handleAddLocation}
+            printers={printers}
+            submitting={createLocation.isPending}
           />
-          <select
-            value={newLocation.location_type}
-            onChange={(e) => setNewLocation({ ...newLocation, location_type: e.target.value })}
-          >
-            {LOCATION_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <select
-            value={newLocation.printer_id}
-            onChange={(e) => setNewLocation({ ...newLocation, printer_id: e.target.value })}
-          >
-            <option value="">No printer</option>
-            {printers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <button className="primary" type="submit">
-            Add location
-          </button>
-        </form>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

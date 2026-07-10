@@ -1,69 +1,77 @@
-import { useCallback } from "react";
-import { AffectedSpoolsPanel } from "../components/AffectedSpoolsPanel";
-import { AlertPanel } from "../components/AlertPanel";
-import { DryingRecommendationCard } from "../components/DryingRecommendationCard";
-import { ReadingCard } from "../components/ReadingCard";
-import { usePolling } from "../hooks/usePolling";
-import { getCurrentReading } from "../api/readings";
-import { dryingApi } from "../api/config";
-
-const POLL_INTERVAL_MS = 3000;
-const DRYING_POLL_INTERVAL_MS = 15000;
+import { useQuery } from "@tanstack/react-query";
+import { CloudFog, Droplets, Gauge, Thermometer } from "lucide-react";
+import { AffectedSpoolsPanel } from "@/components/AffectedSpoolsPanel";
+import { AlertPanel } from "@/components/AlertPanel";
+import { DryingRecommendationCard } from "@/components/DryingRecommendationCard";
+import { ReadingCard } from "@/components/ReadingCard";
+import { useDryingRecommendations } from "@/hooks/resources/drying";
+import { useRefreshInterval } from "@/hooks/useRefreshInterval";
+import { getCurrentReading } from "@/api/readings";
 
 export function Dashboard() {
-  const fetchCurrent = useCallback(() => getCurrentReading(), []);
-  const fetchDrying = useCallback(() => dryingApi.recommendations(), []);
+  const refreshInterval = useRefreshInterval();
+  const { data, error, isPending } = useQuery({
+    queryKey: ["current-reading"],
+    queryFn: getCurrentReading,
+    refetchInterval: refreshInterval,
+  });
+  const { data: recommendations = [] } = useDryingRecommendations();
 
-  const { data, error, loading } = usePolling(fetchCurrent, POLL_INTERVAL_MS);
-  const drying = usePolling(fetchDrying, DRYING_POLL_INTERVAL_MS);
-
-  if (loading && !data) {
-    return <p>Loading current reading…</p>;
+  if (isPending) {
+    return <p className="text-sm text-muted-foreground">Loading current reading…</p>;
   }
 
-  if (error && !data) {
-    return <p className="error-state">Could not reach the backend: {error.message}</p>;
+  if (error || !data) {
+    return (
+      <p className="text-sm text-destructive">
+        Could not reach the backend: {(error as Error)?.message ?? "unknown error"}
+      </p>
+    );
   }
-
-  if (!data) return null;
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Live Environment</h2>
-        <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-          {new Date(data.timestamp).toLocaleString()} · source: <strong>{data.source}</strong> · sensor{" "}
-          {data.sensor.serial_number}
-          {data.location ? (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+        <h1 className="text-xl font-heading font-semibold">Live Environment</h1>
+        <div className="text-sm text-muted-foreground">
+          {new Date(data.timestamp).toLocaleString()} · source <strong className="text-foreground">{data.source}</strong> ·
+          sensor {data.sensor.serial_number}
+          {data.location && (
             <>
               {" "}
-              · <strong>{data.location.name}</strong>
+              · <strong className="text-foreground">{data.location.name}</strong>
             </>
-          ) : null}
+          )}
         </div>
       </div>
 
-      <div className="card-grid">
-        <ReadingCard label="Temperature" value={`${data.temperature_c.toFixed(1)} °C`} />
-        <ReadingCard label="Relative Humidity" value={`${data.relative_humidity_percent.toFixed(1)} %`} />
-        <ReadingCard label="Pressure" value={`${data.pressure_kpa.toFixed(1)} kPa`} />
-        <ReadingCard label="Dew Point" value={`${data.dew_point_c.toFixed(1)} °C`} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <ReadingCard label="Temperature" value={`${data.temperature_c.toFixed(1)} °C`} icon={Thermometer} />
+        <ReadingCard
+          label="Relative Humidity"
+          value={`${data.relative_humidity_percent.toFixed(1)} %`}
+          icon={Droplets}
+        />
+        <ReadingCard label="Pressure" value={`${data.pressure_kpa.toFixed(1)} kPa`} icon={Gauge} />
+        <ReadingCard label="Dew Point" value={`${data.dew_point_c.toFixed(1)} °C`} icon={CloudFog} />
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <AlertPanel alerts={data.alerts} />
-      </div>
+      <AlertPanel alerts={data.alerts} />
 
-      <div style={{ marginBottom: 20 }}>
-        <AffectedSpoolsPanel spools={data.affected_spools} />
-      </div>
+      <AffectedSpoolsPanel spools={data.affected_spools} />
 
-      <h3>Drying Recommendations</h3>
-      {drying.data && drying.data.length > 0 ? (
-        drying.data.map((rec) => <DryingRecommendationCard key={rec.spool_id} rec={rec} />)
-      ) : (
-        <p className="empty-state">No spools currently need drying.</p>
-      )}
+      <div className="flex flex-col gap-3">
+        <h2 className="font-heading text-lg font-medium">Drying Recommendations</h2>
+        {recommendations.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No spools currently need drying.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {recommendations.map((rec) => (
+              <DryingRecommendationCard key={rec.spool_id} rec={rec} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

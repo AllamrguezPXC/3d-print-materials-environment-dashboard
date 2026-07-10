@@ -13,7 +13,9 @@ custom skills/hooks, GitHub integration).
 ## Stack
 
 - **Backend**: Python 3.11+, FastAPI, SQLAlchemy 2.x, SQLite, Pydantic v2, pytest
-- **Frontend**: React 19, TypeScript, Vite, React Router, Recharts
+- **Frontend**: React 19, TypeScript, Vite, React Router, Tailwind CSS v4, shadcn/ui (Radix UI),
+  TanStack Query, Recharts, lucide-react — see `docs/Frontend_Redesign_Guide.md` for the full
+  rationale behind this stack and the architecture it produced.
 
 ## Setup
 
@@ -55,7 +57,7 @@ cd backend
 .venv\Scripts\python -m pytest -q
 ```
 
-85+ tests cover the three required endpoints, the sensor abstraction (mock drift/bounds, Dracal
+87+ tests cover the three required endpoints, the sensor abstraction (mock drift/bounds, Dracal
 VCP parser), material profile alert evaluation, drying recommendations, and CRUD for every entity.
 
 ## Sensor modes
@@ -92,12 +94,17 @@ backend/app/
   sensors/       SensorReader abstraction: mock, Dracal VCP parser, factory
   db/            engine/session setup + idempotent startup seed
 frontend/src/
-  api/           typed fetch client + per-resource wrappers
-  components/    reusable UI (cards, alert panel, charts, theme toggle, layout)
-  pages/         one file per route (Dashboard, History, Printers, Materials, Spools, Drying, Settings)
-  hooks/         usePolling, useTheme
-  types/         TypeScript interfaces mirroring backend schemas
+  api/             typed fetch client + per-resource wrappers
+  components/ui/   shadcn/ui primitives (Button, Card, Badge, Select, Dialog, Table, ...)
+  components/      app-specific UI (StatusBadge, forms, panels, charts, layout, theme toggle)
+  pages/           one file per route (Dashboard, History, Printers, Materials, Spools, Drying, Settings)
+  hooks/           useTheme, useNotice, useRefreshInterval, useResource + hooks/resources/*
+  lib/             cn() helper, status-variant map, TanStack Query client
+  types/           TypeScript interfaces mirroring backend schemas
 ```
+
+See `docs/Frontend_Redesign_Guide.md` for the full frontend architecture, design-token system, and
+component-extension guide.
 
 ## Claude Code evidence
 

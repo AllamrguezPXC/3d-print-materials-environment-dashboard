@@ -1,81 +1,68 @@
-import { useEffect, useState } from "react";
-import { NoticeBanner } from "../components/NoticeBanner";
-import { useNotice } from "../hooks/useNotice";
-import { assignmentsApi, locationsApi, materialsApi, spoolsApi } from "../api/config";
-import type { FilamentSpool, Location, MaterialProfile, SpoolAssignment } from "../types/api";
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { NoticeBanner } from "@/components/NoticeBanner";
+import { SpoolAssignmentForm } from "@/components/SpoolAssignmentForm";
+import { SpoolForm, type SpoolFormValues } from "@/components/SpoolForm";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useNotice } from "@/hooks/useNotice";
+import { useAssignments, useCreateAssignment } from "@/hooks/resources/assignments";
+import { useLocations } from "@/hooks/resources/locations";
+import { useMaterials } from "@/hooks/resources/materials";
+import { useCreateSpool, useSpools } from "@/hooks/resources/spools";
+import type { Location } from "@/types/api";
 
-const STATUS_OPTIONS: FilamentSpool["status"][] = ["ready", "watch", "needs_drying", "quarantine", "unknown"];
+const EMPTY_SPOOL: SpoolFormValues = { material_profile_id: "", brand: "", color: "", status: "ready" };
 
 export function Spools() {
-  const [spools, setSpools] = useState<FilamentSpool[]>([]);
-  const [materials, setMaterials] = useState<MaterialProfile[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [assignments, setAssignments] = useState<SpoolAssignment[]>([]);
+  const { data: spools = [] } = useSpools();
+  const { data: materials = [] } = useMaterials();
+  const { data: locations = [] } = useLocations();
+  const { data: assignments = [] } = useAssignments();
   const { notice, notifySuccess, notifyError } = useNotice();
 
-  const [newSpool, setNewSpool] = useState({
-    material_profile_id: "",
-    brand: "",
-    color: "",
-    status: "ready" as FilamentSpool["status"],
-  });
+  const createSpool = useCreateSpool();
+  const createAssignment = useCreateAssignment();
+
+  const [newSpool, setNewSpool] = useState<SpoolFormValues>(EMPTY_SPOOL);
   const [assignmentDraft, setAssignmentDraft] = useState<Record<number, string>>({});
 
-  async function refresh() {
-    try {
-      const [s, m, l, a] = await Promise.all([
-        spoolsApi.list(),
-        materialsApi.list(),
-        locationsApi.list(),
-        assignmentsApi.list(),
-      ]);
-      setSpools(s);
-      setMaterials(m);
-      setLocations(l);
-      setAssignments(a);
-    } catch (err) {
-      notifyError((err as Error).message);
-    }
-  }
-
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  async function handleAddSpool(e: React.FormEvent) {
+  function handleAddSpool(e: React.FormEvent) {
     e.preventDefault();
     if (!newSpool.material_profile_id || !newSpool.brand.trim()) {
       notifyError("Material and brand are required.");
       return;
     }
-    try {
-      await spoolsApi.create({
+    createSpool.mutate(
+      {
         material_profile_id: Number(newSpool.material_profile_id),
         brand: newSpool.brand,
         color: newSpool.color || null,
         status: newSpool.status,
-      });
-      setNewSpool({ material_profile_id: "", brand: "", color: "", status: "ready" });
-      notifySuccess(`Spool "${newSpool.brand}" added.`);
-      refresh();
-    } catch (err) {
-      notifyError((err as Error).message);
-    }
+      },
+      {
+        onSuccess: () => {
+          notifySuccess(`Spool "${newSpool.brand}" added.`);
+          setNewSpool(EMPTY_SPOOL);
+        },
+        onError: (err) => notifyError(err.message),
+      },
+    );
   }
 
-  async function handleAssign(spoolId: number) {
+  function handleAssign(spoolId: number) {
     const locationId = assignmentDraft[spoolId];
     if (!locationId) {
       notifyError("Select a location before assigning.");
       return;
     }
-    try {
-      await assignmentsApi.create({ spool_id: spoolId, location_id: Number(locationId), is_active: true });
-      notifySuccess("Spool assigned.");
-      refresh();
-    } catch (err) {
-      notifyError((err as Error).message);
-    }
+    createAssignment.mutate(
+      { spool_id: spoolId, location_id: Number(locationId), is_active: true },
+      {
+        onSuccess: () => notifySuccess("Spool assigned."),
+        onError: (err) => notifyError(err.message),
+      },
+    );
   }
 
   function activeLocationFor(spoolId: number): Location | undefined {
@@ -84,105 +71,64 @@ export function Spools() {
   }
 
   return (
-    <div>
-      <h2>Filament Spools</h2>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-heading font-semibold">Filament Spools</h1>
       <NoticeBanner notice={notice} />
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Material</th>
-              <th>Brand</th>
-              <th>Color</th>
-              <th>Status</th>
-              <th>Assigned location</th>
-              <th>Assign to…</th>
-            </tr>
-          </thead>
-          <tbody>
-            {spools.map((s) => {
-              const material = materials.find((m) => m.id === s.material_profile_id);
-              const currentLocation = activeLocationFor(s.id);
-              return (
-                <tr key={s.id}>
-                  <td>{material?.name ?? s.material_profile_id}</td>
-                  <td>{s.brand}</td>
-                  <td>{s.color ?? "—"}</td>
-                  <td>
-                    <span
-                      className={
-                        s.status === "ready"
-                          ? "badge badge-ok"
-                          : s.status === "watch"
-                            ? "badge badge-warning"
-                            : "badge badge-critical"
-                      }
-                    >
-                      {s.status}
-                    </span>
-                  </td>
-                  <td>{currentLocation?.name ?? "Unassigned"}</td>
-                  <td>
-                    <select
-                      value={assignmentDraft[s.id] ?? ""}
-                      onChange={(e) => setAssignmentDraft({ ...assignmentDraft, [s.id]: e.target.value })}
-                    >
-                      <option value="">Select location…</option>
-                      {locations.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.name}
-                        </option>
-                      ))}
-                    </select>{" "}
-                    <button onClick={() => handleAssign(s.id)}>Assign</button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Material</TableHead>
+                <TableHead>Brand</TableHead>
+                <TableHead>Color</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Assigned location</TableHead>
+                <TableHead>Assign to…</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {spools.map((s) => {
+                const material = materials.find((m) => m.id === s.material_profile_id);
+                const currentLocation = activeLocationFor(s.id);
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{material?.name ?? s.material_profile_id}</TableCell>
+                    <TableCell>{s.brand}</TableCell>
+                    <TableCell>{s.color ?? "—"}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={s.status} />
+                    </TableCell>
+                    <TableCell>{currentLocation?.name ?? "Unassigned"}</TableCell>
+                    <TableCell>
+                      <SpoolAssignmentForm
+                        locations={locations}
+                        value={assignmentDraft[s.id] ?? ""}
+                        onChange={(locationId) => setAssignmentDraft({ ...assignmentDraft, [s.id]: locationId })}
+                        onAssign={() => handleAssign(s.id)}
+                        submitting={createAssignment.isPending}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      <div className="card">
-        <div className="card-label">New spool</div>
-        <form onSubmit={handleAddSpool} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <select
-            value={newSpool.material_profile_id}
-            onChange={(e) => setNewSpool({ ...newSpool, material_profile_id: e.target.value })}
-          >
-            <option value="">Material…</option>
-            {materials.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          <input
-            placeholder="Brand"
-            value={newSpool.brand}
-            onChange={(e) => setNewSpool({ ...newSpool, brand: e.target.value })}
+      <Card>
+        <CardContent>
+          <SpoolForm
+            value={newSpool}
+            onChange={setNewSpool}
+            onSubmit={handleAddSpool}
+            materials={materials}
+            submitting={createSpool.isPending}
           />
-          <input
-            placeholder="Color"
-            value={newSpool.color}
-            onChange={(e) => setNewSpool({ ...newSpool, color: e.target.value })}
-          />
-          <select
-            value={newSpool.status}
-            onChange={(e) => setNewSpool({ ...newSpool, status: e.target.value as FilamentSpool["status"] })}
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <button className="primary" type="submit">
-            Add spool
-          </button>
-        </form>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

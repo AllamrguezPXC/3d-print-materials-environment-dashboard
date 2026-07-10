@@ -1,7 +1,9 @@
 # Frontend
 
 React + TypeScript + Vite dashboard for the 3D Print Materials Environment Data Monitoring
-Dashboard. See the root `README.md` for full setup instructions.
+Dashboard, styled with Tailwind CSS v4 and shadcn/ui, using TanStack Query for data fetching. See
+the root `README.md` for full setup instructions and `docs/Frontend_Redesign_Guide.md` for the
+frontend architecture.
 
 ## Quick start
 
@@ -17,8 +19,19 @@ local `.env`, copied from `.env.example`).
 
 ```bash
 npm run build   # tsc -b && vite build
+npm run lint    # oxlint
 ```
 
 ## Routes
 
-`/` Dashboard · `/history` · `/printers` · `/materials` · `/spools` · `/drying` · `/settings`
+`/` Dashboard · `/history` · `/printers` · `/materials` · `/spools` · `/drying` (recommendations +
+drying session workflow) · `/settings`
+
+## Adding a shadcn/ui component
+
+```bash
+npx shadcn@latest add <component-name>
+```
+
+Lands in `src/components/ui/`, already wired to this app's design tokens (see
+`docs/Frontend_Redesign_Guide.md` section 4).

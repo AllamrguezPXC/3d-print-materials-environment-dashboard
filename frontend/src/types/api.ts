@@ -167,3 +167,32 @@ export interface DryingRecommendation {
   dryer_max_temp_c: number | null;
   message: string;
 }
+
+export type DryingSessionStatus = "recommended" | "running" | "completed" | "failed" | "cancelled";
+
+export interface DryingSessionCreate {
+  spool_id: number;
+  dryer_location_id: number;
+  sensor_id?: number | null;
+  target_temp_c: number;
+  target_duration_hours: number;
+}
+
+export interface DryingSessionUpdate {
+  status?: DryingSessionStatus;
+  ended_at?: string;
+  validation_notes?: string;
+}
+
+export interface DryingSessionRead {
+  id: number;
+  spool_id: number;
+  dryer_location_id: number;
+  sensor_id: number | null;
+  target_temp_c: number;
+  target_duration_hours: number;
+  started_at: string;
+  ended_at: string | null;
+  status: DryingSessionStatus;
+  validation_notes: string | null;
+}

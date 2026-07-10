@@ -1,14 +1,27 @@
-import { useEffect, useState } from "react";
-import { HistoryChart } from "../components/HistoryChart";
-import { captureReading, getReadingsHistory } from "../api/readings";
-import { locationsApi, sensorsApi } from "../api/config";
-import type { HourlyAggregate, Location, Sensor } from "../types/api";
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { HistoryChart } from "@/components/HistoryChart";
+import { captureReading, getReadingsHistory } from "@/api/readings";
+import { locationsApi, sensorsApi } from "@/api/config";
 
 const CHART_COLORS = {
-  temperature: "#e8813a",
-  humidity: "#3f8ee0",
-  pressure: "#8a6fd8",
+  temperature: "var(--chart-1)",
+  humidity: "var(--chart-2)",
+  pressure: "var(--chart-5)",
 };
+
+const ALL = "all";
 
 function defaultFrom(): string {
   const d = new Date();
@@ -23,101 +36,114 @@ function defaultTo(): string {
 export function History() {
   const [from, setFrom] = useState(defaultFrom());
   const [to, setTo] = useState(defaultTo());
-  const [sensorId, setSensorId] = useState("");
-  const [locationId, setLocationId] = useState("");
-  const [sensors, setSensors] = useState<Sensor[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [hourly, setHourly] = useState<HourlyAggregate[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [capturing, setCapturing] = useState(false);
+  const [sensorId, setSensorId] = useState(ALL);
+  const [locationId, setLocationId] = useState(ALL);
 
-  useEffect(() => {
-    sensorsApi.list().then(setSensors).catch(() => {});
-    locationsApi.list().then(setLocations).catch(() => {});
-  }, []);
+  const { data: sensors = [] } = useQuery({ queryKey: ["sensors"], queryFn: sensorsApi.list });
+  const { data: locations = [] } = useQuery({ queryKey: ["locations"], queryFn: locationsApi.list });
 
-  async function loadHistory() {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await getReadingsHistory({
+  const {
+    data: history,
+    refetch,
+    isFetching,
+    error,
+  } = useQuery({
+    queryKey: ["readings-history", from, to, sensorId, locationId],
+    queryFn: () =>
+      getReadingsHistory({
         from: new Date(from).toISOString(),
         to: new Date(to).toISOString(),
         aggregate: "hour",
-        sensorId: sensorId ? Number(sensorId) : undefined,
-        locationId: locationId ? Number(locationId) : undefined,
-      });
-      setHourly(result.hourly);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
+        sensorId: sensorId !== ALL ? Number(sensorId) : undefined,
+        locationId: locationId !== ALL ? Number(locationId) : undefined,
+      }),
+    enabled: false,
+  });
 
-  async function handleCapture() {
-    setCapturing(true);
-    try {
-      await captureReading();
-      await loadHistory();
-    } finally {
-      setCapturing(false);
-    }
-  }
+  const captureMutation = useMutation({
+    mutationFn: captureReading,
+    onSuccess: () => refetch(),
+  });
+
+  const hourly = history?.hourly ?? [];
 
   return (
-    <div>
-      <h2>History</h2>
-      <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap" }}>
-        <label>
-          From
-          <br />
-          <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </label>
-        <label>
-          To
-          <br />
-          <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} />
-        </label>
-        <label>
-          Sensor
-          <br />
-          <select value={sensorId} onChange={(e) => setSensorId(e.target.value)}>
-            <option value="">All sensors</option>
-            {sensors.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Location
-          <br />
-          <select value={locationId} onChange={(e) => setLocationId(e.target.value)}>
-            <option value="">All locations</option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="primary" onClick={loadHistory} disabled={loading}>
-          {loading ? "Loading…" : "Load history"}
-        </button>
-        <button onClick={handleCapture} disabled={capturing} className="theme-toggle">
-          {capturing ? "Capturing…" : "Capture reading now"}
-        </button>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-heading font-semibold">History</h1>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="history-from">From</Label>
+          <Input
+            id="history-from"
+            type="datetime-local"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="history-to">To</Label>
+          <Input
+            id="history-to"
+            type="datetime-local"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Sensor</Label>
+          <Select value={sensorId} onValueChange={setSensorId}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All sensors</SelectItem>
+              {sensors.map((s) => (
+                <SelectItem key={s.id} value={String(s.id)}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Location</Label>
+          <Select value={locationId} onValueChange={setLocationId}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All locations</SelectItem>
+              {locations.map((l) => (
+                <SelectItem key={l.id} value={String(l.id)}>
+                  {l.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={() => refetch()} disabled={isFetching}>
+          {isFetching && <Loader2 className="size-4 animate-spin" />}
+          Load history
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => captureMutation.mutate()}
+          disabled={captureMutation.isPending}
+        >
+          {captureMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+          Capture reading now
+        </Button>
       </div>
 
-      {error && <p className="error-state">{error}</p>}
+      {error && <p className="text-sm text-destructive">{(error as Error).message}</p>}
 
       {hourly.length === 0 ? (
-        <p className="empty-state">No readings in this range yet. Try "Capture reading now" a few times, then reload.</p>
+        <p className="text-sm text-muted-foreground">
+          No readings in this range yet. Try "Capture reading now" a few times, then reload.
+        </p>
       ) : (
-        <>
+        <div className="flex flex-col gap-4">
           <HistoryChart
             title="Temperature (°C)"
             data={hourly}
@@ -139,7 +165,7 @@ export function History() {
             color={CHART_COLORS.pressure}
             unit="Pa"
           />
-        </>
+        </div>
       )}
     </div>
   );
