@@ -326,6 +326,40 @@ chose via `AskUserQuestion` from three options).
 - [x] Updated `docs/Frontend_Redesign_Guide.md` §9 (marked "Read from AMS"
   done, reconciled the deferred-list entry).
 
+## Phase 21 — Filament Manager: Filters, Search, Grouping, Edit/Delete
+
+See `docs/Tareas/filament-manager-redesign/TASK.md` for the full task
+record. Second item picked from Phase 18's Phase 2+ deferred list (chosen at
+Claude's discretion, per the user's explicit "continue with whichever you
+think is best").
+
+- [x] `FilamentFilters.tsx` — scope tabs (All/AMS/Storage, derived from the
+  spool's active assignment's `location_type`), brand/material-type
+  (`MaterialProfile.family`)/filament-type (`MaterialProfile.name`)/status
+  selects, free-text search (brand/color/material name), and an optional
+  grouping select (location/printer/material).
+- [x] `EditSpoolModal.tsx` — reuses `SpoolForm` (now with a `submitLabel`
+  prop so it reads "Save changes" here instead of "Add spool").
+- [x] `Spools.tsx` rewritten: computes the filtered + grouped spool list
+  client-side, renders two distinct empty states (no spools at all vs. no
+  results for the current filters), and adds Edit/Delete actions per row
+  (Delete confirms via `window.confirm` and surfaces the backend's existing
+  friendly-400 when a spool is still referenced by an active assignment).
+- [x] **Pre-existing bug found and fixed during live verification**:
+  `FilamentSpool.color` was required (`str`) in the backend model/schema
+  but always treated as optional everywhere in the frontend (types, forms,
+  display fallbacks) — any "Add Filament" submission with a blank color
+  silently 422'd. Fixed to `str | None` in both the SQLAlchemy model and
+  Pydantic schema; added regression tests (create without color succeeds;
+  delete blocked by an active assignment returns a friendly 400).
+- [x] `tsc -b`/`build`/`lint` clean. Full backend suite: 126 passed (2 new
+  spool tests). Playwright MCP verification: AMS/Storage scope filters,
+  free-text search empty state, group-by-printer, edit persists a field
+  change, delete blocked when referenced vs. succeeds when unassigned,
+  create-with-blank-color succeeds post-fix.
+- [x] Updated `docs/Frontend_Redesign_Guide.md` §9 (marked Filament Manager
+  redesign done).
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`
