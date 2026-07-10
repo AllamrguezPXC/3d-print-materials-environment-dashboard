@@ -32,5 +32,8 @@ def validate_sensor_fields(*, sensor_type: str, serial_number: str, port: str | 
                 "to avoid ambiguity with real hardware."
             )
 
-    if sensor_type in {"dracal_vcp", "dracal_cli"} and not port:
+    # dracal_cli identifies its target device via -s <serial_number>, not a
+    # serial port -- only dracal_vcp (a real COM port opened by pyserial)
+    # requires one.
+    if sensor_type == "dracal_vcp" and not port:
         raise ValueError(f"sensor_type {sensor_type!r} requires a non-empty port.")

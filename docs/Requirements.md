@@ -223,6 +223,11 @@ Suggested fields:
 - `location_type`
 - `printer_id`, optional
 - `description`
+- `slot_index`, optional int -- only meaningful when `location_type == "printer_ams"`:
+  the slot's stable ordinal (0-based) within its printer's AMS, so a printer's slots
+  render in a fixed order. A printer's AMS is represented as N `Location` rows sharing
+  its `printer_id`, one per slot -- there is no separate `AmsUnit`/slot entity (see
+  `docs/Tareas/printer-ams-sensor-config/TASK.md` for why).
 
 #### Printer
 
@@ -465,10 +470,13 @@ Implement at least:
 
 - `MockSensorReader`
 - `DracalVcpSensorReader`
-
-Optional:
-
-- `DracalCliSensorReader`
+- `DracalCliSensorReader` — reads a Dracal USB sensor via the vendor's `dracal-usb-get` CLI
+  (`subprocess`, parsing its comma-separated `pressure_kPa, temperature_C, rh_percent` output),
+  for devices whose Windows driver binds to the generic USB class rather than CDC/VCP and so
+  never expose a serial port for `DracalVcpSensorReader`/pyserial to open. Identifies its target
+  device via `-s <serial_number>` — unlike `dracal_vcp`, this sensor type does not require a
+  `port`. The CLI executable's install path is configured once via `DRACAL_CLI_EXECUTABLE`
+  (Settings-level, like `database_url` — a machine install location, not a per-sensor property).
 
 ### 10.2 Dracal VCP Reader
 
@@ -676,6 +684,11 @@ When `aggregate=hour`, return hourly averages for:
 - `GET /sensors/{sensor_id}`
 - `PATCH /sensors/{sensor_id}`
 - `DELETE /sensors/{sensor_id}`
+- `GET /sensors/ports` — detected serial ports (wraps `serial.tools.list_ports.comports()`);
+  transient OS state, never persisted; empty list if none detected or unsupported
+- `POST /sensors/{sensor_id}/test-read` — attempts one non-persisted read from a configured
+  sensor and reports success/failure; never writes a `Reading` row and never raises a 5xx for
+  a hardware/parse failure (`{"success": false, "error": "..."}` instead)
 
 #### Printers
 
@@ -799,8 +812,11 @@ Recommended routes:
 - `/` Dashboard
 - `/history`
 - `/printers`
+- `/printers/:id` — per-printer detail: environment (reuses `SensorReadingSection`),
+  AMS slot grid, slot assignment
 - `/materials`
 - `/spools`
+- `/sensors` — sensor CRUD, serial-port detection, test-read
 - `/drying`
 - `/settings`
 
@@ -810,9 +826,11 @@ Suggested components:
 
 - `ReadingCard`
 - `SensorStatusGrid` — the per-sensor cards on Dashboard (`SensorReadingSection`,
-  one per active sensor with an isolated error state) satisfy this need; a
-  dedicated `/sensors` admin CRUD page/grid remains an optional, still-unbuilt
-  enhancement (the `/sensors` CRUD API already exists and is usable via `/docs`)
+  one per active sensor with an isolated error state) satisfy this need. The
+  `/sensors` admin CRUD page (previously deferred, also noted in
+  `docs/Frontend_Redesign_Guide.md` §9) is now built as part of
+  `docs/Tareas/printer-ams-sensor-config/TASK.md`, with serial-port detection
+  (`GET /sensors/ports`) and a one-off test-read (`POST /sensors/{id}/test-read`).
 - `AlertPanel`
 - `DryingRecommendationCard`
 - `HistoryChart`
@@ -820,6 +838,16 @@ Suggested components:
 - `MaterialProfileForm`
 - `SpoolAssignmentForm`
 - `ThemeToggle`
+- `AmsSlotGrid`/`AmsSlotButton` — a printer's AMS slots, ordered by `slot_index`,
+  with real spool/material data; renders an explicit "no AMS configured" state
+  rather than fabricating slots for a printer with none seeded
+- `SlotAssignmentModal` — assign/clear a slot's spool, composing the existing
+  `Dialog`/`Select` primitives (not a new modal system)
+- `HumidityScale` — client-side A–E "DRY → WET" grade computed from an existing
+  reading + a material's RH bands (or generic bands with no material context)
+- `PortSelect` — thin wrapper over `GET /sensors/ports` with a manual "Scan"
+  trigger; pairs with a plain text input so a port can always be typed manually
+  when detection isn't possible
 
 ### 14.3 Data Refresh
 

@@ -1,3 +1,61 @@
+from app.sensors.base import SensorParseError
+
+
+def test_list_sensor_ports_returns_detected_ports(client, monkeypatch):
+    class FakePort:
+        def __init__(self, device, description, hwid):
+            self.device = device
+            self.description = description
+            self.hwid = hwid
+
+    def fake_comports():
+        return [FakePort("COM7", "USB Serial Device", "USB VID:PID=0403:6001")]
+
+    import serial.tools.list_ports as list_ports_module
+
+    monkeypatch.setattr(list_ports_module, "comports", fake_comports)
+
+    response = client.get("/sensors/ports")
+    assert response.status_code == 200
+    assert response.json() == [
+        {"device": "COM7", "description": "USB Serial Device", "hwid": "USB VID:PID=0403:6001"}
+    ]
+
+
+def test_test_read_succeeds_for_mock_sensor(client):
+    mock_sensor = next(s for s in client.get("/sensors").json() if s["serial_number"] == "MOCK-0001")
+
+    response = client.post(f"/sensors/{mock_sensor['id']}/test-read")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["error"] is None
+    assert isinstance(body["temperature_c"], (int, float))
+
+
+def test_test_read_returns_controlled_error_without_crashing(client, monkeypatch):
+    real_sensor = next(s for s in client.get("/sensors").json() if s["serial_number"] == "E25877")
+
+    class FailingReader:
+        def read_current(self):
+            raise SensorParseError("Simulated hardware failure")
+
+    monkeypatch.setattr(
+        "app.services.sensor_ports.get_sensor_reader_for_sensor", lambda sensor: FailingReader()
+    )
+
+    response = client.post(f"/sensors/{real_sensor['id']}/test-read")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is False
+    assert body["error"] == "Simulated hardware failure"
+
+
+def test_test_read_404_for_missing_sensor(client):
+    response = client.post("/sensors/999999/test-read")
+    assert response.status_code == 404
+
+
 def test_list_sensors_includes_seeded_real_sensor(client):
     response = client.get("/sensors")
 
@@ -104,6 +162,19 @@ def test_create_dracal_sensor_requires_port(client):
     }
     response = client.post("/sensors", json=payload)
     assert response.status_code == 422
+
+
+def test_create_dracal_cli_sensor_does_not_require_port(client):
+    payload = {
+        "name": "USB Native Dracal",
+        "model": "VCP-PTH450-CAL",
+        "serial_number": "E27297",
+        "sensor_type": "dracal_cli",
+        "port": None,
+    }
+    response = client.post("/sensors", json=payload)
+    assert response.status_code == 200
+    assert response.json()["port"] is None
 
 
 def test_create_sensor_rejects_duplicate_serial_with_friendly_400(client):

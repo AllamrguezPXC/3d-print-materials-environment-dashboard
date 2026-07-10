@@ -132,6 +132,9 @@ export interface Location {
   description: string | null;
   max_temp_c: number | null;
   notes: string | null;
+  /** Only meaningful when location_type === "printer_ams": the slot's stable
+   * ordinal (0-based) within its printer's AMS. */
+  slot_index: number | null;
 }
 
 export interface Sensor {
@@ -143,6 +146,24 @@ export interface Sensor {
   port: string | null;
   is_active: boolean;
   location_id: number | null;
+}
+
+/** One serial port detected on the host, from GET /sensors/ports -- transient
+ * OS state, never persisted. */
+export interface SensorPortInfo {
+  device: string;
+  description: string | null;
+  hwid: string | null;
+}
+
+/** Result of a one-off, non-persisted read attempt (POST /sensors/{id}/test-read). */
+export interface SensorTestReadResult {
+  success: boolean;
+  temperature_c: number | null;
+  relative_humidity_percent: number | null;
+  pressure_pa: number | null;
+  source: string | null;
+  error: string | null;
 }
 
 export interface FilamentSpool {

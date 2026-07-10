@@ -124,6 +124,73 @@ database, confirmed (screenshots in `evidence/frontend-verification/`):
 - `/settings` — the rewritten "Sensors" card correctly describes per-row configuration instead of
   the removed `SENSOR_MODE` env var.
 
+## Printer Detail / AMS Slot Grid / Sensor Port Detection (Phase 1)
+
+Full task record: `docs/Tareas/printer-ams-sensor-config/TASK.md`.
+
+A large Bambu-Studio-inspired redesign was requested (17 sections: printer control view, AMS slot
+grid, slot modal, dual-mode "Add Filament", DRY→WET humidity scale, Filament Manager redesign,
+sensor port auto-detection, printer filament-system-type configuration, material-profile expansion).
+Plan Mode audit (3 parallel Explore agents + 1 Plan agent) confirmed this was fully greenfield — no
+AMS/slot model, no serial port scanning, no sensor test-read endpoint existed anywhere. Given
+`CLAUDE.md`'s explicit "keep the MVP focused" constraint, `AskUserQuestion` was used to confirm
+scope with the user, who chose a right-sized Phase 1 over attempting the full 17-section prompt in
+one pass; Phase 2+ items are listed as explicit deferred follow-up in `docs/Frontend_Redesign_Guide.md` §9.
+
+**Backend**: `Location.slot_index` (one new nullable column, no new model); `GET /sensors/ports`
+(wraps `serial.tools.list_ports.comports()`, zero new dependencies) and
+`POST /sensors/{id}/test-read` (wraps the existing per-sensor reader factory, never persists a
+`Reading`). 116/116 backend tests pass (6 new, covering slot ordering and mocked port/test-read
+behavior with no real-hardware dependency).
+
+**Frontend verification (Playwright MCP)**, screenshots in `evidence/frontend-verification/`:
+- `printer-detail-ams-humidity.png` — `A1 mini #1`'s detail page reuses `SensorReadingSection`
+  unmodified with its real mock-sensor reading, a `HumidityScale` grade "A" computed from that
+  reading against the assigned PLA spool's RH bands, and an AMS slot showing the real assigned
+  spool (`PLA / Black / ready`).
+- `P1S #1` (printer id 5) renders a real 4-slot AMS grid (A1-A4, all correctly empty — no spool
+  assigned there); clicking a slot opens `SlotAssignmentModal`, correctly reporting "This slot is
+  empty" and "No unassigned spools available" since both seeded spools are already assigned
+  elsewhere — no fabricated data.
+- `A1 mini #2` (no seeded AMS) shows the explicit "No AMS configured on this printer" state, not a
+  fabricated grid — confirmed the "never invent AMS" constraint holds.
+- `sensors-page-port-scan.png` — `/sensors` lists all 4 configured sensors; a live port scan
+  returned real detected COM ports on the host; test-read against a mock sensor returned a real
+  inline reading; `POST /sensors` with `sensor_type="mock"` and `serial_number="E25877"` still
+  returns 422 through this new UI's own create form path.
+
+## Real-Hardware Validation — DracalCliSensorReader (`dracal_cli`)
+
+Full task record: `docs/Tareas/dracal-cli-sensor-reader/TASK.md`.
+
+Live end-to-end validation of Phase 18's port-detection feature against the user's actual Dracal
+sensor (serial `E27297`) uncovered that it exposes **no COM port at all** — `GET /sensors/ports`
+correctly returned only the host's 3 real ports (none of them the sensor), confirmed authoritative
+via `HKLM\HARDWARE\DEVICEMAP\SERIALCOMM` and Device Manager, which shows the device
+(`USB\VID_289B&PID_0505\E27297`) under the generic `USBDevice` class rather than "Ports (COM &
+LPT)" — its Windows driver isn't in VCP/CDC mode, even though Dracal's own CalView software reads
+it fine over native USB. Rather than fabricate a COM-port connection that doesn't exist, this was
+reported to the user, who provided Dracal's official `dracal-usb-get` CLI approach for exactly
+this case — matching the `sensor_type="dracal_cli"` already reserved in `VALID_SENSOR_TYPES` but
+never implemented (`docs/Tasks.md` previously marked it explicitly out of scope).
+
+Implemented `DracalCliSensorReader` (`backend/app/sensors/dracal_cli.py`), wired into the existing
+per-sensor factory, with `sensor_validation.py` relaxed so only `dracal_vcp` (a real COM port)
+requires a `port` — `dracal_cli` identifies its device via `serial_number` alone. New tests mock
+`subprocess.check_output` (no dependency on the real CLI binary or hardware in CI); full backend
+suite: 124 passed.
+
+**Live registration and verification**: created a location `P1S-003`, registered a `Sensor` row
+(`sensor_type="dracal_cli"`, `serial_number="E27297"`, no `port`), and confirmed:
+- `POST /sensors/5/test-read` returned a real, non-fabricated reading (`23.72°C / 47.21% RH /
+  101040 Pa`) matching what Dracal's own CalView tool showed live for the same device.
+- `GET /readings/current` correctly listed the sensor as `source: "real"`, `error: null`, alongside
+  the seeded (non-functional, no real hardware attached) `E25877` `dracal_vcp` entry showing its
+  own isolated connection error — confirming per-sensor error isolation holds across sensor types.
+- Dashboard screenshot: `evidence/frontend-verification/dashboard-real-dracal-cli-sensor.png` — the
+  `E27297` section renders with real temperature/RH/pressure/dew-point values under location
+  "P1S-003", and the topbar badge correctly reads "4/5 sensors online".
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

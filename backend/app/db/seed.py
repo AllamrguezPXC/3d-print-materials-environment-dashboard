@@ -324,6 +324,28 @@ def seed(session: Session) -> None:
         )
         mock_sensors.append(sensor)
 
+    # --- AMS slot ordering (printer-ams-sensor-config task, Phase 1) ----
+    # Backfill slot_index on the already-seeded lone AMS location for A1
+    # mini #1 so every printer_ams row has a stable ordinal.
+    existing_ams_slot_1 = session.query(Location).filter_by(name="AMS Slot 1 - A1 mini #1").first()
+    if existing_ams_slot_1 is not None and existing_ams_slot_1.slot_index is None:
+        existing_ams_slot_1.slot_index = 0
+
+    # Seed a full 4-slot AMS for P1S #1 to demonstrate a real multi-slot
+    # grid. Printers with no explicitly-seeded AMS location show "no AMS
+    # configured" in the UI instead of a fabricated grid.
+    p1s_1 = printers_by_name.get("P1S #1")
+    if p1s_1 is not None:
+        for slot_index in range(4):
+            _get_or_create_location(
+                session,
+                f"AMS Slot {slot_index + 1} - P1S #1",
+                location_type="printer_ams",
+                printer_id=p1s_1.id,
+                description=f"AMS slot {slot_index + 1} on P1S #1.",
+                slot_index=slot_index,
+            )
+
     # --- Demo filament spools + assignments -----------------------------
     # FilamentSpool/SpoolAssignment have no natural business key of their
     # own (they're free-form demo inventory), so idempotency here is

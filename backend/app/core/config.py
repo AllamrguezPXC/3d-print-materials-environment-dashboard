@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     # and no longer selected via a global runtime mode.
     dracal_serial_number: str = "E25877"
     dracal_vcp_port: str = "COM3"
+    # Path to Dracal's `dracal-usb-get` CLI tool, used by DracalCliSensorReader
+    # for devices whose Windows driver exposes them as a generic USB device
+    # rather than a virtual COM port (no serial port to open in that case).
+    # Machine-level install-location config, not a per-sensor property -- like
+    # database_url, it belongs in Settings rather than on the Sensor row.
+    dracal_cli_executable: str = "dracal-usb-get"
     mock_sensor_count: int = 3
     cors_origins: str = "http://localhost:5173"
 

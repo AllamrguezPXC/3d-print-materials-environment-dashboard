@@ -33,3 +33,25 @@ class SensorRead(SensorBase):
     id: int
     created_at: datetime
     updated_at: datetime
+
+
+class SensorPortInfo(BaseModel):
+    """One serial port detected on the host, from pyserial's
+    serial.tools.list_ports.comports() -- transient OS state, never
+    persisted."""
+
+    device: str
+    description: str | None = None
+    hwid: str | None = None
+
+
+class SensorTestReadResult(BaseModel):
+    """Result of a one-off, non-persisted read attempt against a configured
+    sensor (POST /sensors/{id}/test-read)."""
+
+    success: bool
+    temperature_c: float | None = None
+    relative_humidity_percent: float | None = None
+    pressure_pa: float | None = None
+    source: str | None = None
+    error: str | None = None

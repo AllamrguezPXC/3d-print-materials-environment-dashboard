@@ -23,6 +23,11 @@ class Location(Base):
     printer_id: Mapped[int | None] = mapped_column(ForeignKey("printers.id"), default=None)
     description: Mapped[str | None] = mapped_column(String(500), default=None)
 
+    # Only meaningful when location_type == "printer_ams": the slot's stable
+    # ordinal within its printer's AMS (0-based), so a printer's slots can be
+    # queried/rendered in order. Null for every other location_type.
+    slot_index: Mapped[int | None] = mapped_column(default=None)
+
     # Dryer-capability modeling (only meaningful when location_type == "dryer").
     max_temp_c: Mapped[float | None] = mapped_column(default=None)
     notes: Mapped[str | None] = mapped_column(String(500), default=None)
