@@ -424,6 +424,39 @@ own discretion, per the user's "continue with whichever you think is best").
   chain to resolve) and `MaterialProfile` nozzle/bed-temp + override chain
   (needs a schema migration tool this project doesn't have) remain deferred.
 
+## Phase 24 — Frontend Automated Tests (Vitest)
+
+See `docs/Tareas/frontend-vitest-setup/TASK.md` for the full task record.
+Picked at Claude's own discretion (per the user's "continua con lo que
+falte") as a concrete, already-documented gap rather than a speculative
+item: `CLAUDE.md`'s own Testing Commands section already listed
+`cd frontend && npx vitest run`, but no Vitest config or test-library
+dependency had ever been added — tracked as
+[GitHub Issue #1](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/issues/1).
+
+- [x] Installed `vitest`, `@testing-library/react`, `@testing-library/jest-dom`,
+  `@testing-library/user-event`, `jsdom` as dev dependencies.
+- [x] Added a `test` block to the existing `vite.config.ts` (reusing its `@/`
+  alias and plugins rather than a separate, drifting `vitest.config.ts`), plus
+  `src/test/setup.ts` (`jest-dom` matchers + explicit RTL `cleanup()` in an
+  `afterEach`, since `globals: true` was deliberately not enabled — tests
+  import `describe`/`it`/`expect`/`vi` explicitly from `"vitest"`).
+- [x] `ThemeToggle.test.tsx` — default (dark) state, a pre-set `localStorage`
+  value is respected on mount, clicking toggles both the visible label and
+  `data-theme`/`localStorage` in both directions.
+- [x] `Dashboard.test.tsx` — mocks `@/api/readings`'s `getCurrentReading` and
+  `@/api/config`'s `dryingApi.recommendations` (both wrapped in a real
+  `QueryClientProvider` with retries disabled); covers loading, backend-
+  unreachable error, no-active-sensors empty state, and populated sensor +
+  drying-recommendation rendering.
+- [x] `AlertPanel.test.tsx` — empty state, a warning-severity humidity alert,
+  a critical-severity temperature alert with a recommended action.
+- [x] `"test": "vitest run"` script added to `package.json`; documented in
+  `frontend/README.md` and root `CLAUDE.md`'s Testing Commands.
+- [x] `npx vitest run` (10 passed), `tsc -b`/`build`/`lint` clean, backend
+  suite unaffected (131 passed, no backend changes in this task).
+- [x] Updated `docs/Frontend_Redesign_Guide.md` §9.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

@@ -20,7 +20,16 @@ local `.env`, copied from `.env.example`).
 ```bash
 npm run build   # tsc -b && vite build
 npm run lint    # oxlint
+npm run test    # vitest run
 ```
+
+## Testing
+
+Vitest + React Testing Library, covering `Dashboard` (loading/error/empty/populated states, API
+mocked), `ThemeToggle` (default/persisted theme, toggle behavior), and `AlertPanel` (empty state,
+warning/critical badges). Config lives in `vite.config.ts`'s `test` block (reuses the app's `@/`
+alias and plugins) plus `src/test/setup.ts` (`jest-dom` matchers, RTL cleanup). Test files sit
+next to the component/page they cover (`*.test.tsx`).
 
 ## Routes
 

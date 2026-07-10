@@ -13,7 +13,7 @@ Use this file to document evidence required by the assignment.
 | TDD cycle | `/evidence/tdd-current-reading-fail.txt` and `/evidence/tdd-current-reading-pass.txt` — see summary below | Done |
 | Documentation | Root `README.md` (setup, stack, sensor modes, endpoints, structure), `backend/README.md`, `frontend/README.md`, `docs/Requirements.md`, `docs/Tasks.md`, root `CLAUDE.md`, structured `<summary>` docstring on `MaterialProfile` (`backend/app/models/material_profile.py`) | Done |
 | Security review | `/evidence/security-review.md` — reviewed `POST /readings` and related sensor/CORS/secrets handling, fixed 2 medium findings | Done |
-| GitHub Integration | Repo: https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard. Real action: [Issue #1](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/issues/1) "Add automated frontend tests (vitest) for Dashboard and theme toggle" | Done |
+| GitHub Integration | Repo: https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard. Real action: [Issue #1](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/issues/1) "Add automated frontend tests (vitest) for Dashboard and theme toggle" — opened, then implemented and closed via `gh issue close` (see "Frontend Automated Tests" below) | Done |
 | Custom Skill | `.claude/skills/*/SKILL.md` — `context-handoff` skill adapted from an unrelated prior project to this one; `fastapi-endpoint-builder` used to build `GET /readings/current` | Done |
 | Custom Hook | `.claude/hooks/*`, `.claude/settings.json` — `guard-dangerous-commands.py` and `evidence-logger.py` active from the start; `pre-compact-context-handoff.py` adapted and wired into `PreCompact`, verified via `test-fixtures/precompact-auto.json` | Done |
 
@@ -274,6 +274,31 @@ Playwright MCP verification, screenshot `evidence/frontend-verification/printer-
   unchanged.
 
 `tsc -b`/`build`/`lint` clean throughout.
+
+## Frontend Automated Tests (Vitest)
+
+Full task record: `docs/Tareas/frontend-vitest-setup/TASK.md`. Closes
+[GitHub Issue #1](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/issues/1),
+which had been opened earlier this session as the real GitHub-integration evidence action but never
+implemented — `CLAUDE.md`'s own Testing Commands section already listed `cd frontend && npx vitest
+run`, yet no Vitest config or testing-library dependency had ever existed in `frontend/`.
+
+Installed `vitest` + `@testing-library/react`/`jest-dom`/`user-event` + `jsdom`; added a `test`
+block to the existing `vite.config.ts` (reusing its `@/` alias and plugins) plus `src/test/setup.ts`
+(`jest-dom` matchers, explicit RTL `cleanup()` in `afterEach`). Three test files, matching all three
+acceptance criteria from the issue:
+- `ThemeToggle.test.tsx` — default (dark) state, a pre-set `localStorage` value respected on mount,
+  toggling flips the visible label + `data-theme` + `localStorage` in both directions.
+- `Dashboard.test.tsx` — mocks `getCurrentReading` (`@/api/readings`) and `dryingApi.recommendations`
+  (`@/api/config`) under a real `QueryClientProvider`; covers loading, backend-unreachable error,
+  no-active-sensors empty state, and populated sensor + drying-recommendation rendering.
+- `AlertPanel.test.tsx` — empty state, a warning-severity humidity alert, a critical-severity
+  temperature alert with a recommended action.
+
+`npm run test` (`vitest run`): 10 passed. `tsc -b`/`build`/`lint` clean. Backend suite unaffected —
+131 passed (no backend changes in this task). `npm run test` documented in `frontend/README.md` and
+root `CLAUDE.md`'s Testing Commands. Issue #1 closed via `gh issue close 1` with a summary comment
+linking the implementation.
 
 ## Notes
 

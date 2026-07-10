@@ -202,6 +202,14 @@ does not control the dryer directly — this is validation/tracking only.
   already covers well enough for this MVP.
 - No `react-hook-form`/`zod` — forms are simple `useState` objects; revisit only if a form grows
   complex cross-field validation.
+- **Automated frontend tests** — added, see `docs/Tareas/frontend-vitest-setup/TASK.md`: Vitest +
+  React Testing Library (config in `vite.config.ts`'s `test` block, reusing the app's `@/` alias
+  and plugins; setup in `src/test/setup.ts`), with tests for `Dashboard.tsx`
+  (loading/error/empty/populated states), `ThemeToggle.tsx` (default/persisted theme, toggle +
+  persistence), and `AlertPanel.tsx` (empty state, warning/critical badges) — closing
+  [GitHub Issue #1](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/issues/1).
+  Test files live next to the component/page they cover (`*.test.tsx`), not in a parallel
+  `__tests__/` tree.
 - The main JS bundle is ~808 kB (Vite warns above 500 kB) — acceptable for a local-first assignment
   app; code-splitting via route-based `React.lazy()` would be the next step if bundle size ever
   becomes a real concern.
