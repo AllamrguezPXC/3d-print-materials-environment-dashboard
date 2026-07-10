@@ -392,6 +392,38 @@ discretion, per the user's "continue with whichever you think is best").
   inheritance UI, `MaterialProfile` nozzle/bed-temp + override chain) all
   require a schema change and stay deferred.
 
+## Phase 23 — Printer Filament System Type
+
+See `docs/Tareas/printer-filament-system-type/TASK.md` for the full task
+record. Fourth item picked from Phase 18's Phase 2+ deferred list (Claude's
+own discretion, per the user's "continue with whichever you think is best").
+
+- [x] `Printer.filament_system_type: str` (default `"manual"`), validated
+  against `{"ams", "external_spool", "storage_only", "manual"}` in
+  `printer_service.py` (422 on create/update for an unknown value), added to
+  the SQLAlchemy model + Pydantic schemas.
+- [x] Seed updated: `A1 mini #1` and `P1S #1` → `"ams"` (matches their
+  already-seeded `printer_ams` `Location` rows); every other seeded printer
+  → `"external_spool"`. Purely descriptive — does **not** change the
+  existing AMS-grid inference logic (`AmsSlotGrid`/`ReadFromAmsPanel`/
+  `PrinterDetail` still derive AMS-ness from real `Location` rows), avoiding
+  two competing sources of truth for "does this printer have AMS."
+- [x] 5 new backend tests (default value, valid/invalid enum on create,
+  invalid enum on patch, seeded-printer consistency). Full suite: 131 passed.
+- [x] Frontend: `Printer.filament_system_type` added to `types/api.ts`; new
+  `Select` in `PrinterForm.tsx`; new "Filament System" column in
+  `Printers.tsx`; shown next to brand/model in `PrinterDetail.tsx`'s header.
+- [x] `tsc -b`/`build`/`lint` clean. Playwright MCP verification: "Filament
+  System" column renders seeded values (`ams`/`external spool`) in
+  `/printers`; `/printers/1` header shows "Bambu Lab A1 mini · Ams"; created
+  a test printer with `storage_only` via the form, confirmed it saved and
+  displayed correctly end-to-end, then deleted it.
+- [x] Updated `docs/Frontend_Redesign_Guide.md` §9 (marked filament-system-
+  type selector done) — of the original Phase 2+ list, only sensor-
+  inheritance resolution UI (judged not worth building — no real inheritance
+  chain to resolve) and `MaterialProfile` nozzle/bed-temp + override chain
+  (needs a schema migration tool this project doesn't have) remain deferred.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

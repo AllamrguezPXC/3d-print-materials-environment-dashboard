@@ -111,6 +111,8 @@ export function PrinterDetail() {
         <p className="text-sm text-muted-foreground">
           {printer.brand} {printer.model}
           {printer.serial_number && ` · ${printer.serial_number}`}
+          {" · "}
+          <span className="capitalize">{printer.filament_system_type.replaceAll("_", " ")}</span>
         </p>
       </div>
 

@@ -122,6 +122,10 @@ export interface Printer {
   model: string;
   serial_number: string | null;
   notes: string | null;
+  /** "ams" | "external_spool" | "storage_only" | "manual" -- descriptive
+   * configuration only; does not gate the AMS slot grid, which is derived
+   * from actual Location rows. */
+  filament_system_type: string;
 }
 
 export interface Location {

@@ -219,9 +219,13 @@ does not control the dryer directly — this is validation/tracking only.
     sensor row has that slot's `location_id`, resolved implicitly, not surfaced as an explicit chain.
   - `MaterialProfile` nozzle/bed print-temperature fields and a manufacturer-override chain — the
     model remains environmental/drying-only; no schema migration tool exists to add these safely yet.
-  - A `Printer`-level filament-system-type selector (AMS / External Spool / Storage-only / Manual) —
-    `Printer` has no such column; AMS-ness today is inferred from whether `printer_ams`-typed
-    `Location` rows exist for that printer.
+  - ~~A `Printer`-level filament-system-type selector (AMS / External Spool / Storage-only / Manual)~~
+    — **done**, see `docs/Tareas/printer-filament-system-type/TASK.md`: `Printer.filament_system_type`
+    (validated enum, default `"manual"`), editable via `PrinterForm`, shown as a column in
+    `Printers.tsx` and in the header of `PrinterDetail.tsx`. Purely descriptive configuration — it
+    does **not** change the existing AMS-grid inference, which remains based on whether
+    `printer_ams`-typed `Location` rows exist for that printer (two sources of truth for "has AMS"
+    was explicitly avoided).
   - ~~A color picker for filament color~~ — **done**, see `docs/Tareas/filament-color-swatch/TASK.md`:
     `ColorSwatchPicker` (text input + live preview + a row of common filament color presets that
     just fill the same field) and a `ColorSwatch` display component wherever a color name already

@@ -7,9 +7,11 @@ export interface PrinterFormValues {
   name: string;
   brand: string;
   model: string;
+  filament_system_type: string;
 }
 
 const BAMBU_MODELS = ["A1 mini", "P1S", "P1P", "X1 Carbon", "Other"];
+const FILAMENT_SYSTEM_TYPES = ["ams", "external_spool", "storage_only", "manual"];
 
 interface PrinterFormProps {
   value: PrinterFormValues;
@@ -49,6 +51,24 @@ export function PrinterForm({ value, onChange, onSubmit, submitting }: PrinterFo
             {BAMBU_MODELS.map((m) => (
               <SelectItem key={m} value={m}>
                 {m}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label>Filament system</Label>
+        <Select
+          value={value.filament_system_type}
+          onValueChange={(filament_system_type) => onChange({ ...value, filament_system_type })}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FILAMENT_SYSTEM_TYPES.map((t) => (
+              <SelectItem key={t} value={t}>
+                {t.replaceAll("_", " ")}
               </SelectItem>
             ))}
           </SelectContent>
