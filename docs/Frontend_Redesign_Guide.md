@@ -209,7 +209,9 @@ does not control the dryer directly — this is validation/tracking only.
   printer/AMS/filament redesign)** — not built, by explicit scope decision against this project's
   "keep the MVP focused" constraint:
   - Full "Filament Manager" redesign (filters/search/grouping) — `/spools` stays a plain table.
-  - A simulated "Read from AMS" import flow (no real Bambu Studio/AMS integration exists to read from).
+    ("Add Filament" itself — Manual Add + Read from AMS — is now built; see
+    `docs/Tareas/read-from-ams-flow/TASK.md`. Read from AMS reads the AMS slots this project
+    already tracks explicitly (`Location.slot_index`), not any real Bambu Studio/AMS integration.)
   - Sensor-inheritance resolution UI (printer → AMS → slot → location) — a slot's sensor is whatever
     sensor row has that slot's `location_id`, resolved implicitly, not surfaced as an explicit chain.
   - `MaterialProfile` nozzle/bed print-temperature fields and a manufacturer-override chain — the
