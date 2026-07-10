@@ -360,6 +360,38 @@ think is best").
 - [x] Updated `docs/Frontend_Redesign_Guide.md` §9 (marked Filament Manager
   redesign done).
 
+## Phase 22 — Filament Color Swatch Picker
+
+See `docs/Tareas/filament-color-swatch/TASK.md` for the full task record.
+Third item picked from Phase 18's Phase 2+ deferred list (Claude's own
+discretion, per the user's "continue with whichever you think is best").
+
+- [x] `frontend/src/lib/colorSwatch.ts` — best-effort free-text color-name
+  to CSS-color mapping (`guessSwatchColor`), returning `null` (never a
+  fabricated color) for anything unrecognized, plus a `COLOR_PRESETS` list
+  of common filament colors.
+- [x] `ColorSwatch.tsx` — small circular swatch: filled for a recognized
+  name, a neutral dashed outline ring otherwise.
+- [x] `ColorSwatchPicker.tsx` — the existing free-text color `Input` plus a
+  live swatch preview and a row of clickable presets that just fill the
+  same field (a custom name is always still allowed). Wired into `SpoolForm`
+  (Manual Add / Edit) and `ReadFromAmsPanel` (Read from AMS), replacing the
+  plain `Input`.
+- [x] Swatch added next to the color text in `Spools.tsx`'s table and in
+  `AmsSlotButton.tsx`'s AMS slot cards. No backend/schema changes — color
+  remains the existing free-text string (no hex column exists to persist a
+  real RGB value; fabricating one wasn't in scope).
+- [x] `tsc -b`/`build`/`lint` clean. Playwright MCP verification (screenshots
+  in `evidence/frontend-verification/`): clicking the "Blue" preset fills
+  the field and updates the live preview swatch; swatches render correctly
+  in the Filament Manager table (black/orange dots next to "Black"/"Orange")
+  and on `PrinterDetail`'s AMS grid.
+- [x] Updated `docs/Frontend_Redesign_Guide.md` §9 (marked color picker
+  done) — all frontend-only items from the original Phase 2+ list are now
+  built; the two remaining (`Printer` filament-system-type column, sensor-
+  inheritance UI, `MaterialProfile` nozzle/bed-temp + override chain) all
+  require a schema change and stay deferred.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

@@ -235,6 +235,24 @@ a blank color silently returned a 422 the UI didn't surface clearly. Confirmed v
 an active assignment returns 400), and re-verified the exact same "Add Filament" flow succeeds
 end-to-end with an empty Color field. Full backend suite: 126 passed.
 
+## Filament Color Swatch Picker
+
+Full task record: `docs/Tareas/filament-color-swatch/TASK.md`. Third item picked from Phase 18's
+deferred list, at Claude's discretion. Frontend-only, no backend changes — `FilamentSpool.color`
+remains the existing free-text string; no hex/RGB column exists to persist a real color value, so
+this is built honestly as a best-effort color-name-to-CSS display mapping plus a preset picker,
+not a fabricated precision color store.
+
+Playwright MCP verification, screenshots in `evidence/frontend-verification/`:
+- `color-swatch-table.png` — the Filament Manager table shows a filled black dot next to "Black"
+  and a filled orange dot next to "Orange" for the two seeded spools.
+- `color-swatch-picker.png` — the Add Filament modal's Color field shows a live preview swatch (a
+  neutral dashed ring when empty) plus a row of 14 clickable presets (Black through Transparent).
+- `color-swatch-preset-selected.png` — clicking "Blue" filled the text field with "Blue" and
+  updated the preview swatch to blue.
+- `color-swatch-ams-grid.png` — `PrinterDetail`'s AMS slot card for `A1 mini #1` shows the same
+  black swatch next to "Black" alongside the real sensor reading and humidity scale.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.
