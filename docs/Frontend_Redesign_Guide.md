@@ -222,7 +222,13 @@ does not control the dryer directly — this is validation/tracking only.
   - A `Printer`-level filament-system-type selector (AMS / External Spool / Storage-only / Manual) —
     `Printer` has no such column; AMS-ness today is inferred from whether `printer_ams`-typed
     `Location` rows exist for that printer.
-  - A color picker for filament color — still a free-text string, no new dependency added.
+  - ~~A color picker for filament color~~ — **done**, see `docs/Tareas/filament-color-swatch/TASK.md`:
+    `ColorSwatchPicker` (text input + live preview + a row of common filament color presets that
+    just fill the same field) and a `ColorSwatch` display component wherever a color name already
+    rendered (`Spools.tsx` table, `AmsSlotButton`). Still a free-text string underneath (no hex
+    column exists) — the swatch is a best-effort color-name-to-CSS guess (`lib/colorSwatch.ts`),
+    with a neutral outline ring for anything unrecognized rather than fabricating a color. No new
+    dependency added.
 
 ## 10. Migration notes for contributors
 

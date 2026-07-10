@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ColorSwatchPicker } from "@/components/ColorSwatchPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -51,14 +52,11 @@ export function SpoolForm({ value, onChange, onSubmit, materials, submitting, su
           onChange={(e) => onChange({ ...value, brand: e.target.value })}
         />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="spool-color">Color</Label>
-        <Input
-          id="spool-color"
-          value={value.color}
-          onChange={(e) => onChange({ ...value, color: e.target.value })}
-        />
-      </div>
+      <ColorSwatchPicker
+        id="spool-color"
+        value={value.color}
+        onChange={(color) => onChange({ ...value, color })}
+      />
       <div className="flex flex-col gap-1.5">
         <Label>Status</Label>
         <Select value={value.status} onValueChange={(status) => onChange({ ...value, status: status as FilamentSpool["status"] })}>

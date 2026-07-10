@@ -3,6 +3,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AddFilamentModal } from "@/components/AddFilamentModal";
+import { ColorSwatch } from "@/components/ColorSwatch";
 import { EditSpoolModal } from "@/components/EditSpoolModal";
 import { EMPTY_FILAMENT_FILTERS, FilamentFilters, type FilamentFiltersValue } from "@/components/FilamentFilters";
 import { NoticeBanner } from "@/components/NoticeBanner";
@@ -200,7 +201,16 @@ export function Spools() {
       <TableRow key={s.id}>
         <TableCell className="font-medium">{material?.name ?? s.material_profile_id}</TableCell>
         <TableCell>{s.brand}</TableCell>
-        <TableCell>{s.color ?? "—"}</TableCell>
+        <TableCell>
+          {s.color ? (
+            <span className="flex items-center gap-1.5">
+              <ColorSwatch color={s.color} />
+              {s.color}
+            </span>
+          ) : (
+            "—"
+          )}
+        </TableCell>
         <TableCell>
           <StatusBadge status={s.status} />
         </TableCell>

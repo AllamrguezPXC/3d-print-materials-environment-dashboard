@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { ColorSwatch } from "@/components/ColorSwatch";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { FilamentSpool, Location, MaterialProfile } from "@/types/api";
 
@@ -28,7 +29,12 @@ export function AmsSlotButton({ location, slotLabel, spool, material, selected, 
       {spool ? (
         <>
           <span className="text-sm font-semibold">{material?.name ?? "Unknown material"}</span>
-          {spool.color && <span className="text-xs text-muted-foreground">{spool.color}</span>}
+          {spool.color && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ColorSwatch color={spool.color} />
+              {spool.color}
+            </span>
+          )}
           <StatusBadge status={spool.status} />
         </>
       ) : (

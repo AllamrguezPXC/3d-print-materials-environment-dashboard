@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ColorSwatchPicker } from "@/components/ColorSwatchPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -165,10 +166,7 @@ export function ReadFromAmsPanel({
           <Label htmlFor="ams-brand">Brand</Label>
           <Input id="ams-brand" value={brand} onChange={(e) => setBrand(e.target.value)} />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="ams-color">Color</Label>
-          <Input id="ams-color" value={color} onChange={(e) => setColor(e.target.value)} />
-        </div>
+        <ColorSwatchPicker id="ams-color" value={color} onChange={setColor} />
         <div className="flex flex-col gap-1.5">
           <Label>Status</Label>
           <Select value={status} onValueChange={(value) => setStatus(value as FilamentSpool["status"])}>
