@@ -2,8 +2,8 @@
 
 A local full-stack web application for live environmental monitoring of 3D-printing filament
 storage and readiness — temperature, relative humidity, atmospheric pressure, and dew point —
-using a Dracal `VCP-PTH450-CAL` sensor (serial `E25877`), with a realistic mock sensor mode
-enabled by default so the app runs fully without hardware.
+using a Dracal `VCP-PTH450-CAL` sensor (serial `E25877`), alongside independently-simulated mock
+sensors (seeded by default) so the app runs fully without hardware.
 
 See `docs/Requirements.md` for the full specification and `docs/Tasks.md` for the implementation
 checklist. `CLAUDE.md` documents the Claude Code conventions used to build this repo, and
@@ -36,8 +36,9 @@ copy ..\.env.example .env   # Windows; cp ../.env.example .env on macOS/Linux �
 
 The API is now at `http://localhost:8000` (interactive docs at `http://localhost:8000/docs`).
 On first run it creates `backend/environment_monitor.db` (SQLite) and seeds default material
-profiles, 7 Bambu Lab printers, the real Dracal sensor record (serial `E25877`), a few mock
-sensors/locations, and demo filament spools — safe to restart repeatedly (seeding is idempotent).
+profiles, 7 Bambu Lab printers, the real Dracal sensor record (serial `E25877`), a few
+independently-simulated mock sensors/locations (serials `MOCK-0001`, `MOCK-0002`, ...), and demo
+filament spools — safe to restart repeatedly (seeding is idempotent).
 
 ### Frontend
 
@@ -60,14 +61,23 @@ cd backend
 87+ tests cover the three required endpoints, the sensor abstraction (mock drift/bounds, Dracal
 VCP parser), material profile alert evaluation, drying recommendations, and CRUD for every entity.
 
-## Sensor modes
+## Sensors
 
-`SENSOR_MODE` (backend env var, default `mock`) selects the sensor implementation:
+Sensors are configured per-row in the `sensors` table (`GET/POST/PATCH/DELETE /sensors`) — there
+is no global sensor mode. Each row picks its own implementation via `sensor_type`:
 
-- `mock` — a bounded random-walk simulator with a slow daily sinusoid and rare excursions, so
-  alerts can be demonstrated without hardware. This is the default and must always work.
-- `dracal_vcp` — reads real Dracal VCP-PTH450 serial lines over a COM port
-  (`DRACAL_VCP_PORT`, e.g. `COM3`) and validates against `DRACAL_SERIAL_NUMBER` (default `E25877`).
+- `mock` — a bounded random-walk simulator with a slow daily sinusoid and rare excursions, seeded
+  independently per sensor (from its own serial number) so multiple mock sensors never move in
+  lockstep. Mock sensors must use a `MOCK-`-prefixed serial and may never use the real hardware
+  serial `E25877`; both rules are enforced on create/update. Seeded mock sensors are active by
+  default so the app always runs without hardware.
+- `dracal_vcp` — reads real Dracal VCP-PTH450 serial lines over the sensor row's own `port` (e.g.
+  `COM3`) and validates against its own `serial_number` (e.g. `E25877`). Requires a non-empty
+  `port`, enforced on create/update.
+
+`GET /readings/current` returns one entry per active sensor (see the endpoint table below) — a
+failing physical sensor's error is isolated to its own entry and never blocks the others or
+invents a fallback reading.
 
 ## Required assignment endpoints
 
@@ -75,8 +85,8 @@ These three endpoints are mandatory and are covered by pytest:
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /readings/current` | Current environmental reading, sensor/location metadata, dew point, transient alerts |
-| `POST /readings` | Capture-and-persist from the configured sensor (empty body), or persist a validated manual/mock reading (body present) |
+| `GET /readings/current` | One reading (or read error) per active sensor, each with location metadata, dew point, and transient alerts |
+| `POST /readings` | Capture-and-persist from every active sensor (empty body), or persist a validated manual/mock reading (body present) |
 | `GET /readings?from=&to=` | Historical readings, optionally `aggregate=hour` for hourly averages |
 
 Extended REST endpoints exist for sensors, printers, locations, materials, spools, assignments,

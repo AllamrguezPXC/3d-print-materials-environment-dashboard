@@ -48,10 +48,30 @@ function SystemStatusBadge() {
 
   if (!data) return null;
 
+  const total = data.sensors.length;
+  if (total === 0) {
+    return (
+      <Badge variant="secondary" className="gap-1.5">
+        <Thermometer className="size-3" />
+        No sensors configured
+      </Badge>
+    );
+  }
+
+  const healthy = data.sensors.filter((s) => !s.error).length;
+  if (healthy < total) {
+    return (
+      <Badge variant="warning" className="gap-1.5">
+        <Thermometer className="size-3" />
+        {healthy}/{total} sensors online
+      </Badge>
+    );
+  }
+
   return (
-    <Badge variant={data.source === "mock" ? "secondary" : "ok"} className="gap-1.5">
+    <Badge variant="ok" className="gap-1.5">
       <Thermometer className="size-3" />
-      {data.source === "mock" ? "Mock sensor" : "Live sensor"}
+      All {total} sensors online
     </Badge>
   );
 }

@@ -55,8 +55,9 @@ class DracalVcpSensorReader:
     """
     <summary>
     Reads environmental data from a real Dracal VCP-PTH450-CAL sensor over a
-    serial (COM) port. Requires pyserial and a configured port; only
-    constructed when SENSOR_MODE=dracal_vcp.
+    serial (COM) port. Requires pyserial and a configured port; constructed
+    per-row by app.sensors.factory.get_sensor_reader_for_sensor for any
+    Sensor row with sensor_type="dracal_vcp".
     </summary>
     """
 

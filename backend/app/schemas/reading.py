@@ -23,6 +23,7 @@ PRESSURE_KPA_MAX = PRESSURE_PA_MAX / 1000
 
 
 class SensorInfo(BaseModel):
+    id: int
     serial_number: str
     model: str = "VCP-PTH450-CAL"
     sensor_type: Literal["real", "mock", "manual"]
@@ -43,27 +44,40 @@ class AffectedSpoolInfo(BaseModel):
     status: str
 
 
-class CurrentReadingResponse(BaseModel):
-    """
-    <summary>
-    Response body for GET /readings/current: the latest environmental
-    sample plus sensor metadata, location metadata, dew point, affected
-    spools/materials, and active alerts.
-    </summary>
+class SensorReadingEntry(BaseModel):
+    """One active sensor's current reading, or its read error, for
+    GET /readings/current. `error` is non-null exactly when this sensor's
+    reader failed -- in that case every reading field stays null and the
+    other entries in the response are unaffected.
     """
 
-    timestamp: datetime
-    temperature_c: float
-    relative_humidity_percent: float
-    pressure_pa: float
-    pressure_kpa: float
-    dew_point_c: float
-    source: Literal["real", "mock", "manual"]
     sensor: SensorInfo
     location_id: int | None = None
     location: LocationInfo | None = None
+    timestamp: datetime | None = None
+    temperature_c: float | None = None
+    relative_humidity_percent: float | None = None
+    pressure_pa: float | None = None
+    pressure_kpa: float | None = None
+    dew_point_c: float | None = None
+    source: Literal["real", "mock", "manual"]
     affected_spools: list[AffectedSpoolInfo] = []
     alerts: list[AlertRead] = []
+    error: str | None = None
+
+
+class CurrentReadingsResponse(BaseModel):
+    """
+    <summary>
+    Response body for GET /readings/current: one SensorReadingEntry per
+    active configured sensor. `sensors` is empty (with an explanatory
+    `message`) when no sensor rows are active -- no reading is ever
+    synthesized for a sensor that isn't configured.
+    </summary>
+    """
+
+    sensors: list[SensorReadingEntry] = []
+    message: str | None = None
 
 
 class ReadingCreate(BaseModel):
@@ -111,6 +125,25 @@ class ReadingRead(BaseModel):
 class ReadingCreateResponse(BaseModel):
     reading: ReadingRead
     alerts: list[AlertRead]
+
+
+class ReadingCreateResult(BaseModel):
+    """One sensor's outcome within a POST /readings all-active-sensors capture."""
+
+    sensor_id: int
+    reading: ReadingRead | None = None
+    alerts: list[AlertRead] = []
+    error: str | None = None
+
+
+class ReadingsCaptureResponse(BaseModel):
+    """Response body for POST /readings with an empty body: captures and
+    persists a reading from every active sensor. Empty (with `message`) when
+    no sensor rows are active -- no reading is ever invented.
+    """
+
+    readings: list[ReadingCreateResult] = []
+    message: str | None = None
 
 
 class HourlyAggregate(BaseModel):

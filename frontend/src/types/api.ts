@@ -1,4 +1,5 @@
 export interface SensorInfo {
+  id: number;
   serial_number: string;
   model: string;
   sensor_type: "real" | "mock" | "manual";
@@ -35,19 +36,25 @@ export interface AffectedSpoolInfo {
   status: string;
 }
 
-export interface CurrentReadingResponse {
-  timestamp: string;
-  temperature_c: number;
-  relative_humidity_percent: number;
-  pressure_pa: number;
-  pressure_kpa: number;
-  dew_point_c: number;
-  source: "real" | "mock" | "manual";
+export interface SensorReadingEntry {
   sensor: SensorInfo;
   location_id: number | null;
   location: LocationInfo | null;
+  timestamp: string | null;
+  temperature_c: number | null;
+  relative_humidity_percent: number | null;
+  pressure_pa: number | null;
+  pressure_kpa: number | null;
+  dew_point_c: number | null;
+  source: "real" | "mock" | "manual";
   affected_spools: AffectedSpoolInfo[];
   alerts: AlertOut[];
+  error: string | null;
+}
+
+export interface CurrentReadingsResponse {
+  sensors: SensorReadingEntry[];
+  message: string | null;
 }
 
 export interface ReadingOut {

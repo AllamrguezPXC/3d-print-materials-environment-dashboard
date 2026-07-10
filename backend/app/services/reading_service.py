@@ -4,57 +4,68 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.config import Settings
 from app.models.sensor import Sensor
 from app.repositories.reading_repository import get_or_create_sensor, query_readings, save_reading
 from app.schemas.alert import AlertRead
-from app.schemas.reading import HourlyAggregate, ReadingCreate, ReadingCreateResponse, ReadingRead
+from app.schemas.reading import (
+    HourlyAggregate,
+    ReadingCreate,
+    ReadingCreateResponse,
+    ReadingCreateResult,
+    ReadingRead,
+    ReadingsCaptureResponse,
+)
 from app.sensors.base import SensorParseError
-from app.sensors.factory import get_sensor_reader
+from app.sensors.factory import get_sensor_reader_for_sensor
 from app.services.alert_service import build_alert_drafts, persist_alerts
 from app.services.environment_service import compute_dew_point_c
 
 
-def capture_and_persist_reading(session: Session, settings: Settings) -> ReadingCreateResponse:
-    """POST /readings with an empty body: read from the default configured
-    sensor and persist it. Raises 503 if a real sensor is configured but
-    unavailable (Requirements.md §13.2).
+def capture_and_persist_all_active_sensors(session: Session) -> ReadingsCaptureResponse:
+    """POST /readings with an empty body: capture and persist a reading from
+    every active sensor row. Never invents a reading for a sensor that isn't
+    configured -- returns an empty list with `message` if none are active.
+    A single sensor's read error is recorded on its own result entry rather
+    than aborting the whole request, so one failing physical sensor doesn't
+    prevent the others from being captured.
     """
-    reader = get_sensor_reader(settings)
-    try:
-        raw = reader.read_current()
-    except (SensorParseError, OSError) as exc:
-        raise HTTPException(status_code=503, detail=f"Sensor unavailable: {exc}") from exc
+    active_sensors = session.query(Sensor).filter_by(is_active=True).order_by(Sensor.id.asc()).all()
+    if not active_sensors:
+        return ReadingsCaptureResponse(readings=[], message="No active sensors configured.")
 
-    sensor = get_or_create_sensor(
-        session,
-        serial_number=raw.sensor_serial,
-        sensor_type=raw.source,
-        model="VCP-PTH450-CAL" if raw.source == "real" else "mock",
-    )
-    dew_point_c = compute_dew_point_c(raw.temperature_c, raw.relative_humidity_percent)
+    results: list[ReadingCreateResult] = []
+    for sensor in active_sensors:
+        try:
+            raw = get_sensor_reader_for_sensor(sensor).read_current()
+        except (SensorParseError, OSError, ValueError) as exc:
+            results.append(ReadingCreateResult(sensor_id=sensor.id, error=str(exc)))
+            continue
 
-    reading = save_reading(
-        session,
-        sensor_id=sensor.id,
-        location_id=sensor.location_id,
-        timestamp=raw.timestamp,
-        temperature_c=raw.temperature_c,
-        relative_humidity_percent=raw.relative_humidity_percent,
-        pressure_pa=raw.pressure_pa,
-        pressure_kpa=raw.pressure_kpa,
-        dew_point_c=dew_point_c,
-        source=raw.source,
-        raw_payload=raw.raw_payload,
-    )
+        dew_point_c = compute_dew_point_c(raw.temperature_c, raw.relative_humidity_percent)
+        reading = save_reading(
+            session,
+            sensor_id=sensor.id,
+            location_id=sensor.location_id,
+            timestamp=raw.timestamp,
+            temperature_c=raw.temperature_c,
+            relative_humidity_percent=raw.relative_humidity_percent,
+            pressure_pa=raw.pressure_pa,
+            pressure_kpa=raw.pressure_kpa,
+            dew_point_c=dew_point_c,
+            source=raw.source,
+            raw_payload=raw.raw_payload,
+        )
+        alerts = _evaluate_and_persist_alerts(session, reading, dew_point_c)
+        results.append(
+            ReadingCreateResult(
+                sensor_id=sensor.id,
+                reading=ReadingRead.model_validate(reading),
+                alerts=[AlertRead.model_validate(a) for a in alerts],
+            )
+        )
 
-    alerts = _evaluate_and_persist_alerts(session, reading, dew_point_c)
     session.commit()
-
-    return ReadingCreateResponse(
-        reading=ReadingRead.model_validate(reading),
-        alerts=[AlertRead.model_validate(a) for a in alerts],
-    )
+    return ReadingsCaptureResponse(readings=results)
 
 
 def persist_manual_reading(session: Session, payload: ReadingCreate) -> ReadingCreateResponse:

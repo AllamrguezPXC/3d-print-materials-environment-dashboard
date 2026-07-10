@@ -18,13 +18,16 @@ export function Settings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Sensor mode</CardTitle>
+          <CardTitle>Sensors</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Sensor mode is configured server-side via the <code className="rounded bg-muted px-1 py-0.5">SENSOR_MODE</code> environment
-            variable (default <code className="rounded bg-muted px-1 py-0.5">mock</code>). See{" "}
-            <code className="rounded bg-muted px-1 py-0.5">backend/.env.example</code>.
+            Sensors are configured individually — each row in the sensors table specifies its own
+            type (<code className="rounded bg-muted px-1 py-0.5">mock</code> or{" "}
+            <code className="rounded bg-muted px-1 py-0.5">dracal_vcp</code>) and connection
+            details. There is no global sensor mode. Manage sensors via the{" "}
+            <code className="rounded bg-muted px-1 py-0.5">/sensors</code> API — see{" "}
+            <code className="rounded bg-muted px-1 py-0.5">http://localhost:8000/docs</code>.
           </p>
         </CardContent>
       </Card>

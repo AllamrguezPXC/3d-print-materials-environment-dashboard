@@ -14,6 +14,7 @@ from app.models.material_profile import MaterialProfile
 from app.models.printer import Printer
 from app.models.sensor import Sensor
 from app.models.spool_assignment import SpoolAssignment
+from app.services.sensor_validation import validate_sensor_fields
 
 # --- Material profile seed data (Requirements.md §7) ---------------------
 # Temperature bands are not broken out per-material in §7 (only a shared
@@ -203,6 +204,11 @@ def _get_or_create_sensor(session: Session, serial_number: str, **fields) -> Sen
     existing = session.query(Sensor).filter_by(serial_number=serial_number).first()
     if existing:
         return existing
+    validate_sensor_fields(
+        sensor_type=fields["sensor_type"],
+        serial_number=serial_number,
+        port=fields.get("port"),
+    )
     sensor = Sensor(serial_number=serial_number, **fields)
     session.add(sensor)
     session.flush()
