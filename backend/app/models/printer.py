@@ -20,5 +20,9 @@ class Printer(Base):
     model: Mapped[str] = mapped_column(String(120))
     serial_number: Mapped[str | None] = mapped_column(String(120), default=None)
     notes: Mapped[str | None] = mapped_column(String(500), default=None)
+    # ams, external_spool, storage_only, manual -- purely descriptive
+    # configuration; does not gate the AMS slot grid, which is still
+    # inferred from actual Location rows (see AmsSlotGrid/ReadFromAmsPanel).
+    filament_system_type: Mapped[str] = mapped_column(String(32), default="manual")
 
     locations: Mapped[list["Location"]] = relationship("Location", back_populates="printer")

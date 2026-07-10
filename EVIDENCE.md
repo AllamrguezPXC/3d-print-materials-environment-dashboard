@@ -253,6 +253,28 @@ Playwright MCP verification, screenshots in `evidence/frontend-verification/`:
 - `color-swatch-ams-grid.png` — `PrinterDetail`'s AMS slot card for `A1 mini #1` shows the same
   black swatch next to "Black" alongside the real sensor reading and humidity scale.
 
+## Printer Filament System Type
+
+Full task record: `docs/Tareas/printer-filament-system-type/TASK.md`. Fourth item picked from
+Phase 18's deferred list, at Claude's discretion. Adds `Printer.filament_system_type` (AMS /
+External Spool / Storage-only / Manual) as editable, validated configuration — purely descriptive,
+does not change the existing AMS-grid inference (still derived from real `printer_ams` `Location`
+rows), avoiding two competing sources of truth for "does this printer have AMS."
+
+Backend: model/schema/service-layer validation (422 on an unrecognized enum value for both create
+and patch), seed updated so `A1 mini #1`/`P1S #1` → `"ams"` (matching their real seeded AMS
+`Location` rows) and every other seeded printer → `"external_spool"`. 5 new tests; full backend
+suite: 131 passed.
+
+Playwright MCP verification, screenshot `evidence/frontend-verification/printer-filament-system-type.png`:
+- `/printers` — new "Filament System" column shows `ams`/`external spool` for the seeded printers.
+- `/printers/1` (A1 mini #1) — header now reads "Bambu Lab A1 mini · Ams" (shown in the screenshot).
+- Created a test printer via the form selecting "storage only" from the new `Select`, confirmed it
+  saved and displayed correctly in the table (`storage only`), then deleted it to leave seed data
+  unchanged.
+
+`tsc -b`/`build`/`lint` clean throughout.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

@@ -15,7 +15,12 @@ import {
 } from "@/hooks/resources/locations";
 import { useCreatePrinter, usePrinters, useRemovePrinter } from "@/hooks/resources/printers";
 
-const EMPTY_PRINTER: PrinterFormValues = { name: "", brand: "Bambu Lab", model: "A1 mini" };
+const EMPTY_PRINTER: PrinterFormValues = {
+  name: "",
+  brand: "Bambu Lab",
+  model: "A1 mini",
+  filament_system_type: "manual",
+};
 const EMPTY_LOCATION: LocationFormValues = { name: "", location_type: "printer_ams", printer_id: "" };
 
 export function Printers() {
@@ -101,6 +106,7 @@ export function Printers() {
                 <TableHead>Name</TableHead>
                 <TableHead>Brand</TableHead>
                 <TableHead>Model</TableHead>
+                <TableHead>Filament System</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -114,6 +120,7 @@ export function Printers() {
                   </TableCell>
                   <TableCell>{p.brand}</TableCell>
                   <TableCell>{p.model}</TableCell>
+                  <TableCell className="capitalize">{p.filament_system_type.replaceAll("_", " ")}</TableCell>
                   <TableCell>
                     <Button variant="destructive" size="sm" onClick={() => handleDeletePrinter(p.id)}>
                       Delete

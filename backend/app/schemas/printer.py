@@ -7,6 +7,7 @@ class PrinterBase(BaseModel):
     model: str
     serial_number: str | None = None
     notes: str | None = None
+    filament_system_type: str = "manual"  # ams, external_spool, storage_only, manual
 
 
 class PrinterCreate(PrinterBase):
@@ -19,6 +20,7 @@ class PrinterUpdate(BaseModel):
     model: str | None = None
     serial_number: str | None = None
     notes: str | None = None
+    filament_system_type: str | None = None
 
 
 class PrinterRead(PrinterBase):

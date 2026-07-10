@@ -20,6 +20,58 @@ def test_create_and_fetch_printer(client):
     assert get_response.json()["name"] == "Test Printer"
 
 
+def test_create_printer_defaults_filament_system_type_to_manual(client):
+    payload = {"name": "Default Type Printer", "brand": "Bambu Lab", "model": "A1 mini"}
+    response = client.post("/printers", json=payload)
+    assert response.status_code == 200
+    assert response.json()["filament_system_type"] == "manual"
+
+
+def test_create_printer_accepts_valid_filament_system_type(client):
+    payload = {
+        "name": "AMS Printer",
+        "brand": "Bambu Lab",
+        "model": "P1S",
+        "filament_system_type": "ams",
+    }
+    response = client.post("/printers", json=payload)
+    assert response.status_code == 200
+    assert response.json()["filament_system_type"] == "ams"
+
+
+def test_create_printer_rejects_invalid_filament_system_type(client):
+    payload = {
+        "name": "Bad Type Printer",
+        "brand": "Bambu Lab",
+        "model": "A1 mini",
+        "filament_system_type": "carrier_pigeon",
+    }
+    response = client.post("/printers", json=payload)
+    assert response.status_code == 422
+
+
+def test_patch_printer_rejects_invalid_filament_system_type(client):
+    created = client.post(
+        "/printers", json={"name": "Patchable Type Printer", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+
+    response = client.patch(
+        f"/printers/{created['id']}", json={"filament_system_type": "carrier_pigeon"}
+    )
+    assert response.status_code == 422
+
+
+def test_seeded_printers_have_consistent_filament_system_type(client):
+    printers = client.get("/printers").json()
+    a1_mini_1 = next(p for p in printers if p["name"] == "A1 mini #1")
+    p1s_1 = next(p for p in printers if p["name"] == "P1S #1")
+    p1s_2 = next(p for p in printers if p["name"] == "P1S #2")
+
+    assert a1_mini_1["filament_system_type"] == "ams"
+    assert p1s_1["filament_system_type"] == "ams"
+    assert p1s_2["filament_system_type"] == "external_spool"
+
+
 def test_get_printer_404_for_missing_id(client):
     response = client.get("/printers/999999")
     assert response.status_code == 404

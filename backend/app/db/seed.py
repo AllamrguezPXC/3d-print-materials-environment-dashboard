@@ -166,14 +166,18 @@ MATERIAL_PROFILE_SEEDS: list[dict] = [
 # --- Printer seed data (Requirements.md section 6/13.4: 4x A1 mini, 2x P1S, 1x P1P) ---
 # Printer's natural business key is `name` (not brand+model), since multiple
 # identical units share brand/model but must remain distinct rows.
+# filament_system_type is set to match the AMS locations already seeded
+# below: only "A1 mini #1" and "P1S #1" get real AMS slot Location rows, so
+# only those two are marked "ams" here -- everything else defaults to
+# "external_spool" rather than claiming an AMS that doesn't actually exist.
 PRINTER_SEEDS: list[dict] = [
-    {"name": "A1 mini #1", "brand": "Bambu Lab", "model": "A1 mini"},
-    {"name": "A1 mini #2", "brand": "Bambu Lab", "model": "A1 mini"},
-    {"name": "A1 mini #3", "brand": "Bambu Lab", "model": "A1 mini"},
-    {"name": "A1 mini #4", "brand": "Bambu Lab", "model": "A1 mini"},
-    {"name": "P1S #1", "brand": "Bambu Lab", "model": "P1S"},
-    {"name": "P1S #2", "brand": "Bambu Lab", "model": "P1S"},
-    {"name": "P1P #1", "brand": "Bambu Lab", "model": "P1P"},
+    {"name": "A1 mini #1", "brand": "Bambu Lab", "model": "A1 mini", "filament_system_type": "ams"},
+    {"name": "A1 mini #2", "brand": "Bambu Lab", "model": "A1 mini", "filament_system_type": "external_spool"},
+    {"name": "A1 mini #3", "brand": "Bambu Lab", "model": "A1 mini", "filament_system_type": "external_spool"},
+    {"name": "A1 mini #4", "brand": "Bambu Lab", "model": "A1 mini", "filament_system_type": "external_spool"},
+    {"name": "P1S #1", "brand": "Bambu Lab", "model": "P1S", "filament_system_type": "ams"},
+    {"name": "P1S #2", "brand": "Bambu Lab", "model": "P1S", "filament_system_type": "external_spool"},
+    {"name": "P1P #1", "brand": "Bambu Lab", "model": "P1P", "filament_system_type": "external_spool"},
 ]
 
 REAL_SENSOR_SERIAL = "E25877"
@@ -184,7 +188,12 @@ def _get_or_create_printer(session: Session, spec: dict) -> Printer:
     existing = session.query(Printer).filter_by(name=spec["name"]).first()
     if existing:
         return existing
-    printer = Printer(name=spec["name"], brand=spec["brand"], model=spec["model"])
+    printer = Printer(
+        name=spec["name"],
+        brand=spec["brand"],
+        model=spec["model"],
+        filament_system_type=spec.get("filament_system_type", "manual"),
+    )
     session.add(printer)
     session.flush()
     return printer
