@@ -337,6 +337,34 @@ on `/spools`, Material=PLA + Brand=Prusament shows the suggestion hint, and clic
 switches the Material select to "Prusament PLA" and hides the hint
 (`evidence/frontend-verification/spoolform-override-hint.png`).
 
+## Alerts History Admin Page
+
+Full task record: `docs/Tareas/alerts-history-admin-page/TASK.md`. Picked at Claude's own
+discretion in response to "Continua con lo restante," after an Explore agent audited
+`docs/Requirements.md` end-to-end (beyond the two already-known deferred items) and found a real
+gap: §12.2 requires `GET /alerts` and `PATCH /alerts/{id}/resolve`, both fully implemented and
+tested on the backend, but the frontend had zero consumer — `AlertPanel.tsx` only ever showed the
+transient per-sensor alerts embedded in `GET /readings/current`, never the persisted history, and
+nothing anywhere called resolve. Same class of gap as the manufacturer-override chain (Phase 25): a
+documented, endpoint-backed rule with no consuming code.
+
+Added a new `/alerts` page: status filter (All/Active/Resolved), severity filter, a table (severity
+badge, metric, message, recommended action, resolved location name, created-at, status badge,
+Resolve button for active rows only). Nav item with a `Bell` icon. `AlertPanel.tsx` (Dashboard's
+per-sensor embedded alerts) intentionally left unchanged — it serves live "what's wrong right now"
+status, a different job from this page's history/acknowledgment role.
+
+Backend: no changes (already fully implemented and tested — 132 pytest passed, unaffected).
+Frontend: `Alerts.test.tsx` (4 new tests: empty state, rendering, resolve behavior, no-button-when-
+already-resolved). Full vitest suite: 18 passed. `tsc -b`/`build`/`lint` clean.
+
+Playwright verification: triggered a critical humidity alert (plus a bonus warning dew-point alert)
+via `POST /readings` against the seeded PLA spool's location; confirmed both render correctly on
+`/alerts` with the right severity badges and resolved location name
+(`evidence/frontend-verification/alerts-page-active.png`), then clicked "Resolve" on the humidity
+alert and confirmed it switched to a green "Resolved" badge with the button gone, while the
+dew-point alert stayed Active (`evidence/frontend-verification/alerts-page-resolved.png`).
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

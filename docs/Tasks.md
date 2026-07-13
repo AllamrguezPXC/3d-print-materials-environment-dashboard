@@ -514,6 +514,51 @@ never resolved against anything, anywhere in the codebase.
   the former, and slicer-profile data is orthogonal to this app's scope for
   the latter).
 
+## Phase 26 — Alerts History Admin Page
+
+See `docs/Tareas/alerts-history-admin-page/TASK.md` for the full task
+record. Picked at Claude's own discretion in response to "Continua con lo
+restante" — an Explore agent audited `docs/Requirements.md` end-to-end for
+gaps beyond the two already-known deferred items, and found this one:
+§12.2 requires `GET /alerts` and `PATCH /alerts/{id}/resolve`, fully
+implemented and tested on the backend, but the frontend had zero consumer
+for it — the same class of gap as the manufacturer-override chain fixed in
+Phase 25 (documented, endpoint-backed rule, no consuming code). A second,
+lower-priority gap was also found (§11.6: no drying-session trend chart) —
+noted in `docs/Frontend_Redesign_Guide.md`, deferred, not built this round.
+
+- [x] `types/api.ts`: `AlertResolveResponse { alert: AlertOut }` (reusing
+  the existing `AlertOut` type, which already matched the backend's
+  `AlertRead` schema exactly).
+- [x] `api/config.ts`: `alertsApi.list(params?)` (`is_active`/`severity`/
+  `location_id` query params) and `alertsApi.resolve(id)` (empty-body PATCH
+  — the backend endpoint declares no request body).
+- [x] `hooks/resources/alerts.ts` (new): `useAlerts(params?)` and
+  `useResolveAlert()` — plain `useQuery`/`useMutation`, not
+  `createResourceHooks`, since this resource is list+resolve only.
+- [x] `Alerts.tsx` (new page): status filter (All/Active/Resolved),
+  severity filter (All/info/warning/critical), a table (severity badge,
+  metric, message, recommended action, location — resolved via
+  `useLocations()` + `.find()`, created-at, status badge, Resolve button
+  for active rows only). Route `/alerts` + nav item (`Bell` icon) added.
+  `AlertPanel.tsx` (Dashboard's per-sensor embedded alerts) left unchanged
+  — different job (live status vs. history/acknowledgment).
+- [x] `Alerts.test.tsx` (new, 4 tests): empty state; rendering an active
+  alert with severity/location/Resolve button; resolving calls the mutation
+  and the row updates to "Resolved" with the button gone; an
+  already-resolved alert never shows a Resolve button.
+- [x] `npx vitest run` (18 passed), `tsc -b`/`build`/`lint` clean, backend
+  suite 132 passed (no backend changes — this task is frontend-only).
+- [x] Playwright verification: triggered a critical humidity alert (and a
+  bonus warning dew-point alert) via `POST /readings` against the seeded
+  PLA spool's location; `/alerts` rendered both with correct badges and
+  resolved location name (screenshot:
+  `evidence/frontend-verification/alerts-page-active.png`); clicking
+  "Resolve" on the humidity alert switched it to a green "Resolved" badge
+  with the button gone, while the dew-point alert stayed Active (screenshot:
+  `evidence/frontend-verification/alerts-page-resolved.png`).
+- [x] Updated `docs/Frontend_Redesign_Guide.md` §9.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`
