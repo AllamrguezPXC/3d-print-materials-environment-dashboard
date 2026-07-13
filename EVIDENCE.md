@@ -300,6 +300,39 @@ acceptance criteria from the issue:
 root `CLAUDE.md`'s Testing Commands. Issue #1 closed via `gh issue close 1` with a summary comment
 linking the implementation.
 
+## Material Profile Manufacturer Override
+
+Full task record: `docs/Tareas/material-profile-manufacturer-override/TASK.md`. Picked at Claude's
+own discretion in response to "continua con lo que queda," after using an Explore agent to verify
+this was a real requirements gap rather than one of the optional Bambu-Studio extras:
+`docs/Requirements.md` §7 rule 1 ("Manufacturer-specific values override family defaults") and
+`CLAUDE.md`'s Domain Rules both state this as a must, but investigation confirmed `MaterialProfile`'s
+`manufacturer`/`variant` columns were always `null` in seed data, never queried against
+`FilamentSpool.brand`, with no resolution logic anywhere — flat CRUD plus a user manually picking one
+row from an unlabeled dropdown.
+
+Seeded a real manufacturer-specific example ("Prusament PLA," sharing `family` with generic "PLA"
+but with tighter RH thresholds, `source_notes` honestly marked illustrative rather than claiming a
+real published Prusament spec). `SpoolForm.tsx` now suggests switching to the manufacturer-specific
+profile when the typed brand matches one for the currently-selected family — a button the user
+clicks, never a silent auto-switch. `Materials.tsx` gained a "Manufacturer" column so the override
+relationship is visible per Requirements §7 rule 3. Deliberately no new backend endpoint: resolution
+is a client-side lookup over the already-fetched profile list, matching this codebase's existing
+pattern (e.g. `Printers.tsx` resolving a location's printer via `.find()`) rather than adding a route
+nothing but the frontend would call.
+
+Backend: 1 new pytest (seeded override profile's fields), plus a hardcoded seed-count assertion
+fixed in `test_seed_idempotent.py`. Full suite: 132 passed. Frontend: `SpoolForm.test.tsx` (4 new
+tests) covers no-hint/hint-shown/switch-and-hide/cross-family-no-match. Full vitest suite: 14 passed.
+`tsc -b`/`build`/`lint` clean.
+
+**Playwright verification not performed this session** — the Playwright MCP server was disconnected
+(confirmed via `ToolSearch`, no `mcp__playwright__*` tools resolved). Substituted with a live `curl`
+against the running `GET /materials` confirming the seeded profile's exact fields, plus the vitest
+suite exercising the same render/interaction through Testing Library + jsdom. This is a reasonable
+substitute for this specific change but is explicitly logged as a gap, not silently skipped — a real
+browser check should still happen once Playwright MCP is reconnected.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

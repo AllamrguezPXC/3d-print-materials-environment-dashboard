@@ -44,6 +44,28 @@ MATERIAL_PROFILE_SEEDS: list[dict] = [
         "drying_notes": "Dry at 45C for 4-6h.",
         "source_notes": "Requirements.md section 7 seed defaults.",
     },
+    # Manufacturer-specific override example (Requirements.md section 7 rule 1;
+    # CLAUDE.md Domain Rules): same family as generic "PLA" above, but a
+    # distinct, tighter profile a spool can be assigned to instead. Numbers
+    # are illustrative only, not sourced from Prusament's published spec --
+    # replace with real manufacturer data when available.
+    {
+        "name": "Prusament PLA",
+        "family": "PLA-derived",
+        "manufacturer": "Prusament",
+        "ideal_rh_max_percent": 35.0,
+        "warning_rh_max_percent": 45.0,
+        "critical_rh_max_percent": 55.0,
+        "drying_temp_c": 45.0,
+        "drying_time_hours_min": 4.0,
+        "drying_time_hours_max": 6.0,
+        "storage_notes": "Prusament-specific PLA. Vacuum-sealed with desiccant from the factory.",
+        "drying_notes": "Dry at 45C for 4-6h.",
+        "source_notes": (
+            "Illustrative manufacturer-specific override example (tighter RH tolerance than "
+            "generic PLA) -- not sourced from Prusament's official published spec."
+        ),
+    },
     {
         "name": "PETG",
         "family": "PET-derived",
@@ -235,6 +257,7 @@ def _get_or_create_material_profile(session: Session, spec: dict) -> MaterialPro
     profile = MaterialProfile(
         name=spec["name"],
         family=spec["family"],
+        manufacturer=spec.get("manufacturer"),
         ideal_temp_min_c=_IDEAL_TEMP_MIN_C,
         ideal_temp_max_c=_IDEAL_TEMP_MAX_C,
         warning_temp_min_c=_WARNING_TEMP_MIN_C,

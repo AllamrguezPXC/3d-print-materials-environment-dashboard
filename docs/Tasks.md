@@ -457,6 +457,60 @@ dependency had ever been added — tracked as
   suite unaffected (131 passed, no backend changes in this task).
 - [x] Updated `docs/Frontend_Redesign_Guide.md` §9.
 
+## Phase 25 — Material Profile Manufacturer Override
+
+See `docs/Tareas/material-profile-manufacturer-override/TASK.md` for the
+full task record. Picked at Claude's own discretion in response to
+"continua con lo que queda" after an Explore agent confirmed this was a
+real requirements gap — `docs/Requirements.md` §7 rule 1 and `CLAUDE.md`'s
+Domain Rules both state manufacturer-specific profiles must override family
+defaults, but `manufacturer`/`variant` were always `null` in seed data and
+never resolved against anything, anywhere in the codebase.
+
+- [x] Seeded a real manufacturer-specific example: "Prusament PLA"
+  (`manufacturer="Prusament"`, `family="PLA-derived"` — same family as
+  generic "PLA" — with tighter RH thresholds: 35/45/55% vs. 40/50/60%).
+  `source_notes` honestly labels the numbers as illustrative, not sourced
+  from Prusament's real published spec (same "never fabricate data"
+  principle as the color-swatch picker, applied to numeric domain data).
+- [x] `_get_or_create_material_profile` now passes `manufacturer=` through
+  (previously silently dropped, always `None`).
+- [x] Backend test: seeded "Prusament PLA" has `manufacturer="Prusament"`,
+  shares `family` with generic "PLA", and has a lower `ideal_rh_max_percent`.
+  Fixed a hardcoded `MaterialProfile` count assertion in
+  `test_seed_idempotent.py` (10 → 11). Full suite: 132 passed.
+- [x] `Materials.tsx` gained a "Manufacturer" column (shows the manufacturer
+  name or "Generic") — closing Requirements §7 rule 3 ("must show the
+  source or note for each profile").
+- [x] `SpoolForm.tsx`: when the typed `brand` case-insensitively matches an
+  existing manufacturer-specific profile sharing the currently-selected
+  profile's family, shows an inline hint + "Use it" button that switches
+  `material_profile_id` — a suggestion, never a silent auto-switch, since a
+  spool already points at exactly one profile row and there's no separate
+  family input at evaluation time to resolve against automatically.
+  Deliberately no new `/materials/resolve` backend endpoint: the frontend
+  already has the full profile list loaded, so a network round-trip would
+  be strictly worse than the existing client-side `.find()` pattern used
+  elsewhere (e.g. `Printers.tsx` resolving a location's printer name).
+- [x] `SpoolForm.test.tsx` (new): no hint for a non-matching brand; hint
+  appears for a matching brand; clicking "Use it" switches the Select's
+  displayed value and hides the hint; no false-positive across families.
+- [x] `npx vitest run` (14 passed), `tsc -b`/`build`/`lint` clean, backend
+  suite 132 passed.
+- [x] Playwright verification **not performed** — the Playwright MCP server
+  was disconnected this session (confirmed via `ToolSearch`). Substituted
+  with a live `curl` against the running backend confirming the seeded
+  profile's exact field values, plus the vitest suite exercising the same
+  render/interaction via Testing Library + jsdom. Documented as a real gap
+  in `docs/Tareas/material-profile-manufacturer-override/TASK.md` — do a
+  real-browser check next time Playwright MCP is available.
+- [x] Updated `docs/Frontend_Redesign_Guide.md` §9 — of the original
+  Phase 2+ list, only sensor-inheritance resolution UI and `MaterialProfile`
+  nozzle/bed-temp fields remain deferred (both for reasons independent of
+  a missing migration tool: no real inheritance chain exists to resolve for
+  the former, and slicer-profile data is orthogonal to this app's scope for
+  the latter).
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

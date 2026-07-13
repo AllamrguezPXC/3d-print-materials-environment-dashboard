@@ -225,8 +225,20 @@ does not control the dryer directly — this is validation/tracking only.
     already tracks explicitly (`Location.slot_index`), not any real Bambu Studio/AMS integration.)
   - Sensor-inheritance resolution UI (printer → AMS → slot → location) — a slot's sensor is whatever
     sensor row has that slot's `location_id`, resolved implicitly, not surfaced as an explicit chain.
-  - `MaterialProfile` nozzle/bed print-temperature fields and a manufacturer-override chain — the
-    model remains environmental/drying-only; no schema migration tool exists to add these safely yet.
+  - `MaterialProfile` nozzle/bed print-temperature fields — the model remains environmental/drying-
+    only (slicer profile data is orthogonal to this app's declared monitoring/advisory purpose).
+  - ~~A `MaterialProfile` manufacturer-override chain~~ — **done**, see
+    `docs/Tareas/material-profile-manufacturer-override/TASK.md`: this was a real gap against
+    `docs/Requirements.md` §7 rule 1 and `CLAUDE.md`'s Domain Rules ("manufacturer-specific profiles
+    override generic family defaults"), not one of the optional Bambu-Studio extras — confirmed via
+    investigation that `manufacturer`/`variant` columns existed but were always `null` in seed data
+    and never resolved against anything. Seeded a real example ("Prusament PLA", sharing `family`
+    with generic "PLA" but with tighter RH thresholds); `SpoolForm.tsx` now suggests switching to a
+    manufacturer-specific profile when the typed brand matches one for the selected family (a
+    button, never a silent auto-switch); `Materials.tsx` gained a "Manufacturer" column so the
+    override relationship is visible (Requirements §7 rule 3). Resolution is a client-side `.find()`
+    over the already-fetched profile list — no new backend endpoint, since nothing but the frontend
+    would call one.
   - ~~A `Printer`-level filament-system-type selector (AMS / External Spool / Storage-only / Manual)~~
     — **done**, see `docs/Tareas/printer-filament-system-type/TASK.md`: `Printer.filament_system_type`
     (validated enum, default `"manual"`), editable via `PrinterForm`, shown as a column in

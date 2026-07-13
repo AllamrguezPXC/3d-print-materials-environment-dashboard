@@ -109,6 +109,7 @@ export function Materials() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Family</TableHead>
+                <TableHead>Manufacturer</TableHead>
                 <TableHead>Ideal RH max</TableHead>
                 <TableHead>Warning RH max</TableHead>
                 <TableHead>Critical RH max</TableHead>
@@ -122,6 +123,9 @@ export function Materials() {
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>{p.family}</TableCell>
+                  <TableCell>
+                    {p.manufacturer ?? <span className="text-muted-foreground">Generic</span>}
+                  </TableCell>
                   <TableCell>{p.ideal_rh_max_percent}%</TableCell>
                   <TableCell>{p.warning_rh_max_percent}%</TableCell>
                   <TableCell>{p.critical_rh_max_percent}%</TableCell>

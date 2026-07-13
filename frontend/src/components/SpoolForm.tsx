@@ -23,7 +23,27 @@ interface SpoolFormProps {
   submitLabel?: string;
 }
 
+/** Manufacturer-specific profiles override generic family defaults
+ * (Requirements.md section 7 rule 1; CLAUDE.md Domain Rules). A spool
+ * points at exactly one MaterialProfile row, so "override" means
+ * suggesting the more specific row when the typed brand matches one --
+ * never switching it automatically without the user's confirmation. */
+function findManufacturerOverride(
+  materials: MaterialProfile[],
+  selected: MaterialProfile | undefined,
+  brand: string,
+): MaterialProfile | undefined {
+  const trimmedBrand = brand.trim().toLowerCase();
+  if (!selected || selected.manufacturer || !trimmedBrand) return undefined;
+  return materials.find(
+    (m) => m.family === selected.family && m.manufacturer?.toLowerCase() === trimmedBrand,
+  );
+}
+
 export function SpoolForm({ value, onChange, onSubmit, materials, submitting, submitLabel = "Add spool" }: SpoolFormProps) {
+  const selectedMaterial = materials.find((m) => String(m.id) === value.material_profile_id);
+  const override = findManufacturerOverride(materials, selectedMaterial, value.brand);
+
   return (
     <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1.5">
@@ -51,6 +71,18 @@ export function SpoolForm({ value, onChange, onSubmit, materials, submitting, su
           value={value.brand}
           onChange={(e) => onChange({ ...value, brand: e.target.value })}
         />
+        {override && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{override.name} profile available.</span>
+            <button
+              type="button"
+              className="text-primary underline underline-offset-2"
+              onClick={() => onChange({ ...value, material_profile_id: String(override.id) })}
+            >
+              Use it
+            </button>
+          </div>
+        )}
       </div>
       <ColorSwatchPicker
         id="spool-color"
