@@ -666,6 +666,75 @@ coupling; frontend AMS display components) before implementation.
   `evidence/frontend-verification/sensors-ams-conflict-error.png`).
 - [x] Updated `docs/Frontend_Redesign_Guide.md` §9.
 
+## Phase 29 — Dashboard Device-Module Visual Redesign
+
+See `docs/Tareas/dashboard-device-redesign/TASK.md` and `docs/Dashboard_Device_Redesign_Guide.md`
+for the full task record and architecture writeup. The user reviewed the earlier
+Bambu-Studio-inspired redesign (Phase 18) and found the Dashboard itself still "too simple, not
+representative, no strong visual identity" against the reference images. Planned via Plan Mode
+with 3 parallel Explore agents (current Dashboard structure; existing AMS/slot/printer components
+already built for `/printers/:id`; data model relations and CLAUDE.md/Requirements.md constraints)
+plus 1 Plan agent to firm up concrete component contracts before implementation.
+
+Key finding: almost everything needed already existed on `/printers/:id`
+(`AmsSlotGrid`/`AmsSlotButton`/`SlotAssignmentModal`/`HumidityScale`/`ColorSwatch`/`StatusBadge`) —
+this task ports that pattern to the Dashboard, grouped by printer/location instead of by raw
+sensor, rather than building a new visual system from scratch.
+
+- [x] `lib/deviceModules.ts` (new): `buildDeviceModules(printers, locations, sensorEntries)` groups
+  into printer modules (always rendered, even with zero sensors/locations — a real, unconfigured
+  printer isn't fabricated data), standalone location modules (non-printer, sensor-bearing
+  room/storage_box/dry_box/dryer), and an orphan-sensor fallback bucket. `toneForMetric(alerts,
+  metric)` — tile tone from active alerts targeting that exact metric.
+- [x] `lib/deviceType.ts` (new): `filamentSystemVisual()`/`locationTypeVisual()` — icon+label+class
+  per `filament_system_type`/`location_type`, deliberately neutral-colored (never `StatusBadge`'s
+  ok/warning/critical palette), sibling to `lib/status.ts`, not an extension of it.
+- [x] `DeviceTypeIcon.tsx`, `EnvMetricTile.tsx` (denser `ReadingCard` sibling, same prop shape),
+  `ExternalSpoolSlot.tsx` (the "Ext" slot, mirroring `AmsSlotButton`'s visual language) — new
+  presentational pieces.
+- [x] `DeviceModuleCard.tsx` (new): one printer's device module — header (type badge, status dot,
+  name/brand/model), sensor serial+type+timestamp, `EnvMetricTile` row, `HumidityScale`,
+  `AmsSlotGrid`/`ExternalSpoolSlot`(s) or an explicit "no slots configured" line, `AlertPanel`,
+  `AffectedSpoolsPanel` — composing existing components unmodified. A colored top accent bar
+  (`bg-ok`/`bg-warning`/`bg-destructive`/`bg-border`) reflects the module's worst active condition,
+  built entirely from existing design tokens, no new colors.
+- [x] `StandaloneLocationCard.tsx` (new): same shell for non-printer sensor-bearing locations,
+  minus the filament-slot section.
+- [x] `DeviceModuleGrid.tsx` (new): owns the single shared `SlotAssignmentModal` + assign/clear
+  handlers (identical shape to `PrinterDetail.tsx`'s own state — not duplicated per module), renders
+  the responsive printer/standalone grids plus a flat fallback for orphan sensor entries.
+- [x] `Dashboard.tsx` rewritten: adds `useLocations`/`useSpools`/`useMaterials`/`useAssignments`
+  alongside the existing `usePrinters()`, delegates the whole body to `<DeviceModuleGrid>`; the
+  Drying Recommendations section is unchanged.
+- [x] Seed: added a demo `printer_external_spool` `Location` (A1 mini #2, no sensor of its own — a
+  bare external-spool holder has no consolidated reading) + a demo spool assigned there — no such
+  location was ever seeded before, so the new external-spool slot visual had nothing real to render
+  without this addition.
+- [x] Tests: `lib/deviceModules.test.ts`, `lib/deviceType.test.ts`, `EnvMetricTile.test.tsx`,
+  `DeviceModuleCard.test.tsx` (6 tests: AMS grid render, external-spool render, offline state with
+  slots still editable, no-sensor state, no-slots-configured state, click wiring),
+  `StandaloneLocationCard.test.tsx`; `Dashboard.test.tsx` updated to the new tree (same 4
+  loading/error/empty/populated states, new API mocks for locations/spools/materials/assignments).
+- [x] Discovered and fixed a real gap while writing these components: neither `DeviceModuleCard`
+  nor `StandaloneLocationCard` initially surfaced the sensor's serial number, type, or timestamp —
+  `docs/Requirements.md` §11.1 explicitly requires showing "timestamp and source mode: real or
+  mock." Added a small subtext row (serial + `StatusBadge` + timestamp) to both components before
+  finalizing.
+- [x] `npx vitest run` (60 passed, 14 files), `tsc -b`/`build`/`lint` clean, backend suite 138
+  passed (seed-only change).
+- [x] Playwright verification: `/` shows every seeded printer as a device module — AMS printers
+  (A1 mini #1, P1S #1) render real, editable slot grids (P1S #1's A3 correctly shows the
+  `sensor-per-ams-module` task's demo spool via the shared-sensor expansion); the new
+  `external_spool` demo location renders the "Ext" slot with its seeded spool; printers with no
+  sensor/locations show the correct empty states; clicking an empty slot opens the existing
+  `SlotAssignmentModal` unmodified; standalone locations (room/storage box/dry box) render as their
+  own simpler modules; light mode toggled and confirmed consistent. Screenshots:
+  `evidence/frontend-verification/dashboard-device-modules.png`,
+  `evidence/frontend-verification/dashboard-slot-modal.png`,
+  `evidence/frontend-verification/dashboard-light-mode.png`.
+- [x] `docs/Dashboard_Device_Redesign_Guide.md` written (new); updated
+  `docs/Frontend_Redesign_Guide.md` §9.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

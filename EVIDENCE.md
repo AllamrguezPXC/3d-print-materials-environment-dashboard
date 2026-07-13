@@ -431,6 +431,49 @@ location picker showed one collapsed "P1S #1 — AMS" option, and attempting to 
 sensor to that same AMS module correctly failed with a 400
 (`evidence/frontend-verification/sensors-ams-conflict-error.png`).
 
+## Dashboard Device-Module Visual Redesign
+
+Full task record: `docs/Tareas/dashboard-device-redesign/TASK.md`. Full architecture writeup:
+`docs/Dashboard_Device_Redesign_Guide.md`. The user reviewed the earlier Bambu-Studio-inspired
+redesign (Phase 18) and found the Dashboard itself still "too simple, not representative, no
+strong visual identity" against the reference images (Bambu Studio's device/AMS panel). Planned
+via Plan Mode with 3 parallel Explore agents + 1 Plan agent before implementation.
+
+Key finding that simplified the whole task: almost everything needed already existed on
+`/printers/:id` (`AmsSlotGrid`, `AmsSlotButton`, `SlotAssignmentModal`, `HumidityScale`,
+`ColorSwatch`, `StatusBadge`) — this was about porting that already-built pattern to the Dashboard,
+grouped by printer/location instead of by raw sensor, not building a new visual system.
+
+New: `lib/deviceModules.ts` (grouping logic), `lib/deviceType.ts` (icon/label mapping),
+`DeviceTypeIcon`, `EnvMetricTile`, `ExternalSpoolSlot`, `DeviceModuleCard`, `StandaloneLocationCard`,
+`DeviceModuleGrid`. `Dashboard.tsx` rewritten to compose them. `PrinterDetail.tsx`,
+`SensorReadingSection.tsx`, `AlertPanel.tsx`, `AffectedSpoolsPanel.tsx`, `ReadingCard.tsx`,
+`AmsSlotGrid.tsx`, `SlotAssignmentModal.tsx`, `HumidityScale.tsx` all left unmodified — imported and
+composed only, so `/printers/:id` carries zero regression risk. No new dependency added.
+
+Seed: added a demo `printer_external_spool` `Location` (A1 mini #2) + spool, since no such location
+had ever been seeded, so the new external-spool slot visual had nothing real to demonstrate against.
+
+While building the new components, discovered a real gap: neither `DeviceModuleCard` nor
+`StandaloneLocationCard` initially showed the sensor's serial/type/timestamp, which
+`docs/Requirements.md` §11.1 explicitly requires ("timestamp and source mode: real or mock"). Fixed
+before finalizing by adding a small subtext row to both.
+
+Tests: `lib/deviceModules.test.ts`, `lib/deviceType.test.ts`, `EnvMetricTile.test.tsx`,
+`DeviceModuleCard.test.tsx`, `StandaloneLocationCard.test.tsx` (new); `Dashboard.test.tsx` updated
+to the new tree, same 4 state-coverage intent (loading/error/empty/populated). Full vitest suite:
+60 passed (14 files). `tsc -b`/`build`/`lint` clean. Backend suite (seed-only change): 138 passed.
+
+Playwright verification: `/` shows every seeded printer as a device module; AMS printers render
+real, editable slot grids (P1S #1's A3 correctly surfaces the `sensor-per-ams-module` task's demo
+spool via the shared-sensor expansion); the new external-spool demo location renders the "Ext"
+slot with its spool; empty states render correctly for unconfigured printers; clicking a slot opens
+the existing `SlotAssignmentModal`; standalone locations render as their own simpler modules; light
+mode confirmed consistent. Screenshots:
+`evidence/frontend-verification/dashboard-device-modules.png`,
+`evidence/frontend-verification/dashboard-slot-modal.png`,
+`evidence/frontend-verification/dashboard-light-mode.png`.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

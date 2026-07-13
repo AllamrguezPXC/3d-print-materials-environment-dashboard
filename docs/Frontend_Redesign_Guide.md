@@ -193,10 +193,20 @@ does not control the dryer directly — this is validation/tracking only.
 ## 9. Known limitations / deferred ideas
 
 - **`SensorStatusGrid`** (suggested by Requirements.md §14.2) — superseded. `GET /readings/current`
-  now returns one entry per active sensor (see `docs/Tareas/eliminar-sensor-mode-global/`), and the
-  per-sensor `SensorReadingSection` cards on Dashboard satisfy the original need. The `/sensors`
-  admin CRUD page (`pages/Sensors.tsx`), previously listed here as deferred, is now built as part of
+  now returns one entry per active sensor (see `docs/Tareas/eliminar-sensor-mode-global/`), and this
+  need is now satisfied by the Dashboard's device-module grid (see below), grouped by
+  printer/location rather than by raw sensor. The `/sensors` admin CRUD page (`pages/Sensors.tsx`),
+  previously listed here as deferred, is now built as part of
   `docs/Tareas/printer-ams-sensor-config/TASK.md`, including serial-port detection and test-read.
+- ~~Dashboard still a flat list of `SensorReadingSection` cards, no strong visual identity~~ —
+  **done**, see `docs/Tareas/dashboard-device-redesign/TASK.md` and
+  `docs/Dashboard_Device_Redesign_Guide.md` (full architecture writeup): the Dashboard now groups
+  readings by printer/location into compact "device modules" (`DeviceModuleCard`/
+  `StandaloneLocationCard`, composed by `DeviceModuleGrid`), inspired by Bambu Studio's device/AMS
+  panel — reusing `AmsSlotGrid`/`SlotAssignmentModal`/`HumidityScale`/`ColorSwatch`/`StatusBadge`
+  unmodified (all still power `/printers/:id`, zero regression risk) rather than rebuilding them.
+  `SensorReadingSection.tsx` itself is no longer used by the Dashboard (still used by
+  `PrinterDetail.tsx`, unchanged there).
 - ~~No live sensor-trend chart *during* an active drying session~~ — **done**, see
   `docs/Tareas/drying-session-trend-chart/TASK.md`: closes Requirements.md §11.6 ("review measured
   trend"). A "View trend" button per session row (`DryingSessionsTable.tsx`, shown whenever
