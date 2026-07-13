@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
+  Bell,
   Boxes,
   Droplets,
   Gauge,
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", end: true, icon: LayoutDashboard },
   { to: "/history", label: "History", end: false, icon: Gauge },
+  { to: "/alerts", label: "Alerts", end: false, icon: Bell },
   { to: "/printers", label: "Printers & Locations", end: false, icon: Printer },
   { to: "/materials", label: "Materials", end: false, icon: Boxes },
   { to: "/spools", label: "Spools", end: false, icon: Package },

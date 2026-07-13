@@ -21,6 +21,11 @@ export interface AlertOut {
   resolved_at: string | null;
 }
 
+/** Response of PATCH /alerts/{id}/resolve. */
+export interface AlertResolveResponse {
+  alert: AlertOut;
+}
+
 export interface LocationInfo {
   id: number;
   name: string;

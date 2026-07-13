@@ -1,5 +1,7 @@
 import { api } from "./client";
 import type {
+  AlertOut,
+  AlertResolveResponse,
   DryingRecommendation,
   DryingSessionCreate,
   DryingSessionRead,
@@ -59,6 +61,18 @@ export const sensorsApi = {
   remove: (id: number) => api.delete(`/sensors/${id}`),
   ports: () => api.get<SensorPortInfo[]>("/sensors/ports"),
   testRead: (id: number) => api.post<SensorTestReadResult>(`/sensors/${id}/test-read`),
+};
+
+export const alertsApi = {
+  list: (params?: { isActive?: boolean; severity?: string; locationId?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.isActive !== undefined) query.set("is_active", String(params.isActive));
+    if (params?.severity) query.set("severity", params.severity);
+    if (params?.locationId !== undefined) query.set("location_id", String(params.locationId));
+    const qs = query.toString();
+    return api.get<AlertOut[]>(`/alerts${qs ? `?${qs}` : ""}`);
+  },
+  resolve: (id: number) => api.patch<AlertResolveResponse>(`/alerts/${id}/resolve`, {}),
 };
 
 export const dryingApi = {

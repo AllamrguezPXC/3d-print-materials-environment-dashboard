@@ -197,9 +197,11 @@ does not control the dryer directly — this is validation/tracking only.
   per-sensor `SensorReadingSection` cards on Dashboard satisfy the original need. The `/sensors`
   admin CRUD page (`pages/Sensors.tsx`), previously listed here as deferred, is now built as part of
   `docs/Tareas/printer-ams-sensor-config/TASK.md`, including serial-port detection and test-read.
-- No live sensor-trend chart *during* an active drying session — Requirements §11.6 only asks to
-  "review measured trend," which the existing `/history` page (filterable by sensor/location)
-  already covers well enough for this MVP.
+- No live sensor-trend chart *during* an active drying session — Requirements §11.6 asks to
+  "review measured trend"; the existing `/history` page (filterable by sensor/location) covers it
+  indirectly, but nothing on the `/drying` page itself links to or embeds that trend for a running
+  session's specific sensor. Re-confirmed as a real, if lower-priority, gap during the audit that
+  led to the Alerts admin page below — still deferred, not built this round.
 - No `react-hook-form`/`zod` — forms are simple `useState` objects; revisit only if a form grows
   complex cross-field validation.
 - **Automated frontend tests** — added, see `docs/Tareas/frontend-vitest-setup/TASK.md`: Vitest +
@@ -213,6 +215,15 @@ does not control the dryer directly — this is validation/tracking only.
 - The main JS bundle is ~808 kB (Vite warns above 500 kB) — acceptable for a local-first assignment
   app; code-splitting via route-based `React.lazy()` would be the next step if bundle size ever
   becomes a real concern.
+- **Alerts history admin page** — added, see `docs/Tareas/alerts-history-admin-page/TASK.md`: a
+  real requirements gap, not one of the optional Bambu-Studio extras. `docs/Requirements.md` §12.2
+  requires `GET /alerts` and `PATCH /alerts/{id}/resolve`, both fully implemented and tested on the
+  backend, but the frontend had zero consumer — `AlertPanel.tsx` only ever showed the transient
+  per-sensor `alerts` array embedded in `GET /readings/current`, never the persisted history, and
+  nothing anywhere called resolve. New `/alerts` page (nav item, `Bell` icon) lists full alert
+  history with status/severity filters and a "Resolve" button per active row; `AlertPanel.tsx` is
+  unchanged (still correct for "what's wrong right now" on the Dashboard — a different job from
+  history/acknowledgment).
 - **Deferred from `docs/Tareas/printer-ams-sensor-config/TASK.md` (Phase 1 of the Bambu-Studio-inspired
   printer/AMS/filament redesign)** — not built, by explicit scope decision against this project's
   "keep the MVP focused" constraint:
