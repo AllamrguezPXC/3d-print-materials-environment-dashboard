@@ -197,11 +197,16 @@ does not control the dryer directly — this is validation/tracking only.
   per-sensor `SensorReadingSection` cards on Dashboard satisfy the original need. The `/sensors`
   admin CRUD page (`pages/Sensors.tsx`), previously listed here as deferred, is now built as part of
   `docs/Tareas/printer-ams-sensor-config/TASK.md`, including serial-port detection and test-read.
-- No live sensor-trend chart *during* an active drying session — Requirements §11.6 asks to
-  "review measured trend"; the existing `/history` page (filterable by sensor/location) covers it
-  indirectly, but nothing on the `/drying` page itself links to or embeds that trend for a running
-  session's specific sensor. Re-confirmed as a real, if lower-priority, gap during the audit that
-  led to the Alerts admin page below — still deferred, not built this round.
+- ~~No live sensor-trend chart *during* an active drying session~~ — **done**, see
+  `docs/Tareas/drying-session-trend-chart/TASK.md`: closes Requirements.md §11.6 ("review measured
+  trend"). A "View trend" button per session row (`DryingSessionsTable.tsx`, shown whenever
+  `sensor_id` is non-null) opens `DryingSessionTrendDialog.tsx`, which reuses the existing
+  `HistoryChart` component and `getReadingsHistory()` (no new backend endpoint — the existing
+  `GET /readings?aggregate=hour` already accepts a sensor + time-range filter) over that session's
+  own `started_at`..`ended_at ?? now` window. Only humidity + temperature are charted, not
+  pressure — Domain Rules make humidity the primary readiness metric and pressure secondary, so a
+  focused drying-validation view omits it (unlike `/history`, a general-purpose view that rightly
+  shows all three).
 - No `react-hook-form`/`zod` — forms are simple `useState` objects; revisit only if a form grows
   complex cross-field validation.
 - **Automated frontend tests** — added, see `docs/Tareas/frontend-vitest-setup/TASK.md`: Vitest +

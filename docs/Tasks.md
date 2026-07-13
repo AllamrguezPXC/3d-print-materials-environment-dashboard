@@ -559,6 +559,50 @@ noted in `docs/Frontend_Redesign_Guide.md`, deferred, not built this round.
   `evidence/frontend-verification/alerts-page-resolved.png`).
 - [x] Updated `docs/Frontend_Redesign_Guide.md` §9.
 
+## Phase 27 — Drying Session Trend Chart
+
+See `docs/Tareas/drying-session-trend-chart/TASK.md` for the full task
+record. Picked at Claude's own discretion in response to "Haz todo lo que
+consideres necesario y escencial de todo lo que falta" — the last remaining
+item from the Requirements.md audit that ranked as a genuine, scoped gap:
+§11.6 asks the app to let a user "review measured trend" while validating a
+drying session, but `/drying` only ever showed a static sessions table with
+target numbers and a notes box, no chart. The two other previously-noted
+deferred items (sensor-inheritance UI, `MaterialProfile` nozzle/bed-temp
+fields) were intentionally NOT built — both were already judged not to be
+real gaps, so "necessary and essential" did not include them.
+
+- [x] `useDryingSessionTrend(session)` hook (`hooks/resources/drying.ts`) —
+  reuses the existing `getReadingsHistory()`/`GET /readings?aggregate=hour`
+  (no new backend endpoint) over the session's own `started_at`..
+  `ended_at ?? now` window, filtered to its `sensor_id`; `enabled` only when
+  a session with a non-null sensor is given.
+- [x] `DryingSessionTrendDialog.tsx` (new): loading / empty ("no readings
+  recorded in this session's time window yet") / populated states, reusing
+  the existing `HistoryChart` component (already built for `/history`) for
+  Relative Humidity and Temperature only — pressure omitted, since Domain
+  Rules make humidity the primary readiness metric and pressure secondary,
+  so a focused drying-validation view doesn't need it.
+- [x] `DryingSessionsTable.tsx`: new `trendSession` state + a "View trend"
+  button per row (shown whenever `session.sensor_id !== null`), following
+  the exact same `useState<DryingSessionRead | null>` + second `<Dialog>`
+  pattern the table already used for its status-transition action — no
+  restructuring of the table.
+- [x] `DryingSessionTrendDialog.test.tsx` (new, 4 tests): closed when no
+  session given; empty state; both charts render when readings exist;
+  confirms the exact `getReadingsHistory` call args (session's own
+  `started_at`/`ended_at`/`sensor_id`, `aggregate: "hour"`).
+- [x] `npx vitest run` (22 passed), `tsc -b`/`build`/`lint` clean, backend
+  suite 132 passed (no backend changes — this task is frontend-only).
+- [x] Playwright verification: created a real drying session (spool #2 →
+  Dry Box 1, "Mock Sensor 3"), triggered an automatic sensor capture to
+  produce a real reading at that location, clicked "View trend" on
+  `/drying` and confirmed both charts rendered the real data point
+  (screenshot: `evidence/frontend-verification/drying-session-trend-dialog.png`).
+- [x] Updated `docs/Frontend_Redesign_Guide.md` §9 — this was the last
+  confirmed real gap from the Requirements.md audit; only the two
+  already-judged-out-of-scope items remain on the deferred list.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`
