@@ -365,6 +365,31 @@ via `POST /readings` against the seeded PLA spool's location; confirmed both ren
 alert and confirmed it switched to a green "Resolved" badge with the button gone, while the
 dew-point alert stayed Active (`evidence/frontend-verification/alerts-page-resolved.png`).
 
+## Drying Session Trend Chart
+
+Full task record: `docs/Tareas/drying-session-trend-chart/TASK.md`. Picked at Claude's own
+discretion in response to "Haz todo lo que consideres necesario y escencial de todo lo que falta"
+— the last remaining item from the Requirements.md audit that ranked as a genuine gap:
+§11.6 asks the app to let a user "review measured trend" while validating a drying session, but
+`/drying` only showed a static sessions table, no chart. The two other previously-noted deferred
+items (sensor-inheritance UI, `MaterialProfile` nozzle/bed-temp fields) were intentionally not
+built — both already judged not to be real gaps.
+
+Added a "View trend" button per drying-session row (shown when the session has a sensor assigned)
+opening a dialog that reuses the existing `HistoryChart` component and `getReadingsHistory()` (no
+new backend endpoint) over that session's own `started_at`..`ended_at ?? now` window. Only humidity
+and temperature are charted — Domain Rules make humidity the primary readiness metric and pressure
+secondary, so this focused view omits it (unlike `/history`, which rightly shows all three).
+
+Backend: no changes (already fully implemented and tested — 132 pytest passed, unaffected).
+Frontend: `DryingSessionTrendDialog.test.tsx` (4 new tests: closed/empty/populated states, correct
+query args). Full vitest suite: 22 passed. `tsc -b`/`build`/`lint` clean.
+
+Playwright verification: created a real drying session (spool #2 → Dry Box 1, "Mock Sensor 3"),
+triggered an automatic sensor capture to produce a real reading at that location, clicked "View
+trend" on `/drying`, and confirmed both the Relative Humidity and Temperature charts rendered the
+real captured data point (`evidence/frontend-verification/drying-session-trend-dialog.png`).
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

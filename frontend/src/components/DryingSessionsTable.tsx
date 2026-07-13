@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DryingSessionTrendDialog } from "@/components/DryingSessionTrendDialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -52,6 +53,7 @@ export function DryingSessionsTable({
   const [activeSession, setActiveSession] = useState<DryingSessionRead | null>(null);
   const [nextStatus, setNextStatus] = useState<DryingSessionStatus | "">("");
   const [notes, setNotes] = useState("");
+  const [trendSession, setTrendSession] = useState<DryingSessionRead | null>(null);
 
   function spoolLabel(spoolId: number): string {
     const spool = spools.find((s) => s.id === spoolId);
@@ -120,7 +122,12 @@ export function DryingSessionsTable({
                 <TableCell>
                   <StatusBadge status={session.status} />
                 </TableCell>
-                <TableCell>
+                <TableCell className="flex gap-2">
+                  {session.sensor_id !== null && (
+                    <Button size="sm" variant="outline" onClick={() => setTrendSession(session)}>
+                      View trend
+                    </Button>
+                  )}
                   {availableNext.length > 0 && (
                     <Button size="sm" variant="outline" onClick={() => openTransition(session)}>
                       Update status
@@ -172,6 +179,11 @@ export function DryingSessionsTable({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DryingSessionTrendDialog
+        session={trendSession}
+        onOpenChange={(open) => !open && setTrendSession(null)}
+      />
     </>
   );
 }
