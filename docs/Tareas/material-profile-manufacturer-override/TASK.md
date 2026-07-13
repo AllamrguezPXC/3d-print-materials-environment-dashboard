@@ -83,15 +83,17 @@ and the color-swatch picker never auto-decide data on the user's behalf).
 1. `cd backend && pytest -q` — no regressions, new seed test passes.
 2. `cd frontend && npx tsc -b && npm run build && npm run lint && npm run test` — all clean.
 3. Playwright MCP: `/materials` shows a "Manufacturer" column with "Prusament" vs "Generic"; on
-   `/spools`, adding/editing a spool with Material="PLA" and Brand="Prusament" shows the suggestion
-   hint, clicking it switches to "Prusament PLA". **Not performed this session** — the Playwright
-   MCP server was disconnected (confirmed via `ToolSearch`, no `mcp__playwright__*` tools resolved).
-   Substituted with: a live `curl` against the running `GET /materials` confirming the seeded
-   "Prusament PLA" row (`manufacturer="Prusament"`, `family="PLA-derived"` matching generic "PLA",
-   tighter RH thresholds 35/45/55% vs. 40/50/60%), plus the vitest suite exercising the exact same
-   render/interaction via Testing Library + jsdom (typing a brand, seeing the hint, clicking "Use
-   it", confirming the Select's displayed value switches). This is a reasonable substitute for this
-   specific change but does not replace a real-browser check — do one when Playwright MCP is back.
+   `/spools`, adding a spool with Material="PLA" and Brand="Prusament" shows the suggestion hint,
+   clicking "Use it" switches the Material select to "Prusament PLA". Playwright MCP was
+   disconnected earlier in this task (confirmed via `ToolSearch`) — merge was intentionally held
+   pending reconnection (per `CLAUDE.md`'s Git Workflow, the auto-mode classifier blocked the merge
+   attempt for exactly this reason) rather than merging on automated-test evidence alone. Once the
+   user reconnected it (`/mcp reconnect all`), performed the real check: screenshots
+   `evidence/frontend-verification/materials-manufacturer-column.png` (table shows "Prusament" for
+   "Prusament PLA", "Generic" for the rest) and
+   `evidence/frontend-verification/spoolform-override-hint.png` (hint renders with Material=PLA +
+   Brand=Prusament typed; confirmed clicking "Use it" switches the Material select to
+   "Prusament PLA" and the hint disappears).
 
 ## Completion Criteria
 
@@ -100,6 +102,5 @@ and the color-swatch picker never auto-decide data on the user's behalf).
 - [x] `SpoolForm.tsx` suggests the manufacturer-specific override when the brand matches
 - [x] `SpoolForm.test.tsx` covers the suggestion behavior
 - [x] `pytest`/`tsc -b`/`build`/`lint`/`vitest run` all clean
-- [x] Playwright verification complete — **not performed** (MCP server disconnected this session;
-      see substitute verification above)
+- [x] Playwright verification complete — real browser check performed after MCP reconnection
 - [x] Docs updated (`Frontend_Redesign_Guide.md`, `Tasks.md`, `EVIDENCE.md`)
