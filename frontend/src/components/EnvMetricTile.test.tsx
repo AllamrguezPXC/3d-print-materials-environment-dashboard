@@ -11,6 +11,13 @@ describe("EnvMetricTile", () => {
     expect(screen.getByText("23.1 °C")).toBeInTheDocument();
   });
 
+  it("does not truncate the value, so long formatted values stay fully visible", () => {
+    render(<EnvMetricTile label="Pressure" value="1013.27 kPa" icon={Thermometer} />);
+
+    const value = screen.getByText("1013.27 kPa");
+    expect(value.className).not.toMatch(/\btruncate\b/);
+  });
+
   it("applies the critical tone class when tone=critical", () => {
     const { container } = render(
       <EnvMetricTile label="Humidity" value="90 %" icon={Thermometer} tone="critical" />,

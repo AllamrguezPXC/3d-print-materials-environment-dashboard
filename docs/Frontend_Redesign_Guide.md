@@ -207,6 +207,23 @@ does not control the dryer directly — this is validation/tracking only.
   unmodified (all still power `/printers/:id`, zero regression risk) rather than rebuilding them.
   `SensorReadingSection.tsx` itself is no longer used by the Dashboard (still used by
   `PrinterDetail.tsx`, unchanged there).
+- ~~Dashboard had no filters, and 3 correctness bugs: environmental values truncated/1-decimal, an
+  overly-restrictive spool-assignment selector with no create-spool path, Drying Recommendations
+  always empty~~ — **done**, see `docs/Tareas/dashboard-filters-and-fixes/TASK.md` and
+  `docs/Dashboard_Filters_And_Assignments_Guide.md`: `lib/format.ts` centralizes 2-decimal value
+  formatting; `EnvMetricTile.tsx`'s truncation bug fixed (removed `truncate`, widened the metric-tile
+  grid); `lib/spoolAvailability.ts` extracts the already-correct-but-duplicated "available spools"
+  filter; `SlotAssignmentModal.tsx` gained an inline "+ Create new spool" flow; `drying_service.py`
+  now expands to sibling AMS locations (reusing `alert_service._resolve_covered_location_ids`) when
+  looking up the latest reading, fixing a real cross-service inconsistency where a spool could show
+  a critical alert on the Dashboard but never appear in Drying Recommendations. `lib/deviceFilters.ts`
+  + `DashboardFilters.tsx` add a first version of Dashboard filters (search, alert/sensor/slot
+  status, printer brand, filament type/brand/color/status), reusing `FilamentFilters.tsx`'s
+  controlled-component shape. **Deferred from this same task** (user's explicit scope choice):
+  printer operational status (no field exists on `Printer` yet), sensor assignment/reassignment
+  embedded in each Dashboard module (still only from `/sensors`), AMS↔external-spool system-type
+  switching with slot-count editing from the Dashboard (still only from `/printers`), and filter-state
+  persistence across page loads.
 - ~~No live sensor-trend chart *during* an active drying session~~ — **done**, see
   `docs/Tareas/drying-session-trend-chart/TASK.md`: closes Requirements.md §11.6 ("review measured
   trend"). A "View trend" button per session row (`DryingSessionsTable.tsx`, shown whenever

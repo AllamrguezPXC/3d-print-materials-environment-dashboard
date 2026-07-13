@@ -18,7 +18,7 @@ from app.models.sensor import Sensor
 from app.models.spool_assignment import SpoolAssignment
 from app.models.drying_session import DryingSession
 from app.schemas.drying import DryingRecommendation, DryingSessionCreate, DryingSessionUpdate
-from app.services.alert_service import evaluate_humidity_severity
+from app.services.alert_service import _resolve_covered_location_ids, evaluate_humidity_severity
 
 ADVISORY_DISCLAIMER = (
     "This recommendation is advisory only — the app does not control the dryer directly. "
@@ -56,9 +56,20 @@ def _find_nearest_dryer_location(session: Session) -> Location | None:
 
 
 def _get_last_reading_for_location(session: Session, location_id: int) -> Reading | None:
+    """Most recent Reading covering this location.
+
+    A location that's part of a printer module (e.g. an AMS slot) shares one
+    physical sensor with its sibling slots (Requirements.md / sensor-per-ams-module
+    task) — the Reading may have been persisted against a sibling slot's
+    location_id rather than this exact one. Expand via the same
+    `_resolve_covered_location_ids` alert_service already uses so a spool in
+    any slot of the module sees the module's shared reading, matching what
+    the Dashboard's alert panel already shows for that spool.
+    """
+    covered_ids = _resolve_covered_location_ids(session, location_id)
     return (
         session.query(Reading)
-        .filter(Reading.location_id == location_id)
+        .filter(Reading.location_id.in_(covered_ids))
         .order_by(Reading.timestamp.desc())
         .first()
     )
@@ -107,7 +118,7 @@ def get_drying_recommendations(session: Session) -> list[DryingRecommendation]:
 
         message = (
             f"{location_desc} / {spool_desc} is above its humidity limit ({status}, "
-            f"{last_reading.relative_humidity_percent}% RH). "
+            f"{round(last_reading.relative_humidity_percent, 2)}% RH). "
             f"Dry at {profile.drying_temp_c}°C for {profile.drying_time_hours_min}-"
             f"{profile.drying_time_hours_max} hours."
         )

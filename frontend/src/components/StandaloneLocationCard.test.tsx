@@ -35,8 +35,8 @@ describe("StandaloneLocationCard", () => {
 
     expect(screen.getByText("Primary Filament Storage Room")).toBeInTheDocument();
     expect(screen.getByText("Room")).toBeInTheDocument();
-    expect(screen.getByText("23.1 °C")).toBeInTheDocument();
-    expect(screen.getByText("21.2 %")).toBeInTheDocument();
+    expect(screen.getByText("23.10 °C")).toBeInTheDocument();
+    expect(screen.getByText("21.20 %")).toBeInTheDocument();
   });
 
   it("renders active alerts for the location", () => {

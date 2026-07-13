@@ -15,6 +15,7 @@ import { useLocations } from "@/hooks/resources/locations";
 import { useMaterials } from "@/hooks/resources/materials";
 import { usePrinters } from "@/hooks/resources/printers";
 import { useSpools } from "@/hooks/resources/spools";
+import { getAvailableSpools } from "@/lib/spoolAvailability";
 import type { Location } from "@/types/api";
 
 export function PrinterDetail() {
@@ -61,8 +62,7 @@ export function PrinterDetail() {
     ? (materials.find((m) => m.id === currentSpool.material_profile_id) ?? null)
     : null;
 
-  const activeSpoolIds = new Set(assignments.filter((a) => a.is_active).map((a) => a.spool_id));
-  const availableSpools = spools.filter((s) => !activeSpoolIds.has(s.id) || s.id === currentSpool?.id);
+  const availableSpools = getAvailableSpools(spools, assignments, currentSpool?.id ?? null);
 
   function handleSelectSlot(location: Location) {
     setSelectedLocation(location);

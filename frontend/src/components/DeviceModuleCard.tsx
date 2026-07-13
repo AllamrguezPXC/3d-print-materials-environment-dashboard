@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { toneForMetric } from "@/lib/deviceModules";
+import { formatDewPoint, formatHumidity, formatPressure, formatTemperature } from "@/lib/format";
 import type {
   AffectedSpoolInfo,
   AlertOut,
@@ -134,28 +135,28 @@ export function DeviceModuleCard({
               </span>
               {entry.timestamp && <span>{new Date(entry.timestamp).toLocaleString()}</span>}
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2">
               <EnvMetricTile
                 label="Temp"
-                value={`${entry.temperature_c!.toFixed(1)} °C`}
+                value={formatTemperature(entry.temperature_c)}
                 icon={Thermometer}
                 tone={toneForMetric(alerts, "temperature")}
               />
               <EnvMetricTile
                 label="RH"
-                value={`${entry.relative_humidity_percent!.toFixed(1)} %`}
+                value={formatHumidity(entry.relative_humidity_percent)}
                 icon={Droplets}
                 tone={toneForMetric(alerts, "humidity")}
               />
               <EnvMetricTile
                 label="Pressure"
-                value={`${entry.pressure_kpa!.toFixed(1)} kPa`}
+                value={formatPressure(entry.pressure_kpa)}
                 icon={Gauge}
                 tone={toneForMetric(alerts, "pressure")}
               />
               <EnvMetricTile
                 label="Dew Point"
-                value={`${entry.dew_point_c!.toFixed(1)} °C`}
+                value={formatDewPoint(entry.dew_point_c)}
                 icon={CloudFog}
                 tone={toneForMetric(alerts, "dew_point")}
               />

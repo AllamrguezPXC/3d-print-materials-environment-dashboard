@@ -110,8 +110,8 @@ describe("Dashboard", () => {
 
     await waitFor(() => expect(screen.getByText("Primary Filament Storage Room")).toBeInTheDocument());
     expect(screen.getByText("MOCK-0001")).toBeInTheDocument();
-    expect(screen.getByText("23.1 °C")).toBeInTheDocument();
-    expect(screen.getByText("21.2 %")).toBeInTheDocument();
+    expect(screen.getByText("23.10 °C")).toBeInTheDocument();
+    expect(screen.getByText("21.20 %")).toBeInTheDocument();
     expect(screen.getByText(/humidity is above the ideal range for petg/i)).toBeInTheDocument();
   });
 });

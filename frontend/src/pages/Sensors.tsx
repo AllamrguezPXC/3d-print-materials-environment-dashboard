@@ -16,6 +16,7 @@ import {
   useTestReadSensor,
 } from "@/hooks/resources/sensors";
 import { describeSensorLocation } from "@/lib/sensorLocation";
+import { formatHumidity, formatTemperature } from "@/lib/format";
 import type { SensorTestReadResult } from "@/types/api";
 
 const EMPTY_SENSOR: SensorFormValues = {
@@ -137,7 +138,7 @@ export function Sensors() {
                         {result &&
                           (result.success ? (
                             <span className="text-xs text-ok">
-                              {result.temperature_c?.toFixed(1)}°C / {result.relative_humidity_percent?.toFixed(1)}%
+                              {formatTemperature(result.temperature_c)} / {formatHumidity(result.relative_humidity_percent)}
                             </span>
                           ) : (
                             <span className="text-xs text-destructive">{result.error}</span>

@@ -14,6 +14,7 @@ from app.db.session import SessionLocal
 from app.models.filament_spool import FilamentSpool
 from app.models.location import Location
 from app.models.material_profile import MaterialProfile
+from app.models.printer import Printer
 from app.models.reading import Reading
 from app.models.sensor import Sensor
 from app.models.spool_assignment import SpoolAssignment
@@ -215,6 +216,74 @@ def test_spool_with_no_reading_history_is_skipped(client):
         recs = drying_service.get_drying_recommendations(session)
 
     assert all(r.spool_id != spool.id for r in recs)
+
+
+def test_ams_sibling_slot_reading_is_used_for_drying_recommendation(client):
+    # A physical AMS module shares one sensor across all its slots
+    # (sensor-per-ams-module task). A spool assigned to a sibling slot that
+    # has no Reading of its own must still be recommended for drying, using
+    # the Reading persisted at the slot the sensor is actually attached to.
+    with SessionLocal() as session:
+        profile = session.query(MaterialProfile).filter_by(name="PETG").first()
+        assert profile is not None
+
+        printer = Printer(name="Sibling Test Printer", brand="Bambu Lab", model="P1S")
+        session.add(printer)
+        session.flush()
+
+        sensor_slot = Location(
+            name="AMS Slot 1 - Sibling Test Printer",
+            location_type="printer_ams",
+            printer_id=printer.id,
+            slot_index=0,
+        )
+        spool_slot = Location(
+            name="AMS Slot 2 - Sibling Test Printer",
+            location_type="printer_ams",
+            printer_id=printer.id,
+            slot_index=1,
+        )
+        session.add_all([sensor_slot, spool_slot])
+        session.flush()
+
+        spool = FilamentSpool(material_profile_id=profile.id, brand="TestBrand", color="Black", status="unknown")
+        session.add(spool)
+        session.flush()
+
+        assignment = SpoolAssignment(spool_id=spool.id, location_id=spool_slot.id, is_active=True)
+        session.add(assignment)
+        session.flush()
+
+        sensor = Sensor(
+            name="Sibling AMS Sensor",
+            model="mock",
+            serial_number="TEST-SIBLING-AMS",
+            sensor_type="mock",
+            location_id=sensor_slot.id,
+        )
+        session.add(sensor)
+        session.flush()
+
+        # RH=35 -> warning for PETG (ideal max 30, warning max 40), persisted
+        # only at sensor_slot's location_id -- never at spool_slot's.
+        reading = Reading(
+            sensor_id=sensor.id,
+            location_id=sensor_slot.id,
+            timestamp=datetime.now(timezone.utc),
+            temperature_c=24.0,
+            relative_humidity_percent=35.0,
+            pressure_pa=101000.0,
+            pressure_kpa=101.0,
+            source="mock",
+        )
+        session.add(reading)
+        session.commit()
+
+        recs = drying_service.get_drying_recommendations(session)
+
+    matching = [r for r in recs if r.spool_id == spool.id]
+    assert len(matching) == 1
+    assert matching[0].current_status == "warning"
 
 
 def test_dryer_cannot_reach_recommended_temperature_warns(client):

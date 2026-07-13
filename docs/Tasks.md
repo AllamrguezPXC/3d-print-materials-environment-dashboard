@@ -735,6 +735,57 @@ sensor, rather than building a new visual system from scratch.
 - [x] `docs/Dashboard_Device_Redesign_Guide.md` written (new); updated
   `docs/Frontend_Redesign_Guide.md` §9.
 
+## Phase 30 — Dashboard Correctness Fixes + Advanced Filters
+
+See `docs/Tareas/dashboard-filters-and-fixes/TASK.md` and
+`docs/Dashboard_Filters_And_Assignments_Guide.md` for the full task record. The user reported 3
+concrete bugs from Dashboard screenshots (truncated/1-decimal environmental values, an
+overly-restrictive spool selector with no create-spool path, and Drying Recommendations always
+empty despite visible warnings) plus a much larger feature request (filters, printer operational
+status, sensor assignment from the dashboard, AMS↔external-spool switching from the dashboard).
+Per `CLAUDE.md`'s MVP-focused constraint, the user was asked to prioritize and chose: fix the 3
+bugs + build a first version of Dashboard filters, deferring the rest.
+
+- [x] `lib/format.ts` (new): centralized 2-decimal environmental-value formatters
+  (`formatTemperature`/`formatHumidity`/`formatPressure`/`formatDewPoint`), replacing 5+ duplicated
+  ad hoc `.toFixed(1)` call sites.
+- [x] Fixed `EnvMetricTile.tsx`'s value-truncation bug (`truncate` class inside a `min-w-0`
+  container clipped long values like "31.24 °C" to "31..."): removed truncation, changed the
+  metric-tile grid from `grid-cols-2 sm:grid-cols-4` to a fixed `grid-cols-2` for more width per
+  tile.
+- [x] Backend: `alert_service.py`/`drying_service.py` now round floats before interpolating them
+  into alert/recommendation message strings.
+- [x] `lib/spoolAvailability.ts` (new): extracted the "available spools" filter (already correct,
+  previously duplicated in `DeviceModuleGrid.tsx` and `PrinterDetail.tsx`) into one testable
+  function.
+- [x] `SlotAssignmentModal.tsx`: spool selector now shows each option's `StatusBadge`; added an
+  inline "+ Create new spool" flow (reuses the existing `SpoolForm` + `useCreateSpool()`) that
+  auto-selects the newly created spool.
+- [x] Fixed the real Drying Recommendations bug: `drying_service.py` looked up the latest `Reading`
+  by the exact `location_id` a spool was assigned to, but a shared-AMS-sensor module (per Phase 28)
+  only persists readings at the slot the sensor is attached to — a spool in a sibling slot was
+  silently skipped. Now reuses `alert_service._resolve_covered_location_ids` to expand to sibling
+  locations before looking up the latest reading, matching what the Dashboard's alert panel already
+  shows for that spool.
+- [x] `lib/deviceFilters.ts` + `DashboardFilters.tsx` (new): first version of Dashboard filters
+  (search, alert status, sensor status, slot status, printer brand, filament type/brand/color/
+  status), reusing `FilamentFilters.tsx`'s controlled-component shape, filtering client-side over
+  already-fetched data. Printer brands/filament types/brands/colors are generated dynamically from
+  the data, never hardcoded. Wired into `DeviceModuleGrid.tsx` with a live result counter, removable
+  filter chips, and an explicit "No devices match the current filters." empty state.
+- [x] Tests: `format.test.ts`, `spoolAvailability.test.ts`, `deviceFilters.test.ts` (11 tests),
+  `DashboardFilters.test.tsx`, `SlotAssignmentModal.test.tsx` (new — empty state, create-spool flow,
+  status badge in selector); updated `EnvMetricTile.test.tsx` (no truncate class),
+  `StandaloneLocationCard.test.tsx`/`Dashboard.test.tsx` (2-decimal assertions); backend
+  `test_drying_service.py` new case for sibling-AMS-slot reading expansion.
+- [x] `npx vitest run` (93 passed, 19 files), `tsc -b`/`build`/`lint` clean, backend suite 139
+  passed.
+- [x] `docs/Dashboard_Filters_And_Assignments_Guide.md` written (new); updated
+  `docs/Frontend_Redesign_Guide.md` §9.
+- [x] Playwright browser verification: confirmed full-value 2-decimal display in dark/light mode,
+  filter narrowing (e.g. "No sensor assigned"), the create-spool-from-modal flow syncing to
+  `/spools`, and Drying Recommendations correctly surfacing the AMS sibling-slot spool.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`
