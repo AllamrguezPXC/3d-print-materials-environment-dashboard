@@ -1,10 +1,13 @@
 from types import SimpleNamespace
 
+from app.db.session import SessionLocal
+from app.models.location import Location
 from app.services.alert_service import (
     evaluate_dew_point_severity,
     evaluate_humidity_severity,
     evaluate_pressure_sanity,
     evaluate_temperature_severity,
+    get_affected_spools,
 )
 
 # PLA-like profile: ideal RH<=40, warning<=50, critical>=60; ideal temp 18-30,
@@ -68,3 +71,30 @@ def test_pressure_critical_when_missing():
 
 def test_pressure_critical_when_out_of_range():
     assert evaluate_pressure_sanity(50000.0) == "critical"
+
+
+def test_get_affected_spools_expands_to_sibling_ams_slots(client):
+    """A single sensor covers an entire AMS module's shared microclimate
+    (sensor-per-ams-module task): seeded "Mock Sensor 4" sits on P1S #1's
+    slot 1, and a demo PLA spool sits on slot 3 of that same AMS -- reading
+    off slot 1's location must still surface the spool in slot 3."""
+    with SessionLocal() as session:
+        slot_1 = session.query(Location).filter_by(name="AMS Slot 1 - P1S #1").first()
+        assert slot_1 is not None
+
+        affected = get_affected_spools(session, slot_1.id)
+
+        assert any(a.spool.color == "Silver" for a in affected)
+
+
+def test_get_affected_spools_does_not_expand_non_printer_locations(client):
+    """A standalone location (no printer_id) never expands to unrelated
+    locations -- regression guard for the sibling-expansion change."""
+    with SessionLocal() as session:
+        storage_box_a = session.query(Location).filter_by(name="Storage Box A").first()
+        assert storage_box_a is not None
+
+        affected = get_affected_spools(session, storage_box_a.id)
+
+        assert all(a.location_id == storage_box_a.id for a in affected)
+        assert any(a.spool.color == "Orange" for a in affected)

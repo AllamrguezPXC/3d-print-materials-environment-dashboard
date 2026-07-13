@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.alert import Alert
 from app.models.filament_spool import FilamentSpool
+from app.models.location import Location
 from app.models.material_profile import MaterialProfile
 from app.models.spool_assignment import SpoolAssignment
 
@@ -74,17 +75,39 @@ def evaluate_pressure_sanity(pressure_pa: float | None) -> Severity:
     return "ok"
 
 
+def _resolve_covered_location_ids(session: Session, location_id: int) -> list[int]:
+    """A sensor covers exactly one Location -- except a printer module (e.g. an
+    AMS) that's split across several sibling Location rows sharing the same
+    printer_id, which physically share one sensor's microclimate. Expand to
+    every sibling sharing (printer_id, location_type) in that case; a bare
+    room/storage_box/dry_box location (printer_id is None) is never expanded.
+    """
+    location = session.get(Location, location_id)
+    if location is None or location.printer_id is None:
+        return [location_id]
+    siblings = (
+        session.query(Location.id)
+        .filter(
+            Location.printer_id == location.printer_id,
+            Location.location_type == location.location_type,
+        )
+        .all()
+    )
+    return [row.id for row in siblings]
+
+
 def get_affected_spools(session: Session, location_id: int) -> list[AffectedSpool]:
+    covered_ids = _resolve_covered_location_ids(session, location_id)
     rows = (
         session.query(SpoolAssignment, FilamentSpool, MaterialProfile)
         .join(FilamentSpool, SpoolAssignment.spool_id == FilamentSpool.id)
         .join(MaterialProfile, FilamentSpool.material_profile_id == MaterialProfile.id)
-        .filter(SpoolAssignment.location_id == location_id, SpoolAssignment.is_active.is_(True))
+        .filter(SpoolAssignment.location_id.in_(covered_ids), SpoolAssignment.is_active.is_(True))
         .all()
     )
     return [
-        AffectedSpool(spool=spool, material_profile=profile, location_id=location_id)
-        for _assignment, spool, profile in rows
+        AffectedSpool(spool=spool, material_profile=profile, location_id=assignment.location_id)
+        for assignment, spool, profile in rows
     ]
 
 

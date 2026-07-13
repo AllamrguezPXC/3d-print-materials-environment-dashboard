@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PortSelect } from "@/components/PortSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Location } from "@/types/api";
+import type { Location, Printer } from "@/types/api";
 
 export interface SensorFormValues {
   name: string;
@@ -22,6 +22,7 @@ interface SensorFormProps {
   onChange: (value: SensorFormValues) => void;
   onSubmit: (e: React.FormEvent) => void;
   locations: Location[];
+  printers: Printer[];
   submitting?: boolean;
 }
 
@@ -29,7 +30,41 @@ interface SensorFormProps {
 // it talks to the sensor over native USB via the dracal-usb-get CLI tool).
 const REQUIRES_PORT = new Set(["dracal_vcp"]);
 
-export function SensorForm({ value, onChange, onSubmit, locations, submitting }: SensorFormProps) {
+interface LocationOption {
+  id: number;
+  label: string;
+}
+
+/** Physically, one sensor covers an entire AMS module's shared microclimate
+ * -- collapse that printer's AMS slots to a single option (the lowest
+ * slot_index as the representative location_id), so the picker can't imply
+ * "slot 3" is a different choice from "slot 0". Non-AMS locations are
+ * listed individually, unchanged. */
+function buildLocationOptions(locations: Location[], printers: Printer[]): LocationOption[] {
+  const amsByPrinter = new Map<number, Location>();
+  const otherOptions: LocationOption[] = [];
+
+  for (const location of locations) {
+    if (location.location_type === "printer_ams" && location.printer_id !== null) {
+      const current = amsByPrinter.get(location.printer_id);
+      if (!current || (location.slot_index ?? 0) < (current.slot_index ?? 0)) {
+        amsByPrinter.set(location.printer_id, location);
+      }
+    } else {
+      otherOptions.push({ id: location.id, label: location.name });
+    }
+  }
+
+  const amsOptions: LocationOption[] = [...amsByPrinter.entries()].map(([printerId, location]) => ({
+    id: location.id,
+    label: `${printers.find((p) => p.id === printerId)?.name ?? location.name} — AMS`,
+  }));
+
+  return [...amsOptions, ...otherOptions];
+}
+
+export function SensorForm({ value, onChange, onSubmit, locations, printers, submitting }: SensorFormProps) {
+  const locationOptions = buildLocationOptions(locations, printers);
   return (
     <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1.5">
@@ -103,9 +138,9 @@ export function SensorForm({ value, onChange, onSubmit, locations, submitting }:
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NO_LOCATION}>No location</SelectItem>
-            {locations.map((l) => (
-              <SelectItem key={l.id} value={String(l.id)}>
-                {l.name}
+            {locationOptions.map((option) => (
+              <SelectItem key={option.id} value={String(option.id)}>
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>

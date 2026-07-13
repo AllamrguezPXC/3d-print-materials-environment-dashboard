@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Dashboard } from "./Dashboard";
 import { getCurrentReading } from "@/api/readings";
-import { dryingApi } from "@/api/config";
+import { dryingApi, printersApi } from "@/api/config";
 import type { CurrentReadingsResponse, SensorReadingEntry } from "@/types/api";
 
 vi.mock("@/api/readings");
@@ -11,6 +11,8 @@ vi.mock("@/api/config");
 
 const mockedGetCurrentReading = vi.mocked(getCurrentReading);
 const mockedGetRecommendations = vi.mocked(dryingApi.recommendations);
+const mockedGetPrinters = vi.mocked(printersApi.list);
+mockedGetPrinters.mockResolvedValue([]);
 
 function renderDashboard() {
   const queryClient = new QueryClient({

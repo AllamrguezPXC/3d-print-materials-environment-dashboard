@@ -8,12 +8,14 @@ import { NoticeBanner } from "@/components/NoticeBanner";
 import { SensorForm, type SensorFormValues } from "@/components/SensorForm";
 import { useNotice } from "@/hooks/useNotice";
 import { useLocations } from "@/hooks/resources/locations";
+import { usePrinters } from "@/hooks/resources/printers";
 import {
   useCreateSensor,
   useRemoveSensor,
   useSensors,
   useTestReadSensor,
 } from "@/hooks/resources/sensors";
+import { describeSensorLocation } from "@/lib/sensorLocation";
 import type { SensorTestReadResult } from "@/types/api";
 
 const EMPTY_SENSOR: SensorFormValues = {
@@ -28,6 +30,7 @@ const EMPTY_SENSOR: SensorFormValues = {
 export function Sensors() {
   const { data: sensors = [] } = useSensors();
   const { data: locations = [] } = useLocations();
+  const { data: printers = [] } = usePrinters();
   const { notice, notifySuccess, notifyError } = useNotice();
 
   const createSensor = useCreateSensor();
@@ -112,7 +115,12 @@ export function Sensors() {
                     <TableCell>{s.serial_number}</TableCell>
                     <TableCell>{s.sensor_type}</TableCell>
                     <TableCell>{s.port ?? "—"}</TableCell>
-                    <TableCell>{locations.find((l) => l.id === s.location_id)?.name ?? "—"}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const location = locations.find((l) => l.id === s.location_id);
+                        return location ? describeSensorLocation(location, printers) : "—";
+                      })()}
+                    </TableCell>
                     <TableCell>
                       <StatusBadge status={s.is_active ? "ok" : "unknown"} label={s.is_active ? "active" : "inactive"} />
                     </TableCell>
@@ -151,6 +159,7 @@ export function Sensors() {
             onChange={setNewSensor}
             onSubmit={handleAddSensor}
             locations={locations}
+            printers={printers}
             submitting={createSensor.isPending}
           />
         </CardContent>

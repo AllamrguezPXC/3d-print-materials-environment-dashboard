@@ -3,12 +3,21 @@ import { AffectedSpoolsPanel } from "@/components/AffectedSpoolsPanel";
 import { AlertPanel } from "@/components/AlertPanel";
 import { ReadingCard } from "@/components/ReadingCard";
 import { StatusBadge } from "@/components/StatusBadge";
-import type { SensorReadingEntry } from "@/types/api";
+import { describeSensorLocation } from "@/lib/sensorLocation";
+import type { Printer, SensorReadingEntry } from "@/types/api";
+
+interface SensorReadingSectionProps {
+  entry: SensorReadingEntry;
+  /** Used to relabel an AMS-slot location by its printer ("P1S #1 — AMS")
+   * instead of the misleading exact slot name -- one sensor covers a whole
+   * AMS module's shared microclimate, not just the slot it's attached to. */
+  printers?: Printer[];
+}
 
 /** One active sensor's live reading, or its read error, isolated from every
  * other sensor's section -- a failing physical sensor must never hide a
  * healthy mock sensor's data. */
-export function SensorReadingSection({ entry }: { entry: SensorReadingEntry }) {
+export function SensorReadingSection({ entry, printers = [] }: SensorReadingSectionProps) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
@@ -21,7 +30,10 @@ export function SensorReadingSection({ entry }: { entry: SensorReadingEntry }) {
           {entry.location && (
             <>
               {" "}
-              · <strong className="text-foreground">{entry.location.name}</strong>
+              ·{" "}
+              <strong className="text-foreground">
+                {describeSensorLocation(entry.location, printers)}
+              </strong>
             </>
           )}
         </div>

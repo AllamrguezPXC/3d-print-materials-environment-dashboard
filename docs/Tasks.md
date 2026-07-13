@@ -603,6 +603,69 @@ real gaps, so "necessary and essential" did not include them.
   confirmed real gap from the Requirements.md audit; only the two
   already-judged-out-of-scope items remain on the deferred list.
 
+## Phase 28 — Sensor Per AMS Module
+
+See `docs/Tareas/sensor-per-ams-module/TASK.md` for the full task record.
+Raised by the user directly (not from the Requirements.md audit) while
+asking what "sensor-inheritance resolution UI" (a previously-deferred item)
+would consist of — that explanation surfaced a distinct, real data-model
+gap: a physical AMS module has exactly one shared sensor covering the
+microclimate of all its slots, but `Sensor.location_id` could point at a
+single AMS-slot `Location`, and alert/affected-spool evaluation only
+matched that exact `location_id`, never expanding to sibling slots. Planned
+via Plan Mode with two parallel Explore agents (backend sensor/location
+coupling; frontend AMS display components) before implementation.
+
+- [x] `alert_service.get_affected_spools(session, location_id)`: resolves
+  the `Location`, and if `printer_id is not None` expands to every sibling
+  sharing `(printer_id, location_type)` — generalized, not hardcoded to
+  `"printer_ams"`, so any future per-printer multi-row location type is
+  covered for free. This one function backs all 3 alert/reading flows
+  (`GET /readings/current`, `POST /readings` auto-capture and manual), so
+  the fix applies everywhere in one place.
+- [x] `sensor_service.py`: new `_check_ams_sensor_conflict` (same 400
+  pattern as the existing `_check_duplicate_serial`) rejects assigning a
+  second sensor to any sibling slot of an AMS module that already has one,
+  called from `create_sensor` always and `update_sensor` only when
+  `"location_id"` is in the payload (`exclude_id` lets a sensor move
+  between slots of its own AMS without self-conflicting).
+- [x] `seed.py`: added `Mock Sensor 4` (`MOCK-0004`) to P1S #1's AMS slot 1
+  and a demo spool to a *different* slot (A3) of the same AMS — previously
+  no seeded AMS module demonstrated the shared-sensor behavior at all
+  (A1 mini #1's AMS only had 1 slot seeded; P1S #1's 4-slot AMS had zero
+  sensors).
+- [x] Backend tests: sibling expansion (2 spools in 2 different slots of
+  one printer, both surfaced by one sensor's reading), non-printer
+  locations unaffected (regression), sensor-conflict validation (create +
+  update reject, same-AMS reassignment via `exclude_id` allowed, non-AMS
+  locations unrestricted). Full suite: 138 passed (132 + 6 new).
+- [x] `frontend/src/lib/sensorLocation.ts` (new): `describeSensorLocation()`
+  relabels an AMS-slot location by its printer ("P1S #1 — AMS") instead of
+  the misleading exact slot name; plain name for everything else.
+- [x] `SensorReadingSection.tsx` (new optional `printers?` prop),
+  `Dashboard.tsx` (added `usePrinters()`), `PrinterDetail.tsx` (passed its
+  already-fetched `printers`), `Sensors.tsx` admin table — all now use the
+  helper for the location label.
+- [x] `SensorForm.tsx`: new `printers` prop; the location picker collapses
+  an AMS module's slots to one option (lowest `slot_index` as the
+  representative `location_id`) instead of listing all 4 as if independent.
+- [x] Discovered and fixed a jsdom gap while writing `SensorForm.test.tsx`:
+  Radix `<Select>` needs `hasPointerCapture`/`scrollIntoView`, which jsdom
+  doesn't implement — added the standard polyfill to `src/test/setup.ts`
+  (benefits any future test opening a Select's dropdown).
+- [x] `npx vitest run` (31 passed, 9 files), `tsc -b`/`build`/`lint` clean.
+- [x] Playwright verification (after deleting the dev DB, since the seed's
+  spool-seeding block is gated on the spools table being empty and this DB
+  already had spools from prior sessions): `/printers/5` shows "MOCK-0004"
+  labeled "P1S #1 — AMS" and correctly lists the PLA/Silver spool from a
+  *different* slot as affected (screenshot:
+  `evidence/frontend-verification/printer-detail-shared-ams-sensor.png`);
+  on `/sensors`, the location picker showed one "P1S #1 — AMS" option, and
+  creating a second sensor on that AMS module correctly failed with a 400
+  (confirmed via the browser's network console log; screenshot:
+  `evidence/frontend-verification/sensors-ams-conflict-error.png`).
+- [x] Updated `docs/Frontend_Redesign_Guide.md` §9.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`
