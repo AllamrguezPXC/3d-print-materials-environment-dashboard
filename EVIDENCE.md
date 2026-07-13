@@ -390,6 +390,47 @@ triggered an automatic sensor capture to produce a real reading at that location
 trend" on `/drying`, and confirmed both the Relative Humidity and Temperature charts rendered the
 real captured data point (`evidence/frontend-verification/drying-session-trend-dialog.png`).
 
+## Sensor Per AMS Module
+
+Full task record: `docs/Tareas/sensor-per-ams-module/TASK.md`. Raised by the user directly (not
+from the Requirements.md audit) while asking what a previously-deferred item ("sensor-inheritance
+resolution UI") would consist of — that explanation surfaced a distinct, real correction: a
+physical AMS module has exactly one shared sensor covering all its slots' microclimate, but
+`Sensor.location_id` could point at a single AMS-slot `Location`, and alert/affected-spool
+evaluation only matched that exact `location_id`, never expanding to sibling slots.
+
+**Plan Mode used again** for this correction: two parallel Explore agents (backend sensor/location
+coupling; frontend AMS display components) audited the codebase before any file was touched. Key
+finding: no pre-existing violation in seed data (clean slate), and `PrinterDetail.tsx` already
+grouped sensor entries by printer rather than exact slot, so the Dashboard/PrinterDetail
+"Environment" display already worked correctly without change — the real gaps were the backend
+evaluation logic, missing validation, and misleading frontend labels. The plan was saved and
+approved via `ExitPlanMode` before implementation began.
+
+Backend: `alert_service.get_affected_spools` now expands to every sibling `Location` sharing
+`(printer_id, location_type)` — generalized, not hardcoded to `"printer_ams"` — backing all 3
+alert/reading flows in one place. New `sensor_service._check_ams_sensor_conflict` (same 400 pattern
+as the existing duplicate-serial check) rejects a second sensor on an already-covered AMS module.
+Seed gained a demo sensor + spool on different slots of the same AMS, since no seeded module
+previously demonstrated the shared-sensor behavior. 6 new tests; full suite: 138 passed.
+
+Frontend: new `describeSensorLocation()` helper relabels an AMS-slot reading by its printer
+("P1S #1 — AMS") instead of the misleading exact slot name, used in `SensorReadingSection.tsx`
+(Dashboard + PrinterDetail) and the `Sensors.tsx` admin table. `SensorForm.tsx`'s location picker
+collapses an AMS module's slots to one option. Discovered and fixed a jsdom gap along the way:
+Radix `<Select>` needs `hasPointerCapture`/`scrollIntoView`, which jsdom doesn't implement — added
+the standard polyfill to `src/test/setup.ts`. Full vitest suite: 31 passed (9 files). `tsc -b`/
+`build`/`lint` clean.
+
+Playwright verification (after deleting the dev DB, since the seed's spool-seeding block only runs
+when the spools table is empty, and this DB already had spools from prior sessions):
+`/printers/5` shows the shared sensor correctly labeled "P1S #1 — AMS" and correctly lists a spool
+from a *different* AMS slot as affected, proving the sibling-expansion fix
+(`evidence/frontend-verification/printer-detail-shared-ams-sensor.png`); on `/sensors`, the
+location picker showed one collapsed "P1S #1 — AMS" option, and attempting to assign a second
+sensor to that same AMS module correctly failed with a 400
+(`evidence/frontend-verification/sensors-ams-conflict-error.png`).
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

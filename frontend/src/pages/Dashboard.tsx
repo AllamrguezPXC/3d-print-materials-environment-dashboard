@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DryingRecommendationCard } from "@/components/DryingRecommendationCard";
 import { SensorReadingSection } from "@/components/SensorReadingSection";
 import { useDryingRecommendations } from "@/hooks/resources/drying";
+import { usePrinters } from "@/hooks/resources/printers";
 import { useRefreshInterval } from "@/hooks/useRefreshInterval";
 import { getCurrentReading } from "@/api/readings";
 
@@ -13,6 +14,7 @@ export function Dashboard() {
     refetchInterval: refreshInterval,
   });
   const { data: recommendations = [] } = useDryingRecommendations();
+  const { data: printers = [] } = usePrinters();
 
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Loading current reading…</p>;
@@ -37,7 +39,7 @@ export function Dashboard() {
       ) : (
         <div className="flex flex-col gap-4">
           {data.sensors.map((entry) => (
-            <SensorReadingSection key={entry.sensor.id} entry={entry} />
+            <SensorReadingSection key={entry.sensor.id} entry={entry} printers={printers} />
           ))}
         </div>
       )}

@@ -378,6 +378,25 @@ def seed(session: Session) -> None:
                 slot_index=slot_index,
             )
 
+    # --- Shared AMS-module sensor demo (sensor-per-ams-module task) -----
+    # Physically, one sensor covers an entire AMS module's shared
+    # microclimate. This sensor is assigned to slot 1, but a demo spool
+    # below is assigned to slot 3 of the *same* AMS -- both are covered by
+    # this one sensor's reading (see alert_service.get_affected_spools),
+    # demonstrating the shared-sensor behavior without manual setup.
+    p1s_1_slot_1 = session.query(Location).filter_by(name="AMS Slot 1 - P1S #1").first()
+    if p1s_1_slot_1 is not None:
+        _get_or_create_sensor(
+            session,
+            "MOCK-0004",
+            name="Mock Sensor 4",
+            model="mock",
+            sensor_type="mock",
+            port=None,
+            is_active=True,
+            location_id=p1s_1_slot_1.id,
+        )
+
     # --- Demo filament spools + assignments -----------------------------
     # FilamentSpool/SpoolAssignment have no natural business key of their
     # own (they're free-form demo inventory), so idempotency here is
@@ -385,6 +404,7 @@ def seed(session: Session) -> None:
     if session.query(FilamentSpool).count() == 0 and mock_sensors:
         ams_slot_1 = session.query(Location).filter_by(name="AMS Slot 1 - A1 mini #1").first()
         storage_box_a = session.query(Location).filter_by(name="Storage Box A").first()
+        p1s_1_slot_3 = session.query(Location).filter_by(name="AMS Slot 3 - P1S #1").first()
 
         demo_spools = [
             {
@@ -402,6 +422,17 @@ def seed(session: Session) -> None:
                 "location": storage_box_a,
                 "slot_name": None,
                 "status": "watch",
+            },
+            {
+                # Assigned to a different slot of P1S #1's AMS than "Mock
+                # Sensor 4" (slot 1) -- demonstrates that one shared sensor
+                # covers spools in any of its AMS module's sibling slots.
+                "material_profile_id": profiles_by_name["PLA"].id,
+                "brand": "Generic",
+                "color": "Silver",
+                "location": p1s_1_slot_3,
+                "slot_name": "AMS Slot 3",
+                "status": "ready",
             },
         ]
 

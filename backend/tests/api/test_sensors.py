@@ -231,3 +231,74 @@ def test_patch_sensor_rejects_duplicate_serial_with_friendly_400(client):
         f"/sensors/{second['id']}", json={"serial_number": first["serial_number"]}
     )
     assert response.status_code == 400
+
+
+def _location_id(client, name: str) -> int:
+    location = next(loc for loc in client.get("/locations").json() if loc["name"] == name)
+    return location["id"]
+
+
+def test_create_sensor_rejects_second_sensor_on_occupied_ams_module(client):
+    """Seeded "Mock Sensor 4" already covers P1S #1's whole AMS module from
+    slot 1 -- assigning another sensor to any sibling slot must be rejected,
+    since physically only one sensor covers the shared microclimate."""
+    slot_2_id = _location_id(client, "AMS Slot 2 - P1S #1")
+
+    response = client.post(
+        "/sensors",
+        json={
+            "name": "Rogue AMS Sensor",
+            "model": "mock",
+            "serial_number": "MOCK-AMSCONFLICT-0001",
+            "sensor_type": "mock",
+            "location_id": slot_2_id,
+        },
+    )
+    assert response.status_code == 400
+
+
+def test_patch_sensor_rejects_moving_into_occupied_ams_module(client):
+    slot_3_id = _location_id(client, "AMS Slot 3 - P1S #1")
+    created = client.post(
+        "/sensors",
+        json={
+            "name": "Unassigned Sensor",
+            "model": "mock",
+            "serial_number": "MOCK-AMSCONFLICT-0002",
+            "sensor_type": "mock",
+        },
+    ).json()
+
+    response = client.patch(f"/sensors/{created['id']}", json={"location_id": slot_3_id})
+    assert response.status_code == 400
+
+
+def test_update_sensor_can_reassign_within_its_own_ams_module(client):
+    """A sensor moving to a different slot of the SAME AMS it already
+    covers must not self-conflict (exclude_id)."""
+    mock_sensor_4 = next(s for s in client.get("/sensors").json() if s["serial_number"] == "MOCK-0004")
+    slot_2_id = _location_id(client, "AMS Slot 2 - P1S #1")
+
+    response = client.patch(f"/sensors/{mock_sensor_4['id']}", json={"location_id": slot_2_id})
+    assert response.status_code == 200
+    assert response.json()["location_id"] == slot_2_id
+
+
+def test_create_sensor_on_non_printer_location_is_unrestricted(client):
+    """Locations without a printer_id (room/storage_box/dry_box) are
+    unaffected by the AMS-sensor-conflict rule -- confirms the fix is
+    scoped to printer modules only, per the user's stated hardware
+    constraint (one sensor per printer/AMS module or dryer)."""
+    storage_box_a_id = _location_id(client, "Storage Box A")
+
+    response = client.post(
+        "/sensors",
+        json={
+            "name": "Second Storage Sensor",
+            "model": "mock",
+            "serial_number": "MOCK-NONAMS-0001",
+            "sensor_type": "mock",
+            "location_id": storage_box_a_id,
+        },
+    )
+    assert response.status_code == 200

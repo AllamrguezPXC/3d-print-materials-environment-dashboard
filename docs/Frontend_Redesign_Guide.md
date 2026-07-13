@@ -239,8 +239,25 @@ does not control the dryer directly — this is validation/tracking only.
     grid. ("Add Filament" itself — Manual Add + Read from AMS — was built earlier; see
     `docs/Tareas/read-from-ams-flow/TASK.md`. Read from AMS reads the AMS slots this project
     already tracks explicitly (`Location.slot_index`), not any real Bambu Studio/AMS integration.)
-  - Sensor-inheritance resolution UI (printer → AMS → slot → location) — a slot's sensor is whatever
-    sensor row has that slot's `location_id`, resolved implicitly, not surfaced as an explicit chain.
+  - Sensor-inheritance resolution UI (printer → AMS → slot → location) — still not built: there is
+    no real multi-level hierarchy in the data model to resolve (a `Location` either has a sensor or
+    it doesn't), so a "resolution UI" would be inventing complexity for a chain that doesn't exist.
+    **Related but distinct, and since fixed**: see `docs/Tareas/sensor-per-ams-module/TASK.md` —
+    the user clarified a real hardware constraint (one sensor covers an entire AMS module's shared
+    microclimate, not one sensor per slot), which the model *did* violate by letting each AMS-slot
+    `Location` carry its own sensor. That's a one-level correction (sensor ↔ printer module), not
+    the deeper multi-level "inheritance" idea above, which remains out of scope for the stated
+    reason.
+  - ~~One sensor covering multiple AMS slots~~ — **done**, see
+    `docs/Tareas/sensor-per-ams-module/TASK.md`: `alert_service.get_affected_spools` now expands to
+    every sibling `Location` sharing `(printer_id, location_type)` (not hardcoded to the string
+    `"printer_ams"` — any future per-printer multi-row location type is covered for free), so a
+    spool in any slot of an AMS module is correctly evaluated against that module's one shared
+    sensor reading. `sensor_service.py` gained `_check_ams_sensor_conflict` (same 400 pattern as
+    `_check_duplicate_serial`) rejecting a second sensor on any sibling slot. Frontend:
+    `describeSensorLocation()` relabels an AMS-slot reading by its printer ("P1S #1 — AMS") instead
+    of the misleading exact slot name; `SensorForm`'s location picker collapses an AMS module's
+    slots to one option.
   - `MaterialProfile` nozzle/bed print-temperature fields — the model remains environmental/drying-
     only (slicer profile data is orthogonal to this app's declared monitoring/advisory purpose).
   - ~~A `MaterialProfile` manufacturer-override chain~~ — **done**, see

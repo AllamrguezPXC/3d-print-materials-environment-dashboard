@@ -123,7 +123,7 @@ export function PrinterDetail() {
         ) : (
           printerSensorEntries.map((entry) => (
             <div key={entry.sensor.id} className="flex flex-col gap-3">
-              <SensorReadingSection entry={entry} />
+              <SensorReadingSection entry={entry} printers={printers} />
               {!entry.error && entry.relative_humidity_percent !== null && (
                 <HumidityScale relativeHumidityPercent={entry.relative_humidity_percent} />
               )}
