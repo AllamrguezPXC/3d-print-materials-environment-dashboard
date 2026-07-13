@@ -19,7 +19,7 @@ def test_seed_is_idempotent(db_session):
 
     # Sanity: seeding actually inserted rows.
     assert first_counts["Printer"] == 7
-    assert first_counts["MaterialProfile"] == 10
+    assert first_counts["MaterialProfile"] == 11
     assert first_counts["Sensor"] >= 1
     assert first_counts["FilamentSpool"] > 0
 

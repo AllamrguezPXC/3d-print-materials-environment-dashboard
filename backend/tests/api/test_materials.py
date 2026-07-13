@@ -26,6 +26,19 @@ def test_list_materials_includes_seeded_profiles(client):
     assert any(m["name"] == "PLA" for m in body)
 
 
+def test_seeded_manufacturer_profile_overrides_family_default(client):
+    """Requirements.md section 7 rule 1 / CLAUDE.md Domain Rules: a
+    manufacturer-specific profile shares its family with the generic default
+    but carries distinct (tighter) thresholds a spool can opt into."""
+    body = client.get("/materials").json()
+    generic = next(m for m in body if m["name"] == "PLA")
+    manufacturer_specific = next(m for m in body if m["name"] == "Prusament PLA")
+
+    assert manufacturer_specific["manufacturer"] == "Prusament"
+    assert manufacturer_specific["family"] == generic["family"]
+    assert manufacturer_specific["ideal_rh_max_percent"] < generic["ideal_rh_max_percent"]
+
+
 def test_create_and_fetch_material(client):
     create_response = client.post("/materials", json=MATERIAL_PAYLOAD)
     assert create_response.status_code == 200
