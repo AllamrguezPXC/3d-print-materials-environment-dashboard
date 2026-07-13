@@ -3,7 +3,14 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Dashboard } from "./Dashboard";
 import { getCurrentReading } from "@/api/readings";
-import { dryingApi, printersApi } from "@/api/config";
+import {
+  assignmentsApi,
+  dryingApi,
+  locationsApi,
+  materialsApi,
+  printersApi,
+  spoolsApi,
+} from "@/api/config";
 import type { CurrentReadingsResponse, SensorReadingEntry } from "@/types/api";
 
 vi.mock("@/api/readings");
@@ -12,7 +19,16 @@ vi.mock("@/api/config");
 const mockedGetCurrentReading = vi.mocked(getCurrentReading);
 const mockedGetRecommendations = vi.mocked(dryingApi.recommendations);
 const mockedGetPrinters = vi.mocked(printersApi.list);
+const mockedGetLocations = vi.mocked(locationsApi.list);
+const mockedGetSpools = vi.mocked(spoolsApi.list);
+const mockedGetMaterials = vi.mocked(materialsApi.list);
+const mockedGetAssignments = vi.mocked(assignmentsApi.list);
+
 mockedGetPrinters.mockResolvedValue([]);
+mockedGetLocations.mockResolvedValue([]);
+mockedGetSpools.mockResolvedValue([]);
+mockedGetMaterials.mockResolvedValue([]);
+mockedGetAssignments.mockResolvedValue([]);
 
 function renderDashboard() {
   const queryClient = new QueryClient({
@@ -61,7 +77,7 @@ describe("Dashboard", () => {
     expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument();
   });
 
-  it("shows an explicit empty state when no sensors are active", async () => {
+  it("shows an explicit empty state when no sensors, printers, or locations are active", async () => {
     const response: CurrentReadingsResponse = { sensors: [], message: "No active sensors configured." };
     mockedGetCurrentReading.mockResolvedValue(response);
     mockedGetRecommendations.mockResolvedValue([]);
@@ -72,7 +88,7 @@ describe("Dashboard", () => {
     expect(screen.getByText(/no spools currently need drying/i)).toBeInTheDocument();
   });
 
-  it("renders sensor readings and drying recommendations when both are present", async () => {
+  it("renders a standalone location module and drying recommendations when both are present", async () => {
     const response: CurrentReadingsResponse = { sensors: [SENSOR_ENTRY], message: null };
     mockedGetCurrentReading.mockResolvedValue(response);
     mockedGetRecommendations.mockResolvedValue([
@@ -92,7 +108,8 @@ describe("Dashboard", () => {
 
     renderDashboard();
 
-    await waitFor(() => expect(screen.getByText("MOCK-0001")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Primary Filament Storage Room")).toBeInTheDocument());
+    expect(screen.getByText("MOCK-0001")).toBeInTheDocument();
     expect(screen.getByText("23.1 °C")).toBeInTheDocument();
     expect(screen.getByText("21.2 %")).toBeInTheDocument();
     expect(screen.getByText(/humidity is above the ideal range for petg/i)).toBeInTheDocument();

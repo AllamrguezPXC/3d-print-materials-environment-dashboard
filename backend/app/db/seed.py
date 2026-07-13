@@ -378,6 +378,22 @@ def seed(session: Session) -> None:
                 slot_index=slot_index,
             )
 
+    # --- External-spool location demo (dashboard-device-redesign task) --
+    # No `printer_external_spool` Location was ever seeded before this task
+    # -- every "external_spool" printer had zero locations of its own. Adds
+    # one real row (no sensor of its own; an external spool holder has no
+    # consolidated environmental reading) so the Dashboard's external-spool
+    # slot visual is demonstrable against real data, not just its empty state.
+    a1_mini_2 = printers_by_name.get("A1 mini #2")
+    if a1_mini_2 is not None:
+        _get_or_create_location(
+            session,
+            "External Spool - A1 mini #2",
+            location_type="printer_external_spool",
+            printer_id=a1_mini_2.id,
+            description="External spool holder on A1 mini #2.",
+        )
+
     # --- Shared AMS-module sensor demo (sensor-per-ams-module task) -----
     # Physically, one sensor covers an entire AMS module's shared
     # microclimate. This sensor is assigned to slot 1, but a demo spool
@@ -405,6 +421,7 @@ def seed(session: Session) -> None:
         ams_slot_1 = session.query(Location).filter_by(name="AMS Slot 1 - A1 mini #1").first()
         storage_box_a = session.query(Location).filter_by(name="Storage Box A").first()
         p1s_1_slot_3 = session.query(Location).filter_by(name="AMS Slot 3 - P1S #1").first()
+        a1_mini_2_ext_spool = session.query(Location).filter_by(name="External Spool - A1 mini #2").first()
 
         demo_spools = [
             {
@@ -432,6 +449,14 @@ def seed(session: Session) -> None:
                 "color": "Silver",
                 "location": p1s_1_slot_3,
                 "slot_name": "AMS Slot 3",
+                "status": "ready",
+            },
+            {
+                "material_profile_id": profiles_by_name["PETG"].id,
+                "brand": "Generic",
+                "color": "Blue",
+                "location": a1_mini_2_ext_spool,
+                "slot_name": "External Spool",
                 "status": "ready",
             },
         ]

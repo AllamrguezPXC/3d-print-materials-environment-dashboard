@@ -1,8 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { DeviceModuleGrid } from "@/components/DeviceModuleGrid";
 import { DryingRecommendationCard } from "@/components/DryingRecommendationCard";
-import { SensorReadingSection } from "@/components/SensorReadingSection";
+import { useAssignments } from "@/hooks/resources/assignments";
 import { useDryingRecommendations } from "@/hooks/resources/drying";
+import { useLocations } from "@/hooks/resources/locations";
+import { useMaterials } from "@/hooks/resources/materials";
 import { usePrinters } from "@/hooks/resources/printers";
+import { useSpools } from "@/hooks/resources/spools";
 import { useRefreshInterval } from "@/hooks/useRefreshInterval";
 import { getCurrentReading } from "@/api/readings";
 
@@ -15,6 +19,10 @@ export function Dashboard() {
   });
   const { data: recommendations = [] } = useDryingRecommendations();
   const { data: printers = [] } = usePrinters();
+  const { data: locations = [] } = useLocations();
+  const { data: spools = [] } = useSpools();
+  const { data: materials = [] } = useMaterials();
+  const { data: assignments = [] } = useAssignments();
 
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Loading current reading…</p>;
@@ -32,17 +40,15 @@ export function Dashboard() {
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-heading font-semibold">Live Environment</h1>
 
-      {data.sensors.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          {data.message ?? "No active sensors configured."}
-        </p>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {data.sensors.map((entry) => (
-            <SensorReadingSection key={entry.sensor.id} entry={entry} printers={printers} />
-          ))}
-        </div>
-      )}
+      <DeviceModuleGrid
+        printers={printers}
+        locations={locations}
+        spools={spools}
+        materials={materials}
+        assignments={assignments}
+        sensorEntries={data.sensors}
+        emptyMessage={data.message}
+      />
 
       <div className="flex flex-col gap-3">
         <h2 className="font-heading text-lg font-medium">Drying Recommendations</h2>
