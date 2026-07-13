@@ -93,6 +93,10 @@ Explore agents: frontend, backend, docs/patterns).
       (`remaining_weight_g` skipped — not exposed on the frontend `FilamentSpool` type today).
 - [x] "Create new spool" flow works inline from `SlotAssignmentModal` and syncs to `Spools.tsx`.
 - [x] Drying Recommendations correctly includes AMS sibling-slot spools with a shared sensor.
+- [x] Follow-up (caught during user validation): Drying Recommendations count matched printer/
+      location alert count exactly — fixed by computing recommendations from live sensor reads
+      (same as `GET /readings/current`) instead of a persisted `Reading` row, and syncing its
+      polling interval to the Dashboard's `refreshInterval`.
 - [x] Dashboard filters implemented and functional (search + alert/sensor/slot status + printer
       brand + filament type/brand/color/status).
 - [x] Backend tests green (`pytest -q` — 139 passed).

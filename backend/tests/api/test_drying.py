@@ -26,11 +26,20 @@ def _seed_petg_spool(session, *, location_name: str = "API Test Box"):
     return profile, location, spool
 
 
-def test_get_recommendations_returns_empty_list_when_no_reading_history(client):
+def test_get_recommendations_excludes_a_spool_with_no_sensor_in_its_module(client):
+    # get_drying_recommendations reads each active sensor's live current
+    # reading (not a persisted Reading row) -- other tests in the suite share
+    # this same in-memory DB and may leave their own sensors/spools behind,
+    # so this asserts only that OUR spool (which has no sensor anywhere in
+    # its location) is correctly excluded, not that the whole list is empty.
+    with SessionLocal() as session:
+        _profile, _location, spool = _seed_petg_spool(session, location_name="No Sensor API Box")
+        spool_id = spool.id
+
     response = client.get("/drying/recommendations")
 
     assert response.status_code == 200
-    assert response.json() == []
+    assert all(rec["spool_id"] != spool_id for rec in response.json())
 
 
 def test_post_session_creates_recommended_session(client):

@@ -17,7 +17,7 @@ export function Dashboard() {
     queryFn: getCurrentReading,
     refetchInterval: refreshInterval,
   });
-  const { data: recommendations = [] } = useDryingRecommendations();
+  const { data: recommendations = [] } = useDryingRecommendations(refreshInterval);
   const { data: printers = [] } = usePrinters();
   const { data: locations = [] } = useLocations();
   const { data: spools = [] } = useSpools();

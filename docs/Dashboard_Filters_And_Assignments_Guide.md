@@ -55,26 +55,55 @@ the modal.
 
 ### 3. "Drying Recommendations" always showed "No spools currently need drying"
 
-**Cause:** `GET /drying/recommendations` (`drying_service.py`) looked up the
-latest persisted `Reading` row for the **exact** `location_id` a spool was
-assigned to. But a physical AMS module shares one sensor across all its
-slots (`sensor-per-ams-module` task), and readings are only persisted at the
-slot the sensor is actually attached to — a spool in a sibling slot had no
-`Reading` row of its own and was silently skipped, even though the same
-module's `AlertPanel` correctly showed a warning/critical alert for it (via
-`alert_service.get_affected_spools`'s sibling-location expansion).
+**Cause (first pass):** `GET /drying/recommendations` (`drying_service.py`)
+looked up the latest **persisted** `Reading` row for the exact `location_id`
+a spool was assigned to. But a physical AMS module shares one sensor across
+all its slots (`sensor-per-ams-module` task), and readings are only
+persisted at the slot the sensor is actually attached to — a spool in a
+sibling slot had no `Reading` row of its own and was silently skipped, even
+though the same module's `AlertPanel` correctly showed a warning/critical
+alert for it (via `alert_service.get_affected_spools`'s sibling-location
+expansion). An initial fix made the persisted-`Reading` lookup expand to
+sibling locations too, but that only patched half the bug.
 
-**Fix:** `drying_service.py`'s `_get_last_reading_for_location` now reuses
-`alert_service._resolve_covered_location_ids` to expand to the module's
-sibling locations before looking up the latest `Reading`, matching what the
-Dashboard's alert panel already does.
+**Root cause found in validation:** `Reading` rows are only ever persisted
+via `POST /readings` (the "Capture reading now" button on `/history`) — the
+Dashboard's live polling (`GET /readings/current`) never persists anything.
+So even with the sibling-location fix, Drying Recommendations was reading a
+**stale snapshot** from whenever someone last clicked "Capture reading now"
+(minutes or hours old), while the Dashboard's alert panels are computed
+fresh on every poll. A spool could flip from critical to ok (or vice versa)
+on the Dashboard several times before Drying Recommendations ever saw the
+change — this is exactly why the user could see 3 criticals in the Drying
+Recommendations list while only 1 printer/location currently showed an
+active alert.
 
-**Remaining limitation (by design, not a bug):** `Reading` rows are only
-persisted via `POST /readings` (the "Capture reading now" button on
-`/history`) — the Dashboard's live polling (`GET /readings/current`) never
-persists anything. If no reading has ever been captured for a module, Drying
-Recommendations still has nothing to evaluate. Adding automatic/background
-capture was out of scope for this pass (see "Deferred" below).
+**Actual fix:** `get_drying_recommendations` no longer touches the `Reading`
+table at all. It now iterates every active `Sensor`, takes a **live** read
+via the same `get_sensor_reader_for_sensor(...).read_current()` call
+`GET /readings/current` uses, expands to the sensor's covered locations
+(`alert_service._resolve_covered_location_ids`, same sibling-AMS expansion),
+and evaluates humidity severity from that live value — the identical
+computation the Dashboard's `AlertPanel` performs. A sensor that fails to
+read (offline/misconfigured) contributes nothing, same per-sensor error
+isolation `GET /readings/current` already has.
+
+**Live updates in sync with the alert panels:** `Dashboard.tsx` now passes
+its own `refreshInterval` (the user-configurable interval from Settings,
+`useRefreshInterval()`) into `useDryingRecommendations(refreshInterval)`
+instead of a hardcoded 15s default, so the Drying Recommendations section
+refetches on the same cadence as the printer/location cards. Because both
+are now computed from live sensor reads (not a shared single request),
+there is a small window (one poll tick) where the two could reflect
+slightly different live values for a mock sensor's random-walk simulation —
+this is a cosmetic, sub-second discrepancy, not the multi-minute staleness
+bug that was actually reported, and is consistent with how "live" data
+already works everywhere else in this app (computed fresh per request, not
+synchronized across separate endpoints).
+
+`/drying` (the dedicated Drying page) uses the same `useDryingRecommendations`
+hook and backend endpoint, so this fix applies there too, not just on the
+Dashboard.
 
 ## Dashboard filters (first version)
 
@@ -129,8 +158,6 @@ filters"), these remain **not built**, not accidentally omitted:
 - **Filter-state persistence** across page loads/navigation — filters reset
   to `EMPTY_DEVICE_FILTERS` on remount; no UI-state persistence pattern
   exists in this project yet.
-- **Automatic/background reading capture** — see Bug 3's remaining
-  limitation above.
 - A dedicated "Ambiente ideal" / "Fuera de rango" filter category, separate
   from alert status — redundant with the alert-status filter already
   covering warning/critical/no-alert.
@@ -146,7 +173,8 @@ New: `frontend/src/lib/format.ts`, `format.test.ts`,
 Modified: `EnvMetricTile.tsx`, `DeviceModuleCard.tsx`,
 `StandaloneLocationCard.tsx`, `DeviceModuleGrid.tsx`,
 `SensorReadingSection.tsx`, `HumidityScale.tsx`, `pages/Sensors.tsx`,
-`SlotAssignmentModal.tsx`, `pages/PrinterDetail.tsx`,
+`SlotAssignmentModal.tsx`, `pages/PrinterDetail.tsx`, `pages/Dashboard.tsx`,
 `backend/app/services/drying_service.py`,
 `backend/app/services/alert_service.py`,
-`backend/tests/services/test_drying_service.py`.
+`backend/tests/services/test_drying_service.py`,
+`backend/tests/api/test_drying.py`.

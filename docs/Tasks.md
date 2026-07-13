@@ -786,6 +786,47 @@ bugs + build a first version of Dashboard filters, deferring the rest.
   filter narrowing (e.g. "No sensor assigned"), the create-spool-from-modal flow syncing to
   `/spools`, and Drying Recommendations correctly surfacing the AMS sibling-slot spool.
 
+### Phase 30 follow-up — Drying Recommendations vs live alerts inconsistency
+
+During the user's own browser validation, they caught a real remaining bug: Drying Recommendations
+showed 3 criticals while the printer/location cards showed only 1 active alert. The initial
+sibling-AMS-expansion fix above only patched half of Bug 3 — `get_drying_recommendations` still
+read a **persisted** `Reading` row (only ever written via "Capture reading now" on `/history`),
+which could be minutes stale relative to what `GET /readings/current` computes live for the
+Dashboard's alert panels.
+
+- [x] `drying_service.get_drying_recommendations` rewritten to stop touching the `Reading` table
+  entirely: it now iterates every active `Sensor`, takes a live read via the same
+  `get_sensor_reader_for_sensor(...).read_current()` call `GET /readings/current` uses, and expands
+  to covered sibling locations (`alert_service._resolve_covered_location_ids`) before evaluating
+  humidity severity — the identical computation the Dashboard's `AlertPanel` performs, guaranteeing
+  the two can never structurally disagree beyond one poll tick's worth of live-sensor drift.
+- [x] `Dashboard.tsx` now passes its own `refreshInterval` (from `useRefreshInterval()`, the
+  user-configurable Settings value) into `useDryingRecommendations(refreshInterval)` instead of a
+  hardcoded 15s default, so Drying Recommendations refetches on the same cadence as the
+  printer/location alert panels.
+- [x] `backend/tests/services/test_drying_service.py` rewritten: tests now monkeypatch
+  `get_sensor_reader_for_sensor` for a fixed live reading (same pattern as
+  `tests/api/test_sensors.py`) instead of seeding `Reading` rows, since severity is no longer read
+  from that table.
+- [x] Found and fixed a latent test-isolation bug surfaced by this refactor:
+  `test_no_dryer_configured_sets_capability_none` did a blanket `DELETE FROM locations WHERE
+  location_type='dryer'` without cleaning up dependent `SpoolAssignment`/`Sensor` rows first —
+  SQLite reuses a deleted row's freed integer id for the next insert in that table, so the orphaned
+  rows would silently reattach to whatever unrelated new `Location` a later test created next,
+  corrupting that test's data. This was always latent (the old `Reading`-based code just never
+  surfaced it, since `Reading` was cleared every test regardless). Fixed by deleting dependent rows
+  first; verified by running the full suite in multiple file orderings.
+  `tests/api/test_drying.py`'s `test_get_recommendations_returns_empty_list_when_no_reading_history`
+  was also order-dependent for the same underlying reason and was rewritten to assert only its own
+  seeded spool's exclusion, not global emptiness.
+- [x] Cleaned up debugging-artifact rows (test locations/sensors/spools) that had leaked into the
+  real dev database during manual backend debugging via ad hoc scripts that didn't set
+  `DATABASE_URL=sqlite:///:memory:`.
+- [x] `pytest -q` (139 passed, re-verified across 3 file orderings), `npx vitest run` (93 passed).
+- [x] Playwright re-verification: confirmed the printer/location cards and Drying Recommendations
+  now show a consistent 0-vs-0 empty state on the live dev DB after cleanup.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`
