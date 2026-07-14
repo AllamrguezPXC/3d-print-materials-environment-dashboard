@@ -3,6 +3,10 @@ import os
 # Must be set before `app.main`/`app.db.session` are imported anywhere, since
 # their module-level `get_settings()` calls are cached for the process lifetime.
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+# Disable the background auto-capture loop (app.services.auto_capture) for
+# tests -- it would otherwise race against each test's own Reading/Alert
+# assertions and hold an asyncio task open across TestClient enter/exits.
+os.environ.setdefault("AUTO_CAPTURE_INTERVAL_SECONDS", "0")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

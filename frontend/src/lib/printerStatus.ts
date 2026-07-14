@@ -19,7 +19,7 @@ const STATUS_LABELS: Record<PrinterOperationalStatus, string> = {
  * critical, so it doesn't belong in statusVariant()'s palette. */
 const STATUS_BADGE_CLASSNAME: Record<PrinterOperationalStatus, string> = {
   activo: "bg-ok/15 text-ok",
-  inactivo: "bg-muted text-muted-foreground",
+  inactivo: "bg-destructive/15 text-destructive",
   mantenimiento: "bg-warning/15 text-warning",
 };
 

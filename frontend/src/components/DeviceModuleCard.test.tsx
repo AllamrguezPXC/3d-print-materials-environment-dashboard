@@ -166,6 +166,20 @@ describe("DeviceModuleCard", () => {
     expect(onAssignSensor).toHaveBeenCalledWith(PRINTER);
   });
 
+  it("renders both the AMS grid and the external-spool slot when a printer has both location kinds (e.g. after switching types, or ams_external_spool)", () => {
+    renderCard({
+      printer: { ...PRINTER, filament_system_type: "ams_external_spool" },
+      amsLocations: [AMS_SLOT],
+      externalSpoolLocations: [EXT_SPOOL_LOCATION],
+      assignments: [{ id: 1, spool_id: 1, location_id: 30, slot_name: null, is_active: true }],
+      spools: [SPOOL],
+      materials: [MATERIAL],
+    });
+
+    expect(screen.getByText("A1")).toBeInTheDocument();
+    expect(screen.getByText("Ext")).toBeInTheDocument();
+  });
+
   it('shows "No filament slots configured" when both location arrays are empty', () => {
     renderCard({ printer: { ...PRINTER, filament_system_type: "storage_only" }, amsLocations: [] });
 

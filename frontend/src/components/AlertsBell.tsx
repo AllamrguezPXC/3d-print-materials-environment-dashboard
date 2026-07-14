@@ -5,7 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getCurrentReading } from "@/api/readings";
-import type { AlertOut } from "@/types/api";
+import { usePrinters } from "@/hooks/resources/printers";
+import { describeSensorLocation } from "@/lib/sensorLocation";
+import type { AlertOut, SensorReadingEntry } from "@/types/api";
+
+interface LocatedAlert {
+  alert: AlertOut;
+  entry: SensorReadingEntry;
+}
 
 /** Global notification bell, replacing the sidebar's static "Alerts" nav
  * link -- fed by the exact same ["current-reading"] query the Dashboard's
@@ -22,11 +29,19 @@ export function AlertsBell() {
     queryFn: getCurrentReading,
     refetchInterval: 5000,
   });
+  const { data: printers = [] } = usePrinters();
 
-  const alerts: AlertOut[] = (data?.sensors ?? []).flatMap((s) => s.alerts).filter((a) => a.is_active);
+  const locatedAlerts: LocatedAlert[] = (data?.sensors ?? []).flatMap((entry) =>
+    entry.alerts.filter((a) => a.is_active).map((alert) => ({ alert, entry })),
+  );
+  const alerts = locatedAlerts.map((la) => la.alert);
   const hasCritical = alerts.some((a) => a.severity === "critical");
   const hasWarning = alerts.some((a) => a.severity === "warning");
   const tone = hasCritical ? "critical" : hasWarning ? "warning" : "secondary";
+
+  function locationLabel(entry: SensorReadingEntry): string {
+    return entry.location ? describeSensorLocation(entry.location, printers) : entry.sensor.serial_number;
+  }
 
   return (
     <Popover>
@@ -50,11 +65,14 @@ export function AlertsBell() {
             <p className="text-sm text-muted-foreground">No active alerts.</p>
           ) : (
             <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
-              {alerts.map((alert, i) => (
+              {locatedAlerts.map(({ alert, entry }, i) => (
                 <li key={i} className="flex flex-col gap-1 rounded-md border border-border p-2 text-xs">
-                  <Badge variant={alert.severity === "critical" ? "critical" : "warning"} className="w-fit capitalize">
-                    {alert.severity}
-                  </Badge>
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant={alert.severity === "critical" ? "critical" : "warning"} className="capitalize">
+                      {alert.severity}
+                    </Badge>
+                    <span className="font-medium text-muted-foreground">{locationLabel(entry)}</span>
+                  </div>
                   <span>{alert.message}</span>
                 </li>
               ))}

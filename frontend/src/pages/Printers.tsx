@@ -8,7 +8,8 @@ import { NoticeBanner } from "@/components/NoticeBanner";
 import { LocationForm, type LocationFormValues } from "@/components/LocationForm";
 import { FILAMENT_SYSTEM_TYPES, PrinterForm, type PrinterFormValues } from "@/components/PrinterForm";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PRINTER_OPERATIONAL_STATUSES, printerStatusLabel } from "@/lib/printerStatus";
+import { PRINTER_OPERATIONAL_STATUSES, printerStatusBadgeClassName, printerStatusLabel } from "@/lib/printerStatus";
+import { cn } from "@/lib/utils";
 import { useNotice } from "@/hooks/useNotice";
 import {
   useCreateLocation,
@@ -160,7 +161,10 @@ export function Printers() {
                       value={p.operational_status}
                       onValueChange={(value) => handlePrinterOperationalStatusChange(p.id, value)}
                     >
-                      <SelectTrigger size="sm" className="w-36">
+                      <SelectTrigger
+                        size="sm"
+                        className={cn("w-36", printerStatusBadgeClassName(p.operational_status))}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

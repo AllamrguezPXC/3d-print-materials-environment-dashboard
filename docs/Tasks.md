@@ -875,6 +875,53 @@ persistence.
   (idempotent AMS↔external_spool alternation, never-delete guarantee).
 - [x] `pytest -q` (149 passed), `npx vitest run` (146 passed), `tsc -b`/`build`/`lint` clean.
 
+## Phase 32 — Dashboard Admin Controls Round 2 (alert location, auto-capture history, status colors, AMS/spool ghost-assignment fix + hybrid type, sensor creation in modal)
+
+See `docs/Tareas/dashboard-admin-controls-round-2/TASK.md` and
+`docs/Dashboard_Admin_Controls_Round2_Guide.md` for the full task record. Browser validation of
+Phase 31 surfaced five follow-up issues.
+
+- [x] `AlertsBell.tsx` now threads each alert's `SensorReadingEntry.location` through
+  `describeSensorLocation()` (already used elsewhere for this exact purpose) so every popover row
+  shows where the filament is (printer/AMS/external-spool/storage location), falling back to the
+  sensor's serial number for an orphan sensor with no location.
+- [x] Root-caused `/alerts` staying empty forever: `Reading`/`Alert` rows are only ever persisted by
+  `POST /readings`, which nothing called automatically — the Dashboard's live polling
+  (`GET /readings/current`) never persists. New `app/services/auto_capture.py`'s
+  `run_auto_capture_loop`, started as an asyncio task from `app/main.py`'s lifespan
+  (`Settings.auto_capture_interval_seconds`, default 30s), now calls the existing
+  `capture_and_persist_all_active_sensors` automatically on an interval, so real history
+  accumulates without anyone clicking "Capture reading now". Disabled deterministically in tests via
+  `AUTO_CAPTURE_INTERVAL_SECONDS=0` in `conftest.py`.
+- [x] `lib/printerStatus.ts` already defined `printerStatusBadgeClassName()` (green/yellow) but it was
+  never actually applied anywhere, and `inactivo` mapped to grey, not the requested red. Fixed the
+  `inactivo` mapping to `destructive` (red) and applied the classname to the operational-status
+  `Select` trigger in both `DeviceModuleCard.tsx` and `Printers.tsx`.
+- [x] Root-caused the AMS↔external-spool "ghost assignment" bug: `DeviceModuleCard.tsx`'s slot section
+  was an `if amsLocations.length > 0 {...} else if externalSpoolLocations.length > 0 {...}` —
+  mutually exclusive — even though `lib/deviceModules.ts` already computes both arrays independently
+  from real (non-destructively-synced) `Location` rows. After switching types, a printer can
+  legitimately have both kinds of Locations (and an active `SpoolAssignment` on the now-hidden one),
+  but the card only ever rendered one branch. Changed to two independent conditionals (both render
+  when both are non-empty), which fixes the visibility bug with zero backend change and, as a bonus,
+  is exactly what's needed to support a third `ams_external_spool` filament-system-type value for
+  printers that use both at once (`printer_service.py`'s sync now ensures both an AMS set and an
+  external-spool Location when switched to this value; `PrinterForm.FILAMENT_SYSTEM_TYPES` and
+  `DeviceModuleCard`'s Dashboard-embedded toggle both gained the third option;
+  `lib/deviceType.ts` got a matching icon/label).
+- [x] `SensorAssignmentModal.tsx` gained inline "+ Create new sensor" (name/model/serial/type/port),
+  mirroring `SlotAssignmentModal`'s embedded-`SpoolForm` pattern for spools — simpler here since
+  `Sensor.location_id` is a direct field (no separate assignment row), so creating with
+  `location_id` set to the modal's target location assigns it in one step. Disabled (with an inline
+  note) while a sensor is already assigned, since a second one for the same location would trip the
+  existing AMS one-sensor-per-module 400.
+- [x] Tests: `AlertsBell.test.tsx` (location-context cases), `printerStatus.test.ts` (destructive tone
+  for inactivo), `DeviceModuleCard.test.tsx` (dual-rendering case), `deviceType.test.ts`
+  (`ams_external_spool`), `SensorAssignmentModal.test.tsx` (create-and-assign, disabled-while-assigned),
+  new backend `test_auto_capture.py`, `test_printers.py` extended (`ams_external_spool` sync +
+  idempotency).
+- [x] `pytest -q` (153 passed), `npx vitest run` (153 passed), `tsc -b`/`build`/`lint` clean.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

@@ -209,6 +209,50 @@ def test_patch_printer_to_storage_only_does_not_change_locations(client):
     assert len(ams_locations) == 4
 
 
+def test_patch_printer_to_ams_external_spool_creates_both_location_kinds(client):
+    created = client.post(
+        "/printers", json={"name": "Hybrid Printer", "brand": "Bambu Lab", "model": "P1S"}
+    ).json()
+
+    response = client.patch(
+        f"/printers/{created['id']}", json={"filament_system_type": "ams_external_spool"}
+    )
+    assert response.status_code == 200
+
+    locations = client.get("/locations").json()
+    ams_locations = [
+        loc for loc in locations if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_ams"
+    ]
+    ext_locations = [
+        loc
+        for loc in locations
+        if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_external_spool"
+    ]
+    assert len(ams_locations) == 4
+    assert len(ext_locations) == 1
+
+
+def test_patch_printer_ams_external_spool_is_idempotent(client):
+    created = client.post(
+        "/printers", json={"name": "Hybrid Idempotent Printer", "brand": "Bambu Lab", "model": "P1S"}
+    ).json()
+
+    client.patch(f"/printers/{created['id']}", json={"filament_system_type": "ams_external_spool"})
+    client.patch(f"/printers/{created['id']}", json={"filament_system_type": "ams_external_spool"})
+
+    locations = client.get("/locations").json()
+    ams_locations = [
+        loc for loc in locations if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_ams"
+    ]
+    ext_locations = [
+        loc
+        for loc in locations
+        if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_external_spool"
+    ]
+    assert len(ams_locations) == 4
+    assert len(ext_locations) == 1
+
+
 def test_get_printer_404_for_missing_id(client):
     response = client.get("/printers/999999")
     assert response.status_code == 404

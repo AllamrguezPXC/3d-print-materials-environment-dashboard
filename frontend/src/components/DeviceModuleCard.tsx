@@ -15,7 +15,12 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { toneForMetric } from "@/lib/deviceModules";
 import { formatDewPoint, formatHumidity, formatPressure, formatTemperature } from "@/lib/format";
-import { isPrinterDimmed, PRINTER_OPERATIONAL_STATUSES, printerStatusLabel } from "@/lib/printerStatus";
+import {
+  isPrinterDimmed,
+  PRINTER_OPERATIONAL_STATUSES,
+  printerStatusBadgeClassName,
+  printerStatusLabel,
+} from "@/lib/printerStatus";
 import { useUpdatePrinter } from "@/hooks/resources/printers";
 import type {
   AffectedSpoolInfo,
@@ -28,7 +33,7 @@ import type {
   SpoolAssignment,
 } from "@/types/api";
 
-const DASHBOARD_FILAMENT_SYSTEM_TYPES = ["ams", "external_spool"] as const;
+const DASHBOARD_FILAMENT_SYSTEM_TYPES = ["ams", "external_spool", "ams_external_spool"] as const;
 
 interface DeviceModuleCardProps {
   printer: Printer;
@@ -133,7 +138,10 @@ export function DeviceModuleCard({
             />
           </div>
           <Select value={printer.operational_status} onValueChange={handleOperationalStatusChange}>
-            <SelectTrigger size="sm" className="h-6 px-2 text-[10px]">
+            <SelectTrigger
+              size="sm"
+              className={cn("h-6 px-2 text-[10px]", printerStatusBadgeClassName(printer.operational_status))}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -160,6 +168,7 @@ export function DeviceModuleCard({
               <SelectContent>
                 <SelectItem value="ams">AMS</SelectItem>
                 <SelectItem value="external_spool">External Spool</SelectItem>
+                <SelectItem value="ams_external_spool">AMS + External Spool</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -230,7 +239,11 @@ export function DeviceModuleCard({
 
         <Separator />
 
-        {amsLocations.length > 0 ? (
+        {amsLocations.length === 0 && externalSpoolLocations.length === 0 && (
+          <p className="text-sm text-muted-foreground">No filament slots configured for this printer.</p>
+        )}
+
+        {amsLocations.length > 0 && (
           <AmsSlotGrid
             amsLocations={amsLocations}
             assignments={assignments}
@@ -239,7 +252,9 @@ export function DeviceModuleCard({
             selectedLocationId={selectedLocationId}
             onSelectSlot={onSelectSlot}
           />
-        ) : externalSpoolLocations.length > 0 ? (
+        )}
+
+        {externalSpoolLocations.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {externalSpoolLocations.map((location) => {
               const { spool, material } = resolveSlotSpool(location);
@@ -255,8 +270,6 @@ export function DeviceModuleCard({
               );
             })}
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No filament slots configured for this printer.</p>
         )}
 
         <Separator />

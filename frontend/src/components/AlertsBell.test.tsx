@@ -5,11 +5,14 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AlertsBell } from "./AlertsBell";
 import { getCurrentReading } from "@/api/readings";
-import type { AlertOut, CurrentReadingsResponse, SensorReadingEntry } from "@/types/api";
+import { printersApi } from "@/api/config";
+import type { AlertOut, CurrentReadingsResponse, Printer, SensorReadingEntry } from "@/types/api";
 
 vi.mock("@/api/readings");
+vi.mock("@/api/config");
 
 const mockedGetCurrentReading = vi.mocked(getCurrentReading);
+const mockedGetPrinters = vi.mocked(printersApi.list);
 
 function makeAlert(overrides: Partial<AlertOut> = {}): AlertOut {
   return {
@@ -30,7 +33,7 @@ function makeAlert(overrides: Partial<AlertOut> = {}): AlertOut {
   };
 }
 
-function makeEntry(alerts: AlertOut[]): SensorReadingEntry {
+function makeEntry(alerts: AlertOut[], overrides: Partial<SensorReadingEntry> = {}): SensorReadingEntry {
   return {
     sensor: { id: 1, serial_number: "MOCK-0001", model: "mock", sensor_type: "mock" },
     location_id: 1,
@@ -45,10 +48,12 @@ function makeEntry(alerts: AlertOut[]): SensorReadingEntry {
     affected_spools: [],
     alerts,
     error: null,
+    ...overrides,
   };
 }
 
 function renderBell() {
+  mockedGetPrinters.mockResolvedValue([]);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -107,6 +112,74 @@ describe("AlertsBell", () => {
     await user.click(screen.getByRole("button", { name: /alerts/i }));
 
     expect(screen.getByText(/no active alerts/i)).toBeInTheDocument();
+  });
+
+  it("shows the alert's location in the popover", async () => {
+    const user = userEvent.setup();
+    mockedGetCurrentReading.mockResolvedValue({
+      sensors: [
+        makeEntry([makeAlert()], {
+          location: { id: 1, name: "Storage Box A", location_type: "storage_box", printer_id: null },
+        }),
+      ],
+      message: null,
+    });
+
+    renderBell();
+    await screen.findByText("1");
+    await user.click(screen.getByRole("button", { name: /alerts/i }));
+
+    expect(screen.getByText("Storage Box A")).toBeInTheDocument();
+  });
+
+  it("describes an AMS-slot alert by printer name, not the raw slot name", async () => {
+    const user = userEvent.setup();
+    const printer: Printer = {
+      id: 5,
+      name: "P1S #1",
+      brand: "Bambu Lab",
+      model: "P1S",
+      serial_number: null,
+      notes: null,
+      filament_system_type: "ams",
+      operational_status: "activo",
+    };
+    mockedGetPrinters.mockResolvedValue([printer]);
+    mockedGetCurrentReading.mockResolvedValue({
+      sensors: [
+        makeEntry([makeAlert()], {
+          location: { id: 9, name: "AMS Slot 1 - P1S #1", location_type: "printer_ams", printer_id: 5 },
+        }),
+      ],
+      message: null,
+    });
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AlertsBell />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByText("1");
+    await user.click(screen.getByRole("button", { name: /alerts/i }));
+
+    expect(screen.getByText("P1S #1 — AMS")).toBeInTheDocument();
+  });
+
+  it("falls back to the sensor's serial number when an alert has no location", async () => {
+    const user = userEvent.setup();
+    mockedGetCurrentReading.mockResolvedValue({
+      sensors: [makeEntry([makeAlert()], { location: null, location_id: null })],
+      message: null,
+    });
+
+    renderBell();
+    await screen.findByText("1");
+    await user.click(screen.getByRole("button", { name: /alerts/i }));
+
+    expect(screen.getByText("MOCK-0001")).toBeInTheDocument();
   });
 
   it("ignores inactive alerts when counting", async () => {

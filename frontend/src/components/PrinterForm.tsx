@@ -11,7 +11,13 @@ export interface PrinterFormValues {
 }
 
 const BAMBU_MODELS = ["A1 mini", "P1S", "P1P", "X1 Carbon", "Other"];
-export const FILAMENT_SYSTEM_TYPES = ["ams", "external_spool", "storage_only", "manual"];
+export const FILAMENT_SYSTEM_TYPES = [
+  "ams",
+  "external_spool",
+  "ams_external_spool",
+  "storage_only",
+  "manual",
+];
 
 interface PrinterFormProps {
   value: PrinterFormValues;

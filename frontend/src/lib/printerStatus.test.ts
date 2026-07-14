@@ -17,8 +17,9 @@ describe("printerStatusLabel", () => {
 });
 
 describe("printerStatusBadgeClassName", () => {
-  it("gives activo an ok tone and mantenimiento a warning tone", () => {
+  it("gives activo an ok tone, inactivo a destructive tone, and mantenimiento a warning tone", () => {
     expect(printerStatusBadgeClassName("activo")).toMatch(/ok/);
+    expect(printerStatusBadgeClassName("inactivo")).toMatch(/destructive/);
     expect(printerStatusBadgeClassName("mantenimiento")).toMatch(/warning/);
   });
 

@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SensorAssignmentModal } from "./SensorAssignmentModal";
+import { sensorsApi } from "@/api/config";
 import type { Location, Printer, Sensor } from "@/types/api";
+
+vi.mock("@/api/config");
+
+const mockedCreateSensor = vi.mocked(sensorsApi.create);
+const mockedGetPorts = vi.mocked(sensorsApi.ports);
 
 const PRINTER: Printer = {
   id: 5,
@@ -49,25 +56,29 @@ const UNASSIGNED_SENSOR: Sensor = {
 };
 
 function renderModal(overrides: Partial<React.ComponentProps<typeof SensorAssignmentModal>> = {}) {
+  mockedGetPorts.mockResolvedValue([]);
   const onSelectedSensorIdChange = vi.fn();
   const onAssign = vi.fn();
   const onUnassign = vi.fn();
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <SensorAssignmentModal
-      printer={PRINTER}
-      targetLocation={AMS_SLOT}
-      open
-      onOpenChange={vi.fn()}
-      currentSensor={null}
-      candidateSensors={[UNASSIGNED_SENSOR]}
-      locations={[AMS_SLOT]}
-      printers={[PRINTER]}
-      selectedSensorId=""
-      onSelectedSensorIdChange={onSelectedSensorIdChange}
-      onAssign={onAssign}
-      onUnassign={onUnassign}
-      {...overrides}
-    />,
+    <QueryClientProvider client={queryClient}>
+      <SensorAssignmentModal
+        printer={PRINTER}
+        targetLocation={AMS_SLOT}
+        open
+        onOpenChange={vi.fn()}
+        currentSensor={null}
+        candidateSensors={[UNASSIGNED_SENSOR]}
+        locations={[AMS_SLOT]}
+        printers={[PRINTER]}
+        selectedSensorId=""
+        onSelectedSensorIdChange={onSelectedSensorIdChange}
+        onAssign={onAssign}
+        onUnassign={onUnassign}
+        {...overrides}
+      />
+    </QueryClientProvider>,
   );
   return { onSelectedSensorIdChange, onAssign, onUnassign };
 }
@@ -115,5 +126,36 @@ describe("SensorAssignmentModal", () => {
     renderModal({ targetLocation: null });
 
     expect(screen.getByText(/switch its filament system type first/i)).toBeInTheDocument();
+  });
+
+  it("creates and assigns a new sensor directly to the target location", async () => {
+    const user = userEvent.setup();
+    mockedCreateSensor.mockResolvedValue({
+      id: 3,
+      name: "New Sensor",
+      model: "mock",
+      serial_number: "MOCK-0003",
+      sensor_type: "mock",
+      port: null,
+      is_active: true,
+      location_id: 10,
+    });
+
+    renderModal();
+    await user.click(screen.getByRole("button", { name: /\+ create new sensor/i }));
+    await user.type(screen.getByLabelText("Name"), "New Sensor");
+    await user.type(screen.getByLabelText("Serial number"), "MOCK-0003");
+    await user.click(screen.getByRole("button", { name: /create & assign/i }));
+
+    expect(mockedCreateSensor).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "New Sensor", serial_number: "MOCK-0003", location_id: 10 }),
+    );
+  });
+
+  it("disables creating a new sensor while one is already assigned", () => {
+    renderModal({ currentSensor: ASSIGNED_SENSOR, candidateSensors: [] });
+
+    expect(screen.getByRole("button", { name: /\+ create new sensor/i })).toBeDisabled();
+    expect(screen.getByText(/unassign the current sensor before creating/i)).toBeInTheDocument();
   });
 });
