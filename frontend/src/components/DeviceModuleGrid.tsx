@@ -3,18 +3,30 @@ import { DashboardFilters } from "@/components/DashboardFilters";
 import { DeviceModuleCard } from "@/components/DeviceModuleCard";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { ReadingCard } from "@/components/ReadingCard";
+import { SensorAssignmentModal } from "@/components/SensorAssignmentModal";
 import { SlotAssignmentModal } from "@/components/SlotAssignmentModal";
 import { StandaloneLocationCard } from "@/components/StandaloneLocationCard";
 import { AlertPanel } from "@/components/AlertPanel";
 import { AffectedSpoolsPanel } from "@/components/AffectedSpoolsPanel";
 import { useNotice } from "@/hooks/useNotice";
 import { useCreateAssignment, useUpdateAssignment } from "@/hooks/resources/assignments";
+import { useUpdateSensor } from "@/hooks/resources/sensors";
+import { useDeviceFilters } from "@/hooks/useDeviceFilters";
 import { buildDeviceModules } from "@/lib/deviceModules";
-import { EMPTY_DEVICE_FILTERS, filterDeviceModules, type DeviceFiltersValue } from "@/lib/deviceFilters";
+import { filterDeviceModules } from "@/lib/deviceFilters";
 import { formatDewPoint, formatHumidity, formatPressure, formatTemperature } from "@/lib/format";
 import { getAvailableSpools } from "@/lib/spoolAvailability";
+import { currentSensorForPrinter, representativeLocationForPrinter } from "@/lib/sensorLocation";
 import { CloudFog, Droplets, Gauge, Thermometer } from "lucide-react";
-import type { FilamentSpool, Location, MaterialProfile, Printer, SensorReadingEntry, SpoolAssignment } from "@/types/api";
+import type {
+  FilamentSpool,
+  Location,
+  MaterialProfile,
+  Printer,
+  Sensor,
+  SensorReadingEntry,
+  SpoolAssignment,
+} from "@/types/api";
 
 function uniqueSorted(values: (string | null | undefined)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => Boolean(v)))).sort();
@@ -26,6 +38,7 @@ interface DeviceModuleGridProps {
   spools: FilamentSpool[];
   materials: MaterialProfile[];
   assignments: SpoolAssignment[];
+  sensors: Sensor[];
   sensorEntries: SensorReadingEntry[];
   emptyMessage?: string | null;
 }
@@ -40,16 +53,20 @@ export function DeviceModuleGrid({
   spools,
   materials,
   assignments,
+  sensors,
   sensorEntries,
   emptyMessage,
 }: DeviceModuleGridProps) {
   const { notice, notifySuccess, notifyError } = useNotice();
   const createAssignment = useCreateAssignment();
   const updateAssignment = useUpdateAssignment();
+  const updateSensor = useUpdateSensor();
 
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedSpoolId, setSelectedSpoolId] = useState("");
-  const [filters, setFilters] = useState<DeviceFiltersValue>(EMPTY_DEVICE_FILTERS);
+  const [filters, setFilters] = useDeviceFilters();
+  const [sensorAssignmentPrinter, setSensorAssignmentPrinter] = useState<Printer | null>(null);
+  const [selectedSensorId, setSelectedSensorId] = useState("");
 
   const currentAssignment = selectedLocation
     ? (assignments.find((a) => a.location_id === selectedLocation.id && a.is_active) ?? null)
@@ -92,6 +109,44 @@ export function DeviceModuleGrid({
       await updateAssignment.mutateAsync({ id: currentAssignment.id, body: { is_active: false } });
       notifySuccess("Slot cleared.");
       setSelectedLocation(null);
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
+  }
+
+  const sensorTargetLocation = sensorAssignmentPrinter
+    ? representativeLocationForPrinter(sensorAssignmentPrinter.id, locations)
+    : null;
+  const currentSensor = sensorAssignmentPrinter
+    ? currentSensorForPrinter(sensorAssignmentPrinter.id, locations, sensors)
+    : null;
+  const candidateSensors = sensors.filter((s) => s.id !== currentSensor?.id);
+
+  function handleOpenSensorAssignment(printer: Printer) {
+    setSensorAssignmentPrinter(printer);
+    setSelectedSensorId("");
+  }
+
+  async function handleAssignSensor() {
+    if (!sensorTargetLocation || !selectedSensorId) return;
+    try {
+      if (currentSensor) {
+        await updateSensor.mutateAsync({ id: currentSensor.id, body: { location_id: null } });
+      }
+      await updateSensor.mutateAsync({ id: Number(selectedSensorId), body: { location_id: sensorTargetLocation.id } });
+      notifySuccess(`${sensorAssignmentPrinter?.name} sensor updated.`);
+      setSensorAssignmentPrinter(null);
+    } catch (err) {
+      notifyError((err as Error).message);
+    }
+  }
+
+  async function handleUnassignSensor() {
+    if (!currentSensor) return;
+    try {
+      await updateSensor.mutateAsync({ id: currentSensor.id, body: { location_id: null } });
+      notifySuccess("Sensor unassigned.");
+      setSensorAssignmentPrinter(null);
     } catch (err) {
       notifyError((err as Error).message);
     }
@@ -147,6 +202,7 @@ export function DeviceModuleGrid({
               materials={materials}
               selectedLocationId={selectedLocation?.id}
               onSelectSlot={handleSelectSlot}
+              onAssignSensor={handleOpenSensorAssignment}
             />
           ))}
         </div>
@@ -206,6 +262,25 @@ export function DeviceModuleGrid({
           onClear={handleClear}
           assigning={createAssignment.isPending || updateAssignment.isPending}
           clearing={updateAssignment.isPending}
+        />
+      )}
+
+      {sensorAssignmentPrinter && (
+        <SensorAssignmentModal
+          printer={sensorAssignmentPrinter}
+          targetLocation={sensorTargetLocation}
+          open
+          onOpenChange={(open) => !open && setSensorAssignmentPrinter(null)}
+          currentSensor={currentSensor}
+          candidateSensors={candidateSensors}
+          locations={locations}
+          printers={printers}
+          selectedSensorId={selectedSensorId}
+          onSelectedSensorIdChange={setSelectedSensorId}
+          onAssign={handleAssignSensor}
+          onUnassign={handleUnassignSensor}
+          assigning={updateSensor.isPending}
+          unassigning={updateSensor.isPending}
         />
       )}
     </div>

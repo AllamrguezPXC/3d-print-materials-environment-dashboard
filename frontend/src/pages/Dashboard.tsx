@@ -6,6 +6,7 @@ import { useDryingRecommendations } from "@/hooks/resources/drying";
 import { useLocations } from "@/hooks/resources/locations";
 import { useMaterials } from "@/hooks/resources/materials";
 import { usePrinters } from "@/hooks/resources/printers";
+import { useSensors } from "@/hooks/resources/sensors";
 import { useSpools } from "@/hooks/resources/spools";
 import { useRefreshInterval } from "@/hooks/useRefreshInterval";
 import { getCurrentReading } from "@/api/readings";
@@ -23,6 +24,7 @@ export function Dashboard() {
   const { data: spools = [] } = useSpools();
   const { data: materials = [] } = useMaterials();
   const { data: assignments = [] } = useAssignments();
+  const { data: sensors = [] } = useSensors();
 
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Loading current reading…</p>;
@@ -46,6 +48,7 @@ export function Dashboard() {
         spools={spools}
         materials={materials}
         assignments={assignments}
+        sensors={sensors}
         sensorEntries={data.sensors}
         emptyMessage={data.message}
       />

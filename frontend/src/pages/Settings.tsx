@@ -1,15 +1,23 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getStoredRefreshInterval, REFRESH_STORAGE_KEY } from "@/hooks/useRefreshInterval";
+import { DEVICE_FILTERS_STORAGE_KEY } from "@/hooks/useDeviceFilters";
 
 export function Settings() {
   const [refreshMs, setRefreshMs] = useState(getStoredRefreshInterval);
+  const [filtersReset, setFiltersReset] = useState(false);
 
   function handleChange(value: string) {
     const ms = Number(value);
     setRefreshMs(ms);
     localStorage.setItem(REFRESH_STORAGE_KEY, String(ms));
+  }
+
+  function handleResetFilters() {
+    localStorage.removeItem(DEVICE_FILTERS_STORAGE_KEY);
+    setFiltersReset(true);
   }
 
   return (
@@ -48,6 +56,25 @@ export function Settings() {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">Applies next time the Dashboard page loads.</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dashboard filters</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-sm text-muted-foreground">
+            Dashboard filters (search, alert/sensor/slot status, printer brand and status, filament
+            type/brand/color/status) persist across page reloads. If a forgotten filter is hiding
+            devices you expect to see, reset them here.
+          </p>
+          <Button variant="outline" size="sm" className="w-fit" onClick={handleResetFilters}>
+            Reset filters
+          </Button>
+          {filtersReset && (
+            <p className="text-xs text-muted-foreground">Filters reset. Applies next time the Dashboard page loads.</p>
+          )}
         </CardContent>
       </Card>
     </div>

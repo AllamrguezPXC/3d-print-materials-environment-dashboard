@@ -10,6 +10,7 @@ const PRINTER: Printer = {
   serial_number: null,
   notes: null,
   filament_system_type: "ams",
+  operational_status: "activo",
 };
 
 const AMS_SLOT: Location = {

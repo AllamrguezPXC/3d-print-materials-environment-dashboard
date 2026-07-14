@@ -827,6 +827,54 @@ Dashboard's alert panels.
 - [x] Playwright re-verification: confirmed the printer/location cards and Drying Recommendations
   now show a consistent 0-vs-0 empty state on the live dev DB after cleanup.
 
+## Phase 31 — Dashboard Admin Controls (bell, printer status, sensor/filament-system assignment, filter persistence)
+
+See `docs/Tareas/dashboard-admin-controls/TASK.md` and `docs/Dashboard_Admin_Controls_Guide.md` for
+the full task record. During browser validation of Phase 30, the user reported the sidebar's
+"Alerts" page didn't reflect the Dashboard's live alerts, and asked for it to become a global
+notification-bell popover — plus the four items Phase 30's own guide had explicitly deferred:
+printer operational status, embedded sensor assignment, AMS↔external-spool switching, and filter
+persistence.
+
+- [x] Diagnosed the Alerts bug as the same "live vs persisted" class already fixed for Drying
+  Recommendations — but `/alerts`/`Alert` back a real resolve/audit workflow this time, so the fix
+  is a new live view (`AlertsBell.tsx`, fed by the same `["current-reading"]` query the Dashboard's
+  `AlertPanel` uses), not making `/alerts` itself live. New `ui/popover.tsx` (Radix wrapper, no new
+  dependency). Sidebar "Alerts" nav link removed from `Layout.tsx`; `/alerts` page unchanged.
+- [x] `Printer.operational_status` ("activo"/"inactivo"/"mantenimiento", default "activo") added
+  following the exact `filament_system_type` precedent (model column, schema, service-layer
+  validation, no DB enum). Editable from `DeviceModuleCard` (Dashboard) and inline in `Printers.tsx`
+  (both call the same `PATCH /printers/{id}` + `useUpdatePrinter()`, staying in sync via the shared
+  query cache). Non-"activo" dims the card visually; never gates or suppresses alerts (administrative
+  status is a separate axis from real environmental risk). New dashboard filter criterion.
+- [x] `printer_service._sync_locations_for_filament_system_type`: non-destructive Location-row sync
+  on a `filament_system_type` change (only ever creates missing rows for the new type — 4 AMS slots
+  or 1 external-spool location — never deletes existing ones), making AMS↔external-spool toggling
+  idempotent and safe against orphaning assignments/sensors. Dashboard toggle limited to
+  ams/external_spool (2 values); `/printers` keeps all 4. `hooks/resources/printers.ts` now
+  invalidates `"locations"` too so the Dashboard picks up newly-synced slots immediately.
+- [x] Sensor assignment/reassignment from the Dashboard needed zero backend changes (`PATCH
+  /sensors/{id}` + the existing AMS-conflict check already supported it) — only UI. Hoisted
+  `buildLocationOptions` from `SensorForm.tsx` into `lib/sensorLocation.ts` (shared with two new
+  helpers, `representativeLocationForPrinter`/`currentSensorForPrinter`); new
+  `SensorAssignmentModal.tsx` mirrors `SlotAssignmentModal`'s shared-modal architecture; reassigning
+  is two sequential calls (unassign then assign), matching the existing spool-reassignment pattern.
+  `/sensors` gained its first-ever inline edit control (previously create/delete only) for 1:1
+  symmetry.
+- [x] `frontend/src/hooks/useDeviceFilters.ts`: filter persistence via localStorage, versioned key,
+  merge-over-defaults (missing keys/malformed JSON never leave a field `undefined`). Unlike
+  `useRefreshInterval` (read-only), this hook's setter persists on every change since filters change
+  directly on the Dashboard. New "Dashboard filters" card in `Settings.tsx` with a "Reset filters"
+  button.
+- [x] Tests: `printerStatus.test.ts`, `sensorLocation.test.ts` (new helpers), `deviceFilters.test.ts`
+  (`printerStatus` criterion), `SensorAssignmentModal.test.tsx` (new), `DeviceModuleCard.test.tsx`
+  (extended: selects, dimming, assign-sensor button), `useDeviceFilters.test.ts` (new),
+  `AlertsBell.test.tsx` (new), `Layout.test.tsx` (new — confirms nav link removed, bell present),
+  `Printers.test.tsx`/`Sensors.test.tsx`/`Settings.test.tsx` (new — first test files for these
+  pages); backend `test_printers.py` extended with `operational_status` + Location-sync tests
+  (idempotent AMS↔external_spool alternation, never-delete guarantee).
+- [x] `pytest -q` (149 passed), `npx vitest run` (146 passed), `tsc -b`/`build`/`lint` clean.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

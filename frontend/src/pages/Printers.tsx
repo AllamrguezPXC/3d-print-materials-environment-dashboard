@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { LocationForm, type LocationFormValues } from "@/components/LocationForm";
-import { PrinterForm, type PrinterFormValues } from "@/components/PrinterForm";
+import { FILAMENT_SYSTEM_TYPES, PrinterForm, type PrinterFormValues } from "@/components/PrinterForm";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PRINTER_OPERATIONAL_STATUSES, printerStatusLabel } from "@/lib/printerStatus";
 import { useNotice } from "@/hooks/useNotice";
 import {
   useCreateLocation,
   useLocations,
   useRemoveLocation,
 } from "@/hooks/resources/locations";
-import { useCreatePrinter, usePrinters, useRemovePrinter } from "@/hooks/resources/printers";
+import { useCreatePrinter, usePrinters, useRemovePrinter, useUpdatePrinter } from "@/hooks/resources/printers";
 
 const EMPTY_PRINTER: PrinterFormValues = {
   name: "",
@@ -30,6 +32,7 @@ export function Printers() {
 
   const createPrinter = useCreatePrinter();
   const removePrinter = useRemovePrinter();
+  const updatePrinter = useUpdatePrinter();
   const createLocation = useCreateLocation();
   const removeLocation = useRemoveLocation();
 
@@ -80,6 +83,20 @@ export function Printers() {
     });
   }
 
+  function handlePrinterFilamentSystemTypeChange(id: number, filament_system_type: string) {
+    updatePrinter.mutate(
+      { id, body: { filament_system_type } },
+      { onError: (err) => notifyError(err.message) },
+    );
+  }
+
+  function handlePrinterOperationalStatusChange(id: number, operational_status: string) {
+    updatePrinter.mutate(
+      { id, body: { operational_status } },
+      { onError: (err) => notifyError(err.message) },
+    );
+  }
+
   function handleDeleteLocation(id: number) {
     removeLocation.mutate(id, {
       onSuccess: () => notifySuccess("Location deleted."),
@@ -107,6 +124,7 @@ export function Printers() {
                 <TableHead>Brand</TableHead>
                 <TableHead>Model</TableHead>
                 <TableHead>Filament System</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -120,7 +138,40 @@ export function Printers() {
                   </TableCell>
                   <TableCell>{p.brand}</TableCell>
                   <TableCell>{p.model}</TableCell>
-                  <TableCell className="capitalize">{p.filament_system_type.replaceAll("_", " ")}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={p.filament_system_type}
+                      onValueChange={(value) => handlePrinterFilamentSystemTypeChange(p.id, value)}
+                    >
+                      <SelectTrigger size="sm" className="w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FILAMENT_SYSTEM_TYPES.map((t) => (
+                          <SelectItem key={t} value={t} className="capitalize">
+                            {t.replaceAll("_", " ")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={p.operational_status}
+                      onValueChange={(value) => handlePrinterOperationalStatusChange(p.id, value)}
+                    >
+                      <SelectTrigger size="sm" className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRINTER_OPERATIONAL_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {printerStatusLabel(s)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
                   <TableCell>
                     <Button variant="destructive" size="sm" onClick={() => handleDeletePrinter(p.id)}>
                       Delete

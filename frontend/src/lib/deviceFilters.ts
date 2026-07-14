@@ -13,6 +13,7 @@ export interface DeviceFiltersValue {
   sensorStatus: SensorStatusFilter;
   slotStatus: SlotStatusFilter;
   printerBrand: string;
+  printerStatus: string;
   filamentType: string;
   filamentBrand: string;
   filamentColor: string;
@@ -25,6 +26,7 @@ export const EMPTY_DEVICE_FILTERS: DeviceFiltersValue = {
   sensorStatus: ALL,
   slotStatus: ALL,
   printerBrand: ALL,
+  printerStatus: ALL,
   filamentType: ALL,
   filamentBrand: ALL,
   filamentColor: ALL,
@@ -149,6 +151,13 @@ function matchesPrinterBrand(module: PrinterDeviceModule | StandaloneDeviceModul
   return module.kind === "printer" && module.printer.brand === brand;
 }
 
+function matchesPrinterStatus(module: PrinterDeviceModule | StandaloneDeviceModule, status: string): boolean {
+  if (status === ALL) return true;
+  // Same reasoning as matchesPrinterBrand -- a standalone location has no
+  // operational status of its own.
+  return module.kind === "printer" && module.printer.operational_status === status;
+}
+
 function moduleSearchHaystack(module: PrinterDeviceModule | StandaloneDeviceModule, ctx: DeviceFilterContext): string {
   const parts: string[] = [];
   if (module.kind === "printer") {
@@ -198,6 +207,7 @@ export function filterDeviceModules(
       matchesSlotStatus(module, filters.slotStatus) &&
       matchesSlotOccupancy(module, filters.slotStatus, ctx) &&
       matchesPrinterBrand(module, filters.printerBrand) &&
+      matchesPrinterStatus(module, filters.printerStatus) &&
       matchesFilament(module, filters, ctx),
   );
 
@@ -208,6 +218,7 @@ export function filterDeviceModules(
       matchesSensorStatus(module.entries, filters.sensorStatus) &&
       matchesSlotStatus(module, filters.slotStatus) &&
       matchesPrinterBrand(module, filters.printerBrand) &&
+      matchesPrinterStatus(module, filters.printerStatus) &&
       matchesFilament(module, filters, ctx),
   );
 

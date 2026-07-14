@@ -131,6 +131,9 @@ export interface Printer {
    * configuration only; does not gate the AMS slot grid, which is derived
    * from actual Location rows. */
   filament_system_type: string;
+  /** "activo" | "inactivo" | "mantenimiento" -- administrative status only;
+   * never gates or suppresses alerts. */
+  operational_status: string;
 }
 
 export interface Location {

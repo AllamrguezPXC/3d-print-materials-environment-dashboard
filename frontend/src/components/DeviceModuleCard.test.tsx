@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DeviceModuleCard } from "./DeviceModuleCard";
+import { printersApi } from "@/api/config";
 import type { FilamentSpool, Location, MaterialProfile, Printer, SensorReadingEntry } from "@/types/api";
+
+vi.mock("@/api/config", async () => {
+  const actual = await vi.importActual<typeof import("@/api/config")>("@/api/config");
+  return { ...actual, printersApi: { ...actual.printersApi, update: vi.fn().mockResolvedValue({}) } };
+});
 
 const PRINTER: Printer = {
   id: 5,
@@ -12,6 +19,7 @@ const PRINTER: Printer = {
   serial_number: null,
   notes: null,
   filament_system_type: "ams",
+  operational_status: "activo",
 };
 
 const AMS_SLOT: Location = {
@@ -80,100 +88,12 @@ function makeEntry(overrides: Partial<SensorReadingEntry>): SensorReadingEntry {
   };
 }
 
-describe("DeviceModuleCard", () => {
-  it("renders printer name/brand/model and the AMS grid when amsLocations is present", () => {
-    render(
-      <DeviceModuleCard
-        printer={PRINTER}
-        amsLocations={[AMS_SLOT]}
-        externalSpoolLocations={[]}
-        sensorEntries={[makeEntry({})]}
-        assignments={[]}
-        spools={[]}
-        materials={[]}
-        onSelectSlot={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("P1S #1")).toBeInTheDocument();
-    expect(screen.getByText("Bambu Lab P1S")).toBeInTheDocument();
-    expect(screen.getByText("A1")).toBeInTheDocument();
-  });
-
-  it("renders an ExternalSpoolSlot when externalSpoolLocations is present and amsLocations is empty", () => {
-    render(
-      <DeviceModuleCard
-        printer={{ ...PRINTER, filament_system_type: "external_spool" }}
-        amsLocations={[]}
-        externalSpoolLocations={[EXT_SPOOL_LOCATION]}
-        sensorEntries={[]}
-        assignments={[{ id: 1, spool_id: 1, location_id: 30, slot_name: null, is_active: true }]}
-        spools={[SPOOL]}
-        materials={[MATERIAL]}
-        onSelectSlot={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("Ext")).toBeInTheDocument();
-    expect(screen.getByText("PLA")).toBeInTheDocument();
-  });
-
-  it("shows the offline state when the sensor entry has an error, and the slot grid still renders", () => {
-    render(
-      <DeviceModuleCard
-        printer={PRINTER}
-        amsLocations={[AMS_SLOT]}
-        externalSpoolLocations={[]}
-        sensorEntries={[makeEntry({ error: "Sensor timed out", temperature_c: null })]}
-        assignments={[]}
-        spools={[]}
-        materials={[]}
-        onSelectSlot={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText(/sensor unavailable: sensor timed out/i)).toBeInTheDocument();
-    expect(screen.getByText("A1")).toBeInTheDocument();
-  });
-
-  it('shows "No sensor assigned" when sensorEntries is empty', () => {
-    render(
-      <DeviceModuleCard
-        printer={PRINTER}
-        amsLocations={[AMS_SLOT]}
-        externalSpoolLocations={[]}
-        sensorEntries={[]}
-        assignments={[]}
-        spools={[]}
-        materials={[]}
-        onSelectSlot={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText(/no sensor assigned to this printer's locations/i)).toBeInTheDocument();
-  });
-
-  it('shows "No filament slots configured" when both location arrays are empty', () => {
-    render(
-      <DeviceModuleCard
-        printer={{ ...PRINTER, filament_system_type: "storage_only" }}
-        amsLocations={[]}
-        externalSpoolLocations={[]}
-        sensorEntries={[]}
-        assignments={[]}
-        spools={[]}
-        materials={[]}
-        onSelectSlot={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText(/no filament slots configured for this printer/i)).toBeInTheDocument();
-  });
-
-  it("calls onSelectSlot with the correct location when a slot is clicked", async () => {
-    const user = userEvent.setup();
-    const onSelectSlot = vi.fn();
-    render(
+function renderCard(overrides: Partial<React.ComponentProps<typeof DeviceModuleCard>> = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const onSelectSlot = vi.fn();
+  const onAssignSensor = vi.fn();
+  render(
+    <QueryClientProvider client={queryClient}>
       <DeviceModuleCard
         printer={PRINTER}
         amsLocations={[AMS_SLOT]}
@@ -183,11 +103,146 @@ describe("DeviceModuleCard", () => {
         spools={[]}
         materials={[]}
         onSelectSlot={onSelectSlot}
-      />,
-    );
+        onAssignSensor={onAssignSensor}
+        {...overrides}
+      />
+    </QueryClientProvider>,
+  );
+  return { onSelectSlot, onAssignSensor };
+}
+
+describe("DeviceModuleCard", () => {
+  it("renders printer name/brand/model and the AMS grid when amsLocations is present", () => {
+    renderCard({ sensorEntries: [makeEntry({})] });
+
+    expect(screen.getByText("P1S #1")).toBeInTheDocument();
+    expect(screen.getByText("Bambu Lab P1S")).toBeInTheDocument();
+    expect(screen.getByText("A1")).toBeInTheDocument();
+  });
+
+  it("renders an ExternalSpoolSlot when externalSpoolLocations is present and amsLocations is empty", () => {
+    renderCard({
+      printer: { ...PRINTER, filament_system_type: "external_spool" },
+      amsLocations: [],
+      externalSpoolLocations: [EXT_SPOOL_LOCATION],
+      assignments: [{ id: 1, spool_id: 1, location_id: 30, slot_name: null, is_active: true }],
+      spools: [SPOOL],
+      materials: [MATERIAL],
+    });
+
+    expect(screen.getByText("Ext")).toBeInTheDocument();
+    expect(screen.getByText("PLA")).toBeInTheDocument();
+  });
+
+  it("shows the offline state when the sensor entry has an error, and the slot grid still renders", () => {
+    renderCard({ sensorEntries: [makeEntry({ error: "Sensor timed out", temperature_c: null })] });
+
+    expect(screen.getByText(/sensor unavailable: sensor timed out/i)).toBeInTheDocument();
+    expect(screen.getByText("A1")).toBeInTheDocument();
+  });
+
+  it('shows "No sensor assigned" and an assign button when sensorEntries is empty', () => {
+    renderCard();
+
+    expect(screen.getByText(/no sensor assigned to this printer's locations/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /assign sensor/i })).toBeInTheDocument();
+  });
+
+  it("calls onAssignSensor when the assign-sensor button is clicked", async () => {
+    const user = userEvent.setup();
+    const { onAssignSensor } = renderCard();
+
+    await user.click(screen.getByRole("button", { name: /assign sensor/i }));
+
+    expect(onAssignSensor).toHaveBeenCalledWith(PRINTER);
+  });
+
+  it("calls onAssignSensor when Change is clicked for an already-assigned sensor", async () => {
+    const user = userEvent.setup();
+    const { onAssignSensor } = renderCard({ sensorEntries: [makeEntry({})] });
+
+    await user.click(screen.getByRole("button", { name: "Change" }));
+
+    expect(onAssignSensor).toHaveBeenCalledWith(PRINTER);
+  });
+
+  it('shows "No filament slots configured" when both location arrays are empty', () => {
+    renderCard({ printer: { ...PRINTER, filament_system_type: "storage_only" }, amsLocations: [] });
+
+    expect(screen.getByText(/no filament slots configured for this printer/i)).toBeInTheDocument();
+  });
+
+  it("calls onSelectSlot with the correct location when a slot is clicked", async () => {
+    const user = userEvent.setup();
+    const { onSelectSlot } = renderCard();
 
     await user.click(screen.getByText("A1"));
 
     expect(onSelectSlot).toHaveBeenCalledWith(AMS_SLOT);
+  });
+
+  it("dims the card when operational_status is not activo", () => {
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <DeviceModuleCard
+          printer={{ ...PRINTER, operational_status: "mantenimiento" }}
+          amsLocations={[AMS_SLOT]}
+          externalSpoolLocations={[]}
+          sensorEntries={[]}
+          assignments={[]}
+          spools={[]}
+          materials={[]}
+          onSelectSlot={vi.fn()}
+          onAssignSensor={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(container.querySelector(".opacity-60")).not.toBeNull();
+  });
+
+  it("does not dim the card when operational_status is activo", () => {
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <DeviceModuleCard
+          printer={PRINTER}
+          amsLocations={[AMS_SLOT]}
+          externalSpoolLocations={[]}
+          sensorEntries={[]}
+          assignments={[]}
+          spools={[]}
+          materials={[]}
+          onSelectSlot={vi.fn()}
+          onAssignSensor={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(container.querySelector(".opacity-60")).toBeNull();
+  });
+
+  it("hides the AMS/External Spool toggle when filament_system_type is storage_only", () => {
+    renderCard({ printer: { ...PRINTER, filament_system_type: "storage_only" }, amsLocations: [] });
+
+    // Only the operational-status select renders; the filament-system-type
+    // toggle is hidden for a type it can't represent (2-value toggle).
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  });
+
+  it("shows the AMS/External Spool toggle when filament_system_type is ams", () => {
+    renderCard();
+
+    expect(screen.getAllByRole("combobox")).toHaveLength(2);
+  });
+
+  it("calls useUpdatePrinter when the operational-status select changes", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    const comboboxes = screen.getAllByRole("combobox");
+    await user.click(comboboxes[0]);
+    await user.click(screen.getByRole("option", { name: "Mantenimiento" }));
+
+    expect(vi.mocked(printersApi.update)).toHaveBeenCalledWith(5, { operational_status: "mantenimiento" });
   });
 });

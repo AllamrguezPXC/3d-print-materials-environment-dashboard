@@ -219,11 +219,28 @@ does not control the dryer directly — this is validation/tracking only.
   a critical alert on the Dashboard but never appear in Drying Recommendations. `lib/deviceFilters.ts`
   + `DashboardFilters.tsx` add a first version of Dashboard filters (search, alert/sensor/slot
   status, printer brand, filament type/brand/color/status), reusing `FilamentFilters.tsx`'s
-  controlled-component shape. **Deferred from this same task** (user's explicit scope choice):
-  printer operational status (no field exists on `Printer` yet), sensor assignment/reassignment
-  embedded in each Dashboard module (still only from `/sensors`), AMS↔external-spool system-type
-  switching with slot-count editing from the Dashboard (still only from `/printers`), and filter-state
-  persistence across page loads.
+  controlled-component shape. **Deferred from this same task** (user's explicit scope choice, since
+  built in the very next task below): printer operational status, sensor assignment/reassignment
+  embedded in each Dashboard module, AMS↔external-spool system-type switching from the Dashboard,
+  and filter-state persistence across page loads.
+- ~~Sidebar "Alerts" page didn't reflect the Dashboard's live alerts; printer operational status,
+  embedded sensor assignment, AMS↔external-spool switching, and filter persistence all deferred~~ —
+  **done**, see `docs/Tareas/dashboard-admin-controls/TASK.md` and
+  `docs/Dashboard_Admin_Controls_Guide.md`: the Alerts bug was the same "live vs persisted" class
+  already fixed for Drying Recommendations, but `/alerts`/`Alert` back a real resolve/audit
+  workflow, so the fix is a new `AlertsBell.tsx` popover (fed by the same `["current-reading"]`
+  query the Dashboard's `AlertPanel` uses) replacing the sidebar nav link, not making `/alerts`
+  itself live — that page is unchanged. `Printer.operational_status` ("activo"/"inactivo"/
+  "mantenimiento") added following the `filament_system_type` precedent exactly, editable from both
+  `DeviceModuleCard` and `Printers.tsx` (dims the card visually, never gates alerts, filterable).
+  `printer_service._sync_locations_for_filament_system_type` handles AMS↔external-spool switching
+  non-destructively (only ever creates missing Location rows, never deletes — idempotent, no
+  orphaning risk); the Dashboard's toggle is limited to those 2 values, `/printers` keeps all 4.
+  Sensor reassignment needed zero backend changes (`PATCH /sensors/{id}` already worked) — new
+  `SensorAssignmentModal.tsx` mirrors `SlotAssignmentModal`'s shared-modal pattern, and `/sensors`
+  gained its first-ever inline edit control. `hooks/useDeviceFilters.ts` persists Dashboard filters
+  to localStorage (versioned key, merge-over-defaults), with a "Reset filters" button in
+  `Settings.tsx`.
 - ~~No live sensor-trend chart *during* an active drying session~~ — **done**, see
   `docs/Tareas/drying-session-trend-chart/TASK.md`: closes Requirements.md §11.6 ("review measured
   trend"). A "View trend" button per session row (`DryingSessionsTable.tsx`, shown whenever

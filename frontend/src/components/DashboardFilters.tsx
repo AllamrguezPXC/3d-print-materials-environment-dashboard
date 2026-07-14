@@ -8,6 +8,7 @@ import {
   EMPTY_DEVICE_FILTERS,
   type DeviceFiltersValue,
 } from "@/lib/deviceFilters";
+import { PRINTER_OPERATIONAL_STATUSES, printerStatusLabel } from "@/lib/printerStatus";
 
 const ALERT_STATUS_OPTIONS: { value: DeviceFiltersValue["alertStatus"]; label: string }[] = [
   { value: "none", label: "No alert" },
@@ -79,6 +80,10 @@ export function DashboardFilters({
       label: SLOT_STATUS_OPTIONS.find((o) => o.value === value.slotStatus)?.label ?? value.slotStatus,
     },
     value.printerBrand !== ALL && { key: "printerBrand" as const, label: value.printerBrand },
+    value.printerStatus !== ALL && {
+      key: "printerStatus" as const,
+      label: printerStatusLabel(value.printerStatus),
+    },
     value.filamentType !== ALL && { key: "filamentType" as const, label: value.filamentType },
     value.filamentBrand !== ALL && { key: "filamentBrand" as const, label: value.filamentBrand },
     value.filamentColor !== ALL && { key: "filamentColor" as const, label: value.filamentColor },
@@ -164,6 +169,20 @@ export function DashboardFilters({
             {printerBrands.map((b) => (
               <SelectItem key={b} value={b}>
                 {b}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={value.printerStatus} onValueChange={(printerStatus) => onChange({ ...value, printerStatus })}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Printer status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All statuses</SelectItem>
+            {PRINTER_OPERATIONAL_STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {printerStatusLabel(s)}
               </SelectItem>
             ))}
           </SelectContent>

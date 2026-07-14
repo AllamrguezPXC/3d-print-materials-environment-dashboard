@@ -9,6 +9,7 @@ import {
   locationsApi,
   materialsApi,
   printersApi,
+  sensorsApi,
   spoolsApi,
 } from "@/api/config";
 import type { CurrentReadingsResponse, SensorReadingEntry } from "@/types/api";
@@ -23,12 +24,14 @@ const mockedGetLocations = vi.mocked(locationsApi.list);
 const mockedGetSpools = vi.mocked(spoolsApi.list);
 const mockedGetMaterials = vi.mocked(materialsApi.list);
 const mockedGetAssignments = vi.mocked(assignmentsApi.list);
+const mockedGetSensors = vi.mocked(sensorsApi.list);
 
 mockedGetPrinters.mockResolvedValue([]);
 mockedGetLocations.mockResolvedValue([]);
 mockedGetSpools.mockResolvedValue([]);
 mockedGetMaterials.mockResolvedValue([]);
 mockedGetAssignments.mockResolvedValue([]);
+mockedGetSensors.mockResolvedValue([]);
 
 function renderDashboard() {
   const queryClient = new QueryClient({

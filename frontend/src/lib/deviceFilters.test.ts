@@ -3,8 +3,8 @@ import { EMPTY_DEVICE_FILTERS, filterDeviceModules, type DeviceFilterContext } f
 import type { PrinterDeviceModule, StandaloneDeviceModule } from "./deviceModules";
 import type { FilamentSpool, Location, MaterialProfile, Printer, SensorReadingEntry, SpoolAssignment } from "@/types/api";
 
-const PRINTER_A: Printer = { id: 1, name: "A1 mini #1", brand: "Bambu Lab", model: "A1 mini", serial_number: null, notes: null, filament_system_type: "ams" };
-const PRINTER_B: Printer = { id: 2, name: "Other Brand #1", brand: "Other Brand", model: "X1", serial_number: null, notes: null, filament_system_type: "ams" };
+const PRINTER_A: Printer = { id: 1, name: "A1 mini #1", brand: "Bambu Lab", model: "A1 mini", serial_number: null, notes: null, filament_system_type: "ams", operational_status: "activo" };
+const PRINTER_B: Printer = { id: 2, name: "Other Brand #1", brand: "Other Brand", model: "X1", serial_number: null, notes: null, filament_system_type: "ams", operational_status: "activo" };
 
 const AMS_SLOT: Location = { id: 10, name: "AMS Slot 1 - A1 mini #1", location_type: "printer_ams", printer_id: 1, description: null, max_temp_c: null, notes: null, slot_index: 0 };
 
@@ -121,6 +121,32 @@ describe("filterDeviceModules", () => {
     const result = filterDeviceModules([bambu, other], [], { ...EMPTY_DEVICE_FILTERS, printerBrand: "Other Brand" }, CTX_EMPTY);
 
     expect(result.printerModules.map((m) => m.printer.id)).toEqual([2]);
+  });
+
+  it("filters by printer operational status", () => {
+    const activePrinter = makePrinterModule();
+    const maintenancePrinter = makePrinterModule({ printer: { ...PRINTER_B, operational_status: "mantenimiento" } });
+
+    const result = filterDeviceModules(
+      [activePrinter, maintenancePrinter],
+      [],
+      { ...EMPTY_DEVICE_FILTERS, printerStatus: "mantenimiento" },
+      CTX_EMPTY,
+    );
+
+    expect(result.printerModules.map((m) => m.printer.id)).toEqual([2]);
+  });
+
+  it("excludes standalone location modules from a specific printer-status filter", () => {
+    const standalone: StandaloneDeviceModule = {
+      kind: "standalone",
+      location: { id: 1, name: "Storage Room", location_type: "room", printer_id: null },
+      entries: [makeEntry({ location: { id: 1, name: "Storage Room", location_type: "room", printer_id: null } })],
+    };
+
+    const result = filterDeviceModules([], [standalone], { ...EMPTY_DEVICE_FILTERS, printerStatus: "activo" }, CTX_EMPTY);
+
+    expect(result.standaloneModules).toHaveLength(0);
   });
 
   it("filters by filament type/brand/color/status via the module's assigned spools", () => {

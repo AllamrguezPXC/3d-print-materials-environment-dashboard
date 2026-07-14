@@ -12,6 +12,7 @@ const PRINTER: Printer = {
   serial_number: null,
   notes: null,
   filament_system_type: "ams",
+  operational_status: "activo",
 };
 
 const AMS_SLOTS: Location[] = [0, 1, 2, 3].map((slot_index) => ({

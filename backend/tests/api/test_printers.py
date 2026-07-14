@@ -72,6 +72,143 @@ def test_seeded_printers_have_consistent_filament_system_type(client):
     assert p1s_2["filament_system_type"] == "external_spool"
 
 
+def test_create_printer_defaults_operational_status_to_activo(client):
+    payload = {"name": "Default Status Printer", "brand": "Bambu Lab", "model": "A1 mini"}
+    response = client.post("/printers", json=payload)
+    assert response.status_code == 200
+    assert response.json()["operational_status"] == "activo"
+
+
+def test_create_printer_accepts_valid_operational_status(client):
+    payload = {
+        "name": "Maintenance Printer",
+        "brand": "Bambu Lab",
+        "model": "P1S",
+        "operational_status": "mantenimiento",
+    }
+    response = client.post("/printers", json=payload)
+    assert response.status_code == 200
+    assert response.json()["operational_status"] == "mantenimiento"
+
+
+def test_create_printer_rejects_invalid_operational_status(client):
+    payload = {
+        "name": "Bad Status Printer",
+        "brand": "Bambu Lab",
+        "model": "A1 mini",
+        "operational_status": "on_fire",
+    }
+    response = client.post("/printers", json=payload)
+    assert response.status_code == 422
+
+
+def test_patch_printer_rejects_invalid_operational_status(client):
+    created = client.post(
+        "/printers", json={"name": "Patchable Status Printer", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+
+    response = client.patch(f"/printers/{created['id']}", json={"operational_status": "on_fire"})
+    assert response.status_code == 422
+
+
+def test_patch_printer_updates_operational_status(client):
+    created = client.post(
+        "/printers", json={"name": "Status Update Printer", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+
+    response = client.patch(f"/printers/{created['id']}", json={"operational_status": "inactivo"})
+    assert response.status_code == 200
+    assert response.json()["operational_status"] == "inactivo"
+
+
+def test_patch_printer_to_ams_creates_four_slot_locations(client):
+    created = client.post(
+        "/printers", json={"name": "AMS Sync Printer", "brand": "Bambu Lab", "model": "P1S"}
+    ).json()
+
+    response = client.patch(f"/printers/{created['id']}", json={"filament_system_type": "ams"})
+    assert response.status_code == 200
+
+    locations = client.get("/locations").json()
+    ams_locations = [
+        loc for loc in locations if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_ams"
+    ]
+    assert len(ams_locations) == 4
+    assert sorted(loc["slot_index"] for loc in ams_locations) == [0, 1, 2, 3]
+
+
+def test_patch_printer_to_ams_twice_does_not_duplicate_slots(client):
+    created = client.post(
+        "/printers", json={"name": "AMS Idempotent Printer", "brand": "Bambu Lab", "model": "P1S"}
+    ).json()
+
+    client.patch(f"/printers/{created['id']}", json={"filament_system_type": "ams"})
+    client.patch(f"/printers/{created['id']}", json={"filament_system_type": "external_spool"})
+    client.patch(f"/printers/{created['id']}", json={"filament_system_type": "ams"})
+
+    locations = client.get("/locations").json()
+    ams_locations = [
+        loc for loc in locations if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_ams"
+    ]
+    assert len(ams_locations) == 4
+
+
+def test_patch_printer_to_external_spool_creates_one_location(client):
+    created = client.post(
+        "/printers", json={"name": "External Spool Sync Printer", "brand": "Bambu Lab", "model": "A1 mini"}
+    ).json()
+
+    response = client.patch(f"/printers/{created['id']}", json={"filament_system_type": "external_spool"})
+    assert response.status_code == 200
+
+    locations = client.get("/locations").json()
+    ext_locations = [
+        loc
+        for loc in locations
+        if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_external_spool"
+    ]
+    assert len(ext_locations) == 1
+
+
+def test_patch_printer_switching_types_never_deletes_existing_locations(client):
+    # Switching AMS -> external_spool must not remove the AMS slots already
+    # created -- the sync is additive-only, never destructive.
+    created = client.post(
+        "/printers", json={"name": "Never Delete Printer", "brand": "Bambu Lab", "model": "P1S"}
+    ).json()
+
+    client.patch(f"/printers/{created['id']}", json={"filament_system_type": "ams"})
+    client.patch(f"/printers/{created['id']}", json={"filament_system_type": "external_spool"})
+
+    locations = client.get("/locations").json()
+    ams_locations = [
+        loc for loc in locations if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_ams"
+    ]
+    ext_locations = [
+        loc
+        for loc in locations
+        if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_external_spool"
+    ]
+    assert len(ams_locations) == 4
+    assert len(ext_locations) == 1
+
+
+def test_patch_printer_to_storage_only_does_not_change_locations(client):
+    created = client.post(
+        "/printers", json={"name": "Storage Only Printer", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+
+    client.patch(f"/printers/{created['id']}", json={"filament_system_type": "ams"})
+    response = client.patch(f"/printers/{created['id']}", json={"filament_system_type": "storage_only"})
+    assert response.status_code == 200
+
+    locations = client.get("/locations").json()
+    ams_locations = [
+        loc for loc in locations if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_ams"
+    ]
+    assert len(ams_locations) == 4
+
+
 def test_get_printer_404_for_missing_id(client):
     response = client.get("/printers/999999")
     assert response.status_code == 404
