@@ -46,6 +46,7 @@ export function History() {
     data: history,
     refetch,
     isFetching,
+    isFetched,
     error,
   } = useQuery({
     queryKey: ["readings-history", from, to, sensorId, locationId],
@@ -138,7 +139,11 @@ export function History() {
 
       {error && <p className="text-sm text-destructive">{(error as Error).message}</p>}
 
-      {hourly.length === 0 ? (
+      {!isFetched ? (
+        <p className="text-sm text-muted-foreground">
+          Choose a range and click "Load history" to see readings.
+        </p>
+      ) : hourly.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No readings in this range yet. Try "Capture reading now" a few times, then reload.
         </p>

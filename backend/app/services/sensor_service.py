@@ -32,6 +32,13 @@ def _check_duplicate_serial(session: Session, serial_number: str, *, exclude_id:
         )
 
 
+def _check_location_exists(session: Session, location_id: int | None) -> None:
+    if location_id is None:
+        return
+    if session.get(Location, location_id) is None:
+        raise HTTPException(status_code=404, detail=f"Location {location_id} not found.")
+
+
 def _check_ams_sensor_conflict(session: Session, location_id: int | None, *, exclude_id: int | None = None) -> None:
     """Physically, one sensor covers an entire printer module's (e.g. an AMS)
     shared microclimate -- reject assigning a second sensor to any sibling
@@ -74,6 +81,7 @@ def create_sensor(session: Session, payload: SensorCreate) -> Sensor:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     _check_duplicate_serial(session, fields["serial_number"])
+    _check_location_exists(session, fields["location_id"])
     _check_ams_sensor_conflict(session, fields["location_id"])
 
     sensor = Sensor(**fields)
@@ -111,6 +119,7 @@ def update_sensor(session: Session, sensor_id: int, payload: SensorUpdate) -> Se
         _check_duplicate_serial(session, merged_serial_number, exclude_id=sensor_id)
 
     if "location_id" in updates:
+        _check_location_exists(session, updates["location_id"])
         _check_ams_sensor_conflict(session, updates["location_id"], exclude_id=sensor_id)
 
     for field, value in updates.items():

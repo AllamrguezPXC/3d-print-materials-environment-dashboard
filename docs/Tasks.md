@@ -931,6 +931,50 @@ Phase 31 surfaced five follow-up issues.
   (sensor-driven, not slot-kind-driven) — only the slot tile is hidden. 4 new
   `deviceModules.test.ts` cases; `npx vitest run` (157 passed), `tsc -b` clean.
 
+## Phase 33 — Final Review: Full-Stack Bug Sweep
+
+See `docs/Tareas/final-review-bug-sweep/TASK.md` and `docs/Final_Review_Bug_Sweep_Guide.md` for the
+full task record. Requested by the user as a last pass before marking the project complete: find
+and fix real bugs, separately identify (without necessarily implementing) further improvement
+opportunities with concrete tools, then re-validate everything.
+
+- [x] Three parallel subagent reviews (backend, frontend, security) + manual Playwright sweep of
+  every page (console-error check on each) + direct `curl` reproduction of every suspected bug
+  before treating it as real.
+- [x] Fixed: `MaterialProfile` create/update accepted internally inconsistent thresholds (e.g.
+  `ideal_rh_max_percent > critical_rh_max_percent`) with zero validation, silently inverting
+  `alert_service`'s severity comparisons for that material. New `_validate_thresholds()` in
+  `material_profile_service.py`, applied to both create and the merged-with-existing-row result of
+  an update.
+- [x] Fixed: SQLite foreign keys were never enforced (no `PRAGMA foreign_keys=ON`) — reproduced
+  concretely (deleting a `Location` referenced by an active `SpoolAssignment` silently succeeded
+  instead of the advertised 400). `db/session.py` now enables the pragma (+ `journal_mode=WAL`,
+  a zero-risk addition that lets the auto-capture background loop coexist with concurrent
+  requests) on every SQLite connection via an `event.listens_for(engine, "connect")` handler.
+- [x] Fixed: several create/update endpoints never checked a referenced foreign key actually
+  existed (`Sensor.location_id`, `SpoolAssignment.spool_id`/`location_id`,
+  `FilamentSpool.material_profile_id`, `Location.printer_id`) — reproduced concretely
+  (`POST /assignments` with nonexistent ids returned 200). Added `_check_*_exists()` helpers
+  mirroring the existing `get_*_or_404`/`create_drying_session` pattern.
+- [x] Fixed: hourly dew-point average in `reading_service.get_readings_history` divided by every
+  reading in the bucket instead of only the ones with a non-null `dew_point_c` — currently latent
+  (no live write path leaves it null) but fixed and regression-tested via direct `save_reading()`
+  insertion.
+- [x] Fixed: `useCreateSensor`/`useUpdateSensor`/`useCreateAssignment`/`useUpdateAssignment` never
+  invalidated the `"current-reading"` query, leaving Dashboard cards stale after a
+  sensor/spool reassignment until the next poll tick. Verified live: the card now updates the
+  instant the mutation resolves.
+- [x] Fixed: `History.tsx` showed "No readings in this range yet" before the user had ever clicked
+  "Load history" (query is `enabled: false`), indistinguishable from a genuine empty result. Added
+  an `isFetched`-gated "choose a range and search" prompt.
+- [x] Documented (not implemented, per explicit scope): route-based code splitting for the ~880kB
+  main chunk, missing DB indexes on hot-path filter columns, a duplicate `get_affected_spools`
+  query per request, missing loading/error states on several list pages, a color-only status dot
+  with no ARIA label, `StatusBadge` missing sensor-type color entries, and a `sensor_type` naming
+  collision between two different value domains.
+- [x] `pytest -q` (170 passed, 12 new), `npx vitest run` (160 passed, 4 new), `tsc -b`/`build`/`lint`
+  clean. All demo data touched during live verification restored to its original state.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

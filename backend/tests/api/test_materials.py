@@ -64,6 +64,44 @@ def test_patch_material_updates_fields(client):
     assert response.json()["warning_rh_max_percent"] == 55.0
 
 
+def test_create_material_rejects_inverted_rh_thresholds(client):
+    payload = {
+        **MATERIAL_PAYLOAD,
+        "ideal_rh_max_percent": 80.0,
+        "warning_rh_max_percent": 20.0,
+        "critical_rh_max_percent": 10.0,
+    }
+    response = client.post("/materials", json=payload)
+    assert response.status_code == 422
+
+
+def test_create_material_rejects_inverted_temp_range(client):
+    payload = {**MATERIAL_PAYLOAD, "ideal_temp_min_c": 30.0, "ideal_temp_max_c": 10.0}
+    response = client.post("/materials", json=payload)
+    assert response.status_code == 422
+
+
+def test_create_material_rejects_inverted_drying_time_range(client):
+    payload = {**MATERIAL_PAYLOAD, "drying_time_hours_min": 10.0, "drying_time_hours_max": 2.0}
+    response = client.post("/materials", json=payload)
+    assert response.status_code == 422
+
+
+def test_create_material_accepts_valid_thresholds(client):
+    response = client.post("/materials", json=MATERIAL_PAYLOAD)
+    assert response.status_code == 200
+
+
+def test_patch_material_rejects_update_that_inverts_thresholds(client):
+    created = client.post("/materials", json=MATERIAL_PAYLOAD).json()
+
+    # ideal_rh_max_percent (40) alone, unchanged, is still <= the current
+    # warning (50) -- but raising it above critical_rh_max_percent (60)
+    # must be rejected even though only one field is being patched.
+    response = client.patch(f"/materials/{created['id']}", json={"ideal_rh_max_percent": 70.0})
+    assert response.status_code == 422
+
+
 def test_delete_material_happy_path(client):
     created = client.post("/materials", json=MATERIAL_PAYLOAD).json()
 

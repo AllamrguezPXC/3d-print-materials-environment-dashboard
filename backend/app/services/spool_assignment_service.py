@@ -5,6 +5,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.time import utc_now
+from app.models.filament_spool import FilamentSpool
+from app.models.location import Location
 from app.models.spool_assignment import SpoolAssignment
 from app.schemas.spool_assignment import SpoolAssignmentCreate, SpoolAssignmentUpdate
 
@@ -20,8 +22,20 @@ def get_assignment_or_404(session: Session, assignment_id: int) -> SpoolAssignme
     return assignment
 
 
+def _check_spool_exists(session: Session, spool_id: int) -> None:
+    if session.get(FilamentSpool, spool_id) is None:
+        raise HTTPException(status_code=404, detail=f"Filament spool {spool_id} not found.")
+
+
+def _check_location_exists(session: Session, location_id: int) -> None:
+    if session.get(Location, location_id) is None:
+        raise HTTPException(status_code=404, detail=f"Location {location_id} not found.")
+
+
 def create_assignment(session: Session, payload: SpoolAssignmentCreate) -> SpoolAssignment:
     data = payload.model_dump()
+    _check_spool_exists(session, data["spool_id"])
+    _check_location_exists(session, data["location_id"])
     if data.get("assigned_at") is None:
         data["assigned_at"] = utc_now()
     assignment = SpoolAssignment(**data)
@@ -35,7 +49,12 @@ def update_assignment(
     session: Session, assignment_id: int, payload: SpoolAssignmentUpdate
 ) -> SpoolAssignment:
     assignment = get_assignment_or_404(session, assignment_id)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    if "spool_id" in updates:
+        _check_spool_exists(session, updates["spool_id"])
+    if "location_id" in updates:
+        _check_location_exists(session, updates["location_id"])
+    for field, value in updates.items():
         setattr(assignment, field, value)
     session.commit()
     session.refresh(assignment)

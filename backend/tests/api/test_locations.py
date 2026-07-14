@@ -68,3 +68,44 @@ def test_delete_location_happy_path(client):
 
     get_response = client.get(f"/locations/{created['id']}")
     assert get_response.status_code == 404
+
+
+def test_delete_location_rejected_with_friendly_400_when_referenced_by_assignment(client):
+    """Regression test: without SQLite foreign-key enforcement, this delete
+    used to silently succeed and leave the SpoolAssignment's location_id
+    dangling (no relationship() is declared from Location to
+    SpoolAssignment, so the ORM had no way to catch this on its own)."""
+    location = client.post(
+        "/locations", json={"name": "Referenced Room", "location_type": "room"}
+    ).json()
+    material_id = client.get("/materials").json()[0]["id"]
+    spool = client.post(
+        "/spools", json={"material_profile_id": material_id, "brand": "Referenced Brand"}
+    ).json()
+    client.post(
+        "/assignments",
+        json={"spool_id": spool["id"], "location_id": location["id"], "is_active": True},
+    )
+
+    response = client.delete(f"/locations/{location['id']}")
+    assert response.status_code == 400
+
+    get_response = client.get(f"/locations/{location['id']}")
+    assert get_response.status_code == 200
+
+
+def test_create_location_404_for_nonexistent_printer(client):
+    response = client.post(
+        "/locations",
+        json={"name": "Orphan AMS Slot", "location_type": "printer_ams", "printer_id": 999999},
+    )
+    assert response.status_code == 404
+
+
+def test_patch_location_404_for_nonexistent_printer(client):
+    created = client.post(
+        "/locations", json={"name": "Reassignable Location", "location_type": "printer_ams"}
+    ).json()
+
+    response = client.patch(f"/locations/{created['id']}", json={"printer_id": 999999})
+    assert response.status_code == 404

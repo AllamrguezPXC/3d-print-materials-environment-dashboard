@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.location import Location
+from app.models.printer import Printer
 from app.schemas.location import LocationCreate, LocationUpdate
 
 
@@ -19,8 +20,17 @@ def get_location_or_404(session: Session, location_id: int) -> Location:
     return location
 
 
+def _check_printer_exists(session: Session, printer_id: int | None) -> None:
+    if printer_id is None:
+        return
+    if session.get(Printer, printer_id) is None:
+        raise HTTPException(status_code=404, detail=f"Printer {printer_id} not found.")
+
+
 def create_location(session: Session, payload: LocationCreate) -> Location:
-    location = Location(**payload.model_dump())
+    fields = payload.model_dump()
+    _check_printer_exists(session, fields.get("printer_id"))
+    location = Location(**fields)
     session.add(location)
     session.commit()
     session.refresh(location)
@@ -29,7 +39,10 @@ def create_location(session: Session, payload: LocationCreate) -> Location:
 
 def update_location(session: Session, location_id: int, payload: LocationUpdate) -> Location:
     location = get_location_or_404(session, location_id)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    if "printer_id" in updates:
+        _check_printer_exists(session, updates["printer_id"])
+    for field, value in updates.items():
         setattr(location, field, value)
     session.commit()
     session.refresh(location)

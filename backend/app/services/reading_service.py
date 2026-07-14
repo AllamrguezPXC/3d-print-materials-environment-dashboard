@@ -153,6 +153,12 @@ def get_readings_history(
         hour_key = row.timestamp.replace(minute=0, second=0, microsecond=0)
         buckets[hour_key].append(row)
 
+    def _dew_point_average(bucket: list) -> float | None:
+        values = [r.dew_point_c for r in bucket if r.dew_point_c is not None]
+        if not values:
+            return None
+        return round(sum(values) / len(values), 2)
+
     hourly = [
         HourlyAggregate(
             hour=hour,
@@ -161,11 +167,7 @@ def get_readings_history(
                 sum(r.relative_humidity_percent for r in bucket) / len(bucket), 2
             ),
             pressure_pa=round(sum(r.pressure_pa for r in bucket) / len(bucket), 2),
-            dew_point_c=(
-                round(sum(r.dew_point_c for r in bucket if r.dew_point_c is not None) / len(bucket), 2)
-                if any(r.dew_point_c is not None for r in bucket)
-                else None
-            ),
+            dew_point_c=_dew_point_average(bucket),
             sample_count=len(bucket),
         )
         for hour, bucket in sorted(buckets.items())
