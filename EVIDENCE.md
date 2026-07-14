@@ -474,6 +474,86 @@ mode confirmed consistent. Screenshots:
 `evidence/frontend-verification/dashboard-slot-modal.png`,
 `evidence/frontend-verification/dashboard-light-mode.png`.
 
+## Final Delivery Review — 2026-07-14
+
+Full-project audit requested explicitly for delivery readiness: structure, `README.md`,
+`CLAUDE.md`, `docs/Requirements.md`, `docs/Tasks.md`, all of `/docs`, `backend/`, `frontend/`,
+`.claude/agents`/`hooks`/`skills`/`settings.json`, `.gitignore`, `.env.example`, and Git state
+(`git status`, `git branch`, `git remote -v`) — all reviewed before any file was touched. This
+followed directly after the "Final Review: Full-Stack Bug Sweep" (see below) merged via
+[PR #2](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/pull/2, commit
+`1d371c3`), so this pass focused on polish/documentation rather than re-auditing code just fixed.
+
+**What was audited:**
+- Confirmed no `ruff`/`mypy` config exists anywhere in `backend/` (not in `requirements.txt`, no
+  config file) — per instruction, these were **not** run (only tools actually configured in the
+  project are executed).
+- `.claude/hooks/`: found 4 scripts (`quality-frontend.py`, `quality-python.py`,
+  `session-summary.py`, `audit-posttooluse.py`) present on disk but never wired into
+  `settings.json`. Evaluated each for whether it could be adapted to real use before deciding to
+  remove: `quality-python.py` shelled out to `ruff`, which this project has never depended on —
+  reviving it would mean adding a new dependency, which contradicts the project's own "avoid
+  unnecessary dependencies" convention, so it was deleted rather than adapted.
+  `session-summary.py`/`audit-posttooluse.py` duplicated, with a strictly worse implementation
+  (plain-text logs in a non-standard `exports/logs/` location never used elsewhere in this repo),
+  what the already-active `evidence-logger.py` (structured JSONL to `evidence/`) and the
+  context-handoff system already do — deleted as genuinely redundant.
+  `quality-frontend.py` shelled out to `eslint`, which was never installed in this project either
+  (the actual linter is `oxlint`, already a `frontend` devDependency and this project's own `npm
+  run lint` script) — this one **was** adaptable with zero new dependencies, so it was fixed to
+  call `oxlint` (verified working via a manual hook invocation, both on a clean file and on a file
+  with a real lint violation) and wired into `PostToolUse` alongside `evidence-logger.py`.
+  `run-backend-tests-after-edit.py` was left untouched — it already self-documents as an
+  intentionally-disabled optional template, not orphaned/confusing content.
+- `.env.example`: found `AUTO_CAPTURE_INTERVAL_SECONDS` (a real `core/config.py` setting, added
+  during the prior bug-sweep task) was never documented there. Added.
+- `README.md`: found the test count ("116+") stale (actual: 170 backend / 160 frontend), no
+  frontend validation commands documented, and no mention of the dashboard admin-control features
+  shipped since the file was last touched (notification bell, printer status, embedded sensor
+  assignment, AMS/external-spool switching, persistent filters, background auto-capture). Updated
+  all three.
+- Backend/frontend code itself: no changes needed — the prior bug-sweep task had just finished a
+  thorough pass (3 parallel subagent reviews + live reproduction of every finding); re-auditing the
+  same code minutes later would have been redundant, so this pass verified current state via a
+  fresh full test run rather than re-reviewing line-by-line.
+
+**Commands executed:**
+```
+cd backend && pytest -q
+cd frontend && npx tsc -b && npm run build && npm run lint && npx vitest run
+```
+Plus live functional smoke tests (dev servers already running): direct `curl` against all three
+required endpoints (`GET /readings/current`, `POST /readings`, `GET /readings?from=&to=`), the
+AMS one-sensor-per-module conflict rule, and the duplicate-serial rule; Playwright MCP browser
+checks of `/`, `/sensors`, and `/printers` (zero console errors on any); a full-page Dashboard
+screenshot confirming 2-decimal environmental formatting, correct active/inactive/unassigned sensor
+states, and Drying Recommendations matching the spools actually shown in warning/critical alerts.
+
+**Results:**
+- `pytest -q`: **170 passed**.
+- `npx tsc -b`: clean.
+- `npm run build`: clean (same pre-existing "chunk > 500kB" size warning as before, not an error —
+  documented as a deferred improvement opportunity in `docs/Final_Review_Bug_Sweep_Guide.md`).
+- `npm run lint`: clean — same 6 pre-existing `only-export-components` warnings as before (not
+  errors), nothing new.
+- `npx vitest run`: **160 passed** (28 files).
+- All 3 required endpoints: 200 OK with real data. Both validation rules: correctly rejected with
+  400, no side effects (no rows created by the rejected requests).
+
+**Git/GitHub action:** committed directly to `main` per explicit user instruction (small,
+non-functional documentation/config changes — no feature branch needed for this pass). Commit
+[`a970338`](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/commit/a970338)
+("chore: final project polish — clean up orphaned hooks, document auto-capture env var, refresh
+README"), pushed to `origin/main`. This `EVIDENCE.md` update is committed separately immediately
+after.
+
+**Known limitations (unchanged, documented previously, not re-litigated here):** no Alembic/
+migration tool (schema changes require deleting the dev SQLite DB); AMS slot count fixed at 4; no
+route-based code splitting yet (main JS chunk ~880kB); a few list pages lack a distinct
+loading/error state (`Alerts.tsx`, `Drying.tsx`, `Printers.tsx`, `Materials.tsx`, `Sensors.tsx`,
+`Spools.tsx`); GitHub MCP was never connected in any session — the `gh` CLI was used throughout as
+the explicitly-authorized substitute. Full list: `docs/Final_Review_Bug_Sweep_Guide.md`.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.
