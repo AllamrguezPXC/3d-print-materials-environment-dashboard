@@ -18,6 +18,11 @@ build/
 .env.*
 !.env.example
 
+# Assignment source document is marked "Confidencial — Solo uso interno" and
+# this repo is public — kept local-only, intentionally excluded (not an
+# oversight). Referenced by relative path from docs/ elsewhere in the repo.
+docs/asignacion_react_fastapi.pdf
+
 # SQLite and local data
 *.db
 *.db-shm

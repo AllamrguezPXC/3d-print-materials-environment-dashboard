@@ -12,8 +12,8 @@ Use this file to document evidence required by the assignment.
 | `/init` and `CLAUDE.md` | Root `CLAUDE.md` audited and extended with Task Documentation, Git Workflow, Testing Requirements, and Playwright MCP sections adapted from `Inpiration CLAUDE.md` | Done |
 | TDD cycle | `/evidence/tdd-current-reading-fail.txt` and `/evidence/tdd-current-reading-pass.txt` — see summary below | Done |
 | Documentation | Root `README.md` (setup, stack, sensor modes, endpoints, structure), `backend/README.md`, `frontend/README.md`, `docs/Requirements.md`, `docs/Tasks.md`, root `CLAUDE.md`, structured `<summary>` docstring on `MaterialProfile` (`backend/app/models/material_profile.py`) | Done |
-| Security review | `/evidence/security-review.md` — reviewed `POST /readings` and related sensor/CORS/secrets handling, fixed 2 medium findings | Done |
-| GitHub Integration | Repo: https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard. Real action: [Issue #1](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/issues/1) "Add automated frontend tests (vitest) for Dashboard and theme toggle" — opened, then implemented and closed via `gh issue close` (see "Frontend Automated Tests" below) | Done |
+| Security review | `/evidence/security-review.md` — reviewed `POST /readings` and related sensor/CORS/secrets handling, fixed 2 medium findings. Extended by a second pass during the final bug-sweep task covering code added afterward (SQLite FK enforcement, `auto_capture.py`) — see `docs/Final_Review_Bug_Sweep_Guide.md` | Done |
+| GitHub Integration | Repo: https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard. Real actions: [Issue #1](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/issues/1) (created + closed via `gh issue close`, see "Frontend Automated Tests" below) and [PR #2](https://github.com/AllamrguezPXC/3d-print-materials-environment-dashboard/pull/2) (created + merged via `gh pr create`/`gh pr merge`). GitHub MCP was confirmed configured in the user's Claude Code settings but inactive in these sessions due to a project-path casing mismatch (see "Final Assignment Compliance Review" below) — `gh` CLI used as the documented substitute throughout | Done (documented substitute) |
 | Custom Skill | `.claude/skills/*/SKILL.md` — `context-handoff` skill adapted from an unrelated prior project to this one; `fastapi-endpoint-builder` used to build `GET /readings/current` | Done |
 | Custom Hook | `.claude/hooks/*`, `.claude/settings.json` — `guard-dangerous-commands.py` and `evidence-logger.py` active from the start; `pre-compact-context-handoff.py` adapted and wired into `PreCompact`, verified via `test-fixtures/precompact-auto.json` | Done |
 
@@ -553,6 +553,67 @@ route-based code splitting yet (main JS chunk ~880kB); a few list pages lack a d
 loading/error state (`Alerts.tsx`, `Drying.tsx`, `Printers.tsx`, `Materials.tsx`, `Sensors.tsx`,
 `Spools.tsx`); GitHub MCP was never connected in any session — the `gh` CLI was used throughout as
 the explicitly-authorized substitute. Full list: `docs/Final_Review_Bug_Sweep_Guide.md`.
+
+## Final Assignment Compliance Review — 2026-07-14
+
+**Documento base:** `docs/asignacion_react_fastapi.pdf` ("Dashboard de Monitoreo Ambiental en
+Tiempo Real," Phoenix Calibration DR) — read in full and used as the literal source of truth for
+this review, distinct from (and narrower than) the extended `CLAUDE.md`/`docs/Requirements.md`
+scope this project actually built against.
+
+**Checklist generado:** `docs/Final_Assignment_Compliance_Checklist.md` — maps every requirement
+in the assignment PDF (stack, 3 casos de uso, 8 temas de Claude Code, entregables, criterios de
+evaluación) to its exact evidence location in this repository.
+
+**Hallazgo principal:** nothing was missing or broken. The project satisfies every literal
+requirement; the only real gap found was one of *presentation clarity* for an evaluator — the
+8-theme Claude Code evidence (40% of the grade) was accurate but spread across ~30 build phases in
+this file's narrative, with no single document mapping the assignment's exact wording to exact
+evidence. `docs/Final_Assignment_Compliance_Checklist.md` closes that gap.
+
+**GitHub MCP re-check:** the user reported GitHub MCP was now available. Verified via `ToolSearch`
+(no GitHub-specific MCP tools surfaced) and by inspecting Claude Code's own settings
+(`~/.claude.json`): a `github` MCP server **is** configured, but under a project-path entry whose
+drive-letter casing (`C:/...`) differs from the active session's working directory (`c:/...`) —
+Claude Code treats these as two different project keys, so the server never loads into this
+session. This is a real, environment-level technicality, not a missing setup step on the user's
+part. Documented as a partial/substitute-compliant item in the checklist (§3, item 6) rather than
+silently claimed as fully resolved — the existing `gh` CLI evidence (Issue #1, PR #2) already
+satisfies the assignment's own explicit allowance for a documented substitute.
+
+**Cambios realizados:**
+- New `docs/Final_Assignment_Compliance_Checklist.md`.
+- This section, plus tightened the "Security review" and "GitHub Integration" rows in the
+  checklist table above with the newest evidence (second security pass, PR #2, the MCP
+  casing finding).
+- No backend/frontend code changes — the prior final bug-sweep task had just finished a thorough
+  correctness pass; re-touching that code minutes later would have been unjustified churn.
+
+**Comandos ejecutados y resultados:**
+```
+cd backend && pytest -q                    → 170 passed
+cd frontend && npx tsc -b                  → clean
+cd frontend && npm run build                → clean (pre-existing >500kB chunk notice, not an error)
+cd frontend && npm run lint                 → clean (6 pre-existing warnings, no errors)
+cd frontend && npx vitest run               → 160 passed, 28 files
+```
+`ruff`/`mypy` not run — neither is configured in this project.
+
+**Revisión de seguridad:** re-confirmed `evidence/security-review.md` (POST /readings, the
+assignment's own most-critical-endpoint candidate) remains valid and its fixes are still in place;
+no new security concerns found in this pass since no code changed.
+
+**Revisión de requisitos de Claude Code:** all 8 themes re-verified individually against the
+assignment's exact wording — see `docs/Final_Assignment_Compliance_Checklist.md` §3 for the
+item-by-item mapping.
+
+**Estado final:** ✅ compliant against `docs/asignacion_react_fastapi.pdf` in full, with one item
+(#6, GitHub MCP) marked as a documented substitute rather than a literal MCP action, per the
+assignment's own stated allowance for that exact scenario.
+
+**Limitaciones conocidas:** see `docs/Final_Assignment_Compliance_Checklist.md`'s own
+"Limitaciones conocidas" section (GitHub MCP casing mismatch, no Alembic, project scope
+intentionally exceeds the assignment's 3-endpoint minimum).
 
 ## Notes
 
