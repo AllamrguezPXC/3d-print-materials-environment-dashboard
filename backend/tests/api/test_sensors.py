@@ -302,3 +302,32 @@ def test_create_sensor_on_non_printer_location_is_unrestricted(client):
         },
     )
     assert response.status_code == 200
+
+
+def test_create_sensor_404_for_nonexistent_location(client):
+    response = client.post(
+        "/sensors",
+        json={
+            "name": "Ghost Location Sensor",
+            "model": "mock",
+            "serial_number": "MOCK-GHOST-0001",
+            "sensor_type": "mock",
+            "location_id": 999999,
+        },
+    )
+    assert response.status_code == 404
+
+
+def test_patch_sensor_404_for_nonexistent_location(client):
+    created = client.post(
+        "/sensors",
+        json={
+            "name": "Reassignable Sensor",
+            "model": "mock",
+            "serial_number": "MOCK-GHOST-0002",
+            "sensor_type": "mock",
+        },
+    ).json()
+
+    response = client.patch(f"/sensors/{created['id']}", json={"location_id": 999999})
+    assert response.status_code == 404

@@ -24,5 +24,9 @@ class Printer(Base):
     # configuration; does not gate the AMS slot grid, which is still
     # inferred from actual Location rows (see AmsSlotGrid/ReadFromAmsPanel).
     filament_system_type: Mapped[str] = mapped_column(String(32), default="manual")
+    # activo, inactivo, mantenimiento -- administrative status only; never
+    # gates or suppresses alerts, which reflect real environmental risk
+    # regardless of a printer's operational state.
+    operational_status: Mapped[str] = mapped_column(String(32), default="activo")
 
     locations: Mapped[list["Location"]] = relationship("Location", back_populates="printer")

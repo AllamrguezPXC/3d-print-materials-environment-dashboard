@@ -28,7 +28,7 @@ export function EnvMetricTile({ label, value, icon: Icon, tone = "default" }: En
         <div className="truncate text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
           {label}
         </div>
-        <div className="truncate text-sm font-semibold tabular-nums">{value}</div>
+        <div className="text-sm font-semibold whitespace-nowrap tabular-nums">{value}</div>
       </div>
     </div>
   );

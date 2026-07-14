@@ -1,4 +1,4 @@
-import { Archive, Box, Disc3, Fan, Grid2x2, HelpCircle, Home, PackageCheck, PenLine } from "lucide-react";
+import { Archive, Box, Disc3, Fan, Grid2x2, HelpCircle, Home, Layers, PackageCheck, PenLine } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface DeviceTypeVisual {
@@ -17,6 +17,7 @@ const PRIMARY = "bg-primary/10 text-primary";
 const FILAMENT_SYSTEM_VISUALS: Record<string, DeviceTypeVisual> = {
   ams: { icon: Grid2x2, label: "AMS", chipClassName: PRIMARY },
   external_spool: { icon: Disc3, label: "External Spool", chipClassName: NEUTRAL },
+  ams_external_spool: { icon: Layers, label: "AMS + External Spool", chipClassName: PRIMARY },
   storage_only: { icon: Archive, label: "Storage Only", chipClassName: NEUTRAL },
   manual: { icon: PenLine, label: "Manual", chipClassName: NEUTRAL },
 };

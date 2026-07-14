@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     dracal_cli_executable: str = "dracal-usb-get"
     mock_sensor_count: int = 3
     cors_origins: str = "http://localhost:5173"
+    # Background auto-capture cadence (see app.services.auto_capture): how
+    # often every active sensor's current reading is persisted automatically,
+    # so /alerts and /readings history accumulate real data without anyone
+    # manually clicking "Capture reading now". Set to 0 to disable (tests do
+    # this via the AUTO_CAPTURE_INTERVAL_SECONDS env var, for determinism).
+    auto_capture_interval_seconds: float = 30.0
 
     @property
     def cors_origin_list(self) -> list[str]:

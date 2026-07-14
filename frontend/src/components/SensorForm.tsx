@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PortSelect } from "@/components/PortSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { buildLocationOptions } from "@/lib/sensorLocation";
 import type { Location, Printer } from "@/types/api";
 
 export interface SensorFormValues {
@@ -29,39 +30,6 @@ interface SensorFormProps {
 // dracal_cli identifies its device via serial number only (no COM port --
 // it talks to the sensor over native USB via the dracal-usb-get CLI tool).
 const REQUIRES_PORT = new Set(["dracal_vcp"]);
-
-interface LocationOption {
-  id: number;
-  label: string;
-}
-
-/** Physically, one sensor covers an entire AMS module's shared microclimate
- * -- collapse that printer's AMS slots to a single option (the lowest
- * slot_index as the representative location_id), so the picker can't imply
- * "slot 3" is a different choice from "slot 0". Non-AMS locations are
- * listed individually, unchanged. */
-function buildLocationOptions(locations: Location[], printers: Printer[]): LocationOption[] {
-  const amsByPrinter = new Map<number, Location>();
-  const otherOptions: LocationOption[] = [];
-
-  for (const location of locations) {
-    if (location.location_type === "printer_ams" && location.printer_id !== null) {
-      const current = amsByPrinter.get(location.printer_id);
-      if (!current || (location.slot_index ?? 0) < (current.slot_index ?? 0)) {
-        amsByPrinter.set(location.printer_id, location);
-      }
-    } else {
-      otherOptions.push({ id: location.id, label: location.name });
-    }
-  }
-
-  const amsOptions: LocationOption[] = [...amsByPrinter.entries()].map(([printerId, location]) => ({
-    id: location.id,
-    label: `${printers.find((p) => p.id === printerId)?.name ?? location.name} — AMS`,
-  }));
-
-  return [...amsOptions, ...otherOptions];
-}
 
 export function SensorForm({ value, onChange, onSubmit, locations, printers, submitting }: SensorFormProps) {
   const locationOptions = buildLocationOptions(locations, printers);

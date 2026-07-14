@@ -8,6 +8,7 @@ class PrinterBase(BaseModel):
     serial_number: str | None = None
     notes: str | None = None
     filament_system_type: str = "manual"  # ams, external_spool, storage_only, manual
+    operational_status: str = "activo"  # activo, inactivo, mantenimiento
 
 
 class PrinterCreate(PrinterBase):
@@ -21,6 +22,7 @@ class PrinterUpdate(BaseModel):
     serial_number: str | None = None
     notes: str | None = None
     filament_system_type: str | None = None
+    operational_status: str | None = None
 
 
 class PrinterRead(PrinterBase):

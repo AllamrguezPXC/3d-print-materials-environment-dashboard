@@ -2,7 +2,6 @@ import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Bell,
   Boxes,
   Droplets,
   Gauge,
@@ -16,6 +15,7 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
+import { AlertsBell } from "@/components/AlertsBell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", end: true, icon: LayoutDashboard },
   { to: "/history", label: "History", end: false, icon: Gauge },
-  { to: "/alerts", label: "Alerts", end: false, icon: Bell },
   { to: "/printers", label: "Printers & Locations", end: false, icon: Printer },
   { to: "/materials", label: "Materials", end: false, icon: Boxes },
   { to: "/spools", label: "Spools", end: false, icon: Package },
@@ -145,6 +144,7 @@ export function Layout() {
           <div className="flex-1">
             <SystemStatusBadge />
           </div>
+          <AlertsBell />
           <ThemeToggle />
         </header>
         <main className="flex-1 overflow-x-auto p-4 md:p-6">

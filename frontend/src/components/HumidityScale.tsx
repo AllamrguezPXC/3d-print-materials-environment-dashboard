@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { formatHumidity } from "@/lib/format";
 import type { MaterialProfile } from "@/types/api";
 
 export type HumidityGrade = "A" | "B" | "C" | "D" | "E";
@@ -68,7 +69,7 @@ export function HumidityScale({ relativeHumidityPercent, material }: HumiditySca
           {grade}
         </span>
         <div className="flex flex-col">
-          <span className="text-sm font-medium">{relativeHumidityPercent.toFixed(1)}% RH</span>
+          <span className="text-sm font-medium">{formatHumidity(relativeHumidityPercent)} RH</span>
           <span className="text-xs text-muted-foreground">{GRADE_MESSAGES[grade]}</span>
         </div>
       </div>

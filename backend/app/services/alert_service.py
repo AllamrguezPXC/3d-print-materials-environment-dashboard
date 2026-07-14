@@ -131,7 +131,7 @@ def build_alert_drafts(
             AlertDraft(
                 severity=pressure_severity,
                 metric="pressure",
-                message=f"Pressure reading {pressure_pa} Pa is outside the sensor's realistic operating range.",
+                message=f"Pressure reading {round(pressure_pa, 2)} Pa is outside the sensor's realistic operating range.",
                 recommended_action="Check sensor wiring/placement; pressure does not affect filament readiness by itself.",
             )
         )
@@ -149,7 +149,7 @@ def build_alert_drafts(
                     severity=humidity_severity,
                     metric="humidity",
                     message=(
-                        f"{profile.name} spool #{affected.spool.id} humidity {relative_humidity_percent}% "
+                        f"{profile.name} spool #{affected.spool.id} humidity {round(relative_humidity_percent, 2)}% "
                         f"exceeds its {humidity_severity} threshold."
                     ),
                     recommended_action=(
@@ -168,7 +168,7 @@ def build_alert_drafts(
                     severity=temperature_severity,
                     metric="temperature",
                     message=(
-                        f"{profile.name} spool #{affected.spool.id} temperature {temperature_c}C "
+                        f"{profile.name} spool #{affected.spool.id} temperature {round(temperature_c, 2)}C "
                         f"is outside its {temperature_severity} range."
                     ),
                     recommended_action="Move spool/printer to a location within the material's ideal temperature range.",
@@ -184,8 +184,8 @@ def build_alert_drafts(
                 severity=dew_point_severity,
                 metric="dew_point",
                 message=(
-                    f"Temperature ({temperature_c}C) is within {round(temperature_c - dew_point_c, 2)}C "
-                    f"of the dew point ({dew_point_c}C) — condensation risk."
+                    f"Temperature ({round(temperature_c, 2)}C) is within {round(temperature_c - dew_point_c, 2)}C "
+                    f"of the dew point ({round(dew_point_c, 2)}C) — condensation risk."
                 ),
                 recommended_action="Seal or move affected spools away from the condensation-risk area.",
             )

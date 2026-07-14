@@ -3,15 +3,25 @@ import { AlertTriangle } from "lucide-react";
 import { AffectedSpoolsPanel } from "@/components/AffectedSpoolsPanel";
 import { AlertPanel } from "@/components/AlertPanel";
 import { AmsSlotGrid } from "@/components/AmsSlotGrid";
+import { Button } from "@/components/ui/button";
 import { DeviceTypeIcon } from "@/components/DeviceTypeIcon";
 import { EnvMetricTile } from "@/components/EnvMetricTile";
 import { ExternalSpoolSlot } from "@/components/ExternalSpoolSlot";
 import { HumidityScale } from "@/components/HumidityScale";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { toneForMetric } from "@/lib/deviceModules";
+import { formatDewPoint, formatHumidity, formatPressure, formatTemperature } from "@/lib/format";
+import {
+  isPrinterDimmed,
+  PRINTER_OPERATIONAL_STATUSES,
+  printerStatusBadgeClassName,
+  printerStatusLabel,
+} from "@/lib/printerStatus";
+import { useUpdatePrinter } from "@/hooks/resources/printers";
 import type {
   AffectedSpoolInfo,
   AlertOut,
@@ -23,6 +33,8 @@ import type {
   SpoolAssignment,
 } from "@/types/api";
 
+const DASHBOARD_FILAMENT_SYSTEM_TYPES = ["ams", "external_spool", "ams_external_spool"] as const;
+
 interface DeviceModuleCardProps {
   printer: Printer;
   amsLocations: Location[];
@@ -33,6 +45,7 @@ interface DeviceModuleCardProps {
   materials: MaterialProfile[];
   selectedLocationId?: number;
   onSelectSlot: (location: Location) => void;
+  onAssignSensor: (printer: Printer) => void;
 }
 
 function dedupeById<T>(items: T[], keyOf: (item: T) => number | null): T[] {
@@ -62,7 +75,9 @@ export function DeviceModuleCard({
   materials,
   selectedLocationId,
   onSelectSlot,
+  onAssignSensor,
 }: DeviceModuleCardProps) {
+  const updatePrinter = useUpdatePrinter();
   const entry = sensorEntries.length > 0 ? sensorEntries[0] : null;
   const alerts: AlertOut[] = dedupeById(
     sensorEntries.flatMap((e) => e.alerts),
@@ -97,8 +112,21 @@ export function DeviceModuleCard({
     return { spool, material };
   }
 
+  const dimmed = isPrinterDimmed(printer.operational_status);
+  const showsFilamentSystemToggle = (DASHBOARD_FILAMENT_SYSTEM_TYPES as readonly string[]).includes(
+    printer.filament_system_type,
+  );
+
+  function handleOperationalStatusChange(operational_status: string) {
+    updatePrinter.mutate({ id: printer.id, body: { operational_status } });
+  }
+
+  function handleFilamentSystemTypeChange(filament_system_type: string) {
+    updatePrinter.mutate({ id: printer.id, body: { filament_system_type } });
+  }
+
   return (
-    <Card size="sm" className="relative overflow-hidden">
+    <Card size="sm" className={cn("relative overflow-hidden", dimmed && "opacity-60")}>
       <div className={cn("absolute inset-x-0 top-0 h-1", accentClass)} />
       <CardHeader className="gap-2">
         <div className="flex items-center justify-between gap-2">
@@ -109,12 +137,41 @@ export function DeviceModuleCard({
               title={entry ? (entry.error ? "Sensor unavailable" : "Sensor online") : "No sensor assigned"}
             />
           </div>
+          <Select value={printer.operational_status} onValueChange={handleOperationalStatusChange}>
+            <SelectTrigger
+              size="sm"
+              className={cn("h-6 px-2 text-[10px]", printerStatusBadgeClassName(printer.operational_status))}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRINTER_OPERATIONAL_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {printerStatusLabel(s)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div>
-          <h2 className="font-heading text-sm font-semibold">{printer.name}</h2>
-          <p className="text-xs text-muted-foreground">
-            {printer.brand} {printer.model}
-          </p>
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="font-heading text-sm font-semibold">{printer.name}</h2>
+            <p className="text-xs text-muted-foreground">
+              {printer.brand} {printer.model}
+            </p>
+          </div>
+          {showsFilamentSystemToggle && (
+            <Select value={printer.filament_system_type} onValueChange={handleFilamentSystemTypeChange}>
+              <SelectTrigger size="sm" className="h-6 px-2 text-[10px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ams">AMS</SelectItem>
+                <SelectItem value="external_spool">External Spool</SelectItem>
+                <SelectItem value="ams_external_spool">AMS + External Spool</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -131,31 +188,38 @@ export function DeviceModuleCard({
               <span className="flex items-center gap-1.5">
                 {entry.sensor.serial_number}
                 <StatusBadge status={entry.sensor.sensor_type} />
+                <button
+                  type="button"
+                  onClick={() => onAssignSensor(printer)}
+                  className="text-primary underline underline-offset-2"
+                >
+                  Change
+                </button>
               </span>
               {entry.timestamp && <span>{new Date(entry.timestamp).toLocaleString()}</span>}
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2">
               <EnvMetricTile
                 label="Temp"
-                value={`${entry.temperature_c!.toFixed(1)} °C`}
+                value={formatTemperature(entry.temperature_c)}
                 icon={Thermometer}
                 tone={toneForMetric(alerts, "temperature")}
               />
               <EnvMetricTile
                 label="RH"
-                value={`${entry.relative_humidity_percent!.toFixed(1)} %`}
+                value={formatHumidity(entry.relative_humidity_percent)}
                 icon={Droplets}
                 tone={toneForMetric(alerts, "humidity")}
               />
               <EnvMetricTile
                 label="Pressure"
-                value={`${entry.pressure_kpa!.toFixed(1)} kPa`}
+                value={formatPressure(entry.pressure_kpa)}
                 icon={Gauge}
                 tone={toneForMetric(alerts, "pressure")}
               />
               <EnvMetricTile
                 label="Dew Point"
-                value={`${entry.dew_point_c!.toFixed(1)} °C`}
+                value={formatDewPoint(entry.dew_point_c)}
                 icon={CloudFog}
                 tone={toneForMetric(alerts, "dew_point")}
               />
@@ -165,12 +229,21 @@ export function DeviceModuleCard({
             )}
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">No sensor assigned to this printer's locations.</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">No sensor assigned to this printer's locations.</p>
+            <Button variant="outline" size="sm" onClick={() => onAssignSensor(printer)}>
+              + Assign sensor
+            </Button>
+          </div>
         )}
 
         <Separator />
 
-        {amsLocations.length > 0 ? (
+        {amsLocations.length === 0 && externalSpoolLocations.length === 0 && (
+          <p className="text-sm text-muted-foreground">No filament slots configured for this printer.</p>
+        )}
+
+        {amsLocations.length > 0 && (
           <AmsSlotGrid
             amsLocations={amsLocations}
             assignments={assignments}
@@ -179,7 +252,9 @@ export function DeviceModuleCard({
             selectedLocationId={selectedLocationId}
             onSelectSlot={onSelectSlot}
           />
-        ) : externalSpoolLocations.length > 0 ? (
+        )}
+
+        {externalSpoolLocations.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {externalSpoolLocations.map((location) => {
               const { spool, material } = resolveSlotSpool(location);
@@ -195,8 +270,6 @@ export function DeviceModuleCard({
               );
             })}
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No filament slots configured for this printer.</p>
         )}
 
         <Separator />

@@ -1,8 +1,13 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SpoolForm, type SpoolFormValues } from "@/components/SpoolForm";
+import { useCreateSpool } from "@/hooks/resources/spools";
 import type { FilamentSpool, Location, MaterialProfile, SpoolAssignment } from "@/types/api";
+
+const EMPTY_NEW_SPOOL: SpoolFormValues = { material_profile_id: "", brand: "", color: "", status: "ready" };
 
 interface SlotAssignmentModalProps {
   location: Location;
@@ -40,6 +45,30 @@ export function SlotAssignmentModal({
   assigning,
   clearing,
 }: SlotAssignmentModalProps) {
+  const [creatingSpool, setCreatingSpool] = useState(false);
+  const [newSpool, setNewSpool] = useState<SpoolFormValues>(EMPTY_NEW_SPOOL);
+  const createSpool = useCreateSpool();
+
+  function handleCreateSpool(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newSpool.material_profile_id || !newSpool.brand.trim()) return;
+    createSpool.mutate(
+      {
+        material_profile_id: Number(newSpool.material_profile_id),
+        brand: newSpool.brand,
+        color: newSpool.color || null,
+        status: newSpool.status,
+      },
+      {
+        onSuccess: (created) => {
+          onSelectedSpoolIdChange(String(created.id));
+          setNewSpool(EMPTY_NEW_SPOOL);
+          setCreatingSpool(false);
+        },
+      },
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -77,8 +106,13 @@ export function SlotAssignmentModal({
                     const material = materials.find((m) => m.id === s.material_profile_id);
                     return (
                       <SelectItem key={s.id} value={String(s.id)}>
-                        {material?.name ?? s.material_profile_id} — {s.brand}
-                        {s.color ? ` (${s.color})` : ""}
+                        <span className="flex items-center gap-2">
+                          <span>
+                            {material?.name ?? s.material_profile_id} — {s.brand}
+                            {s.color ? ` (${s.color})` : ""}
+                          </span>
+                          <StatusBadge status={s.status} />
+                        </span>
                       </SelectItem>
                     );
                   })}
@@ -89,11 +123,27 @@ export function SlotAssignmentModal({
               </Button>
             </div>
             {availableSpools.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                No unassigned spools available. Add one from the Spools page.
-              </p>
+              <p className="text-xs text-muted-foreground">No unassigned spools available.</p>
             )}
           </div>
+
+          {creatingSpool ? (
+            <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+              <span className="text-sm font-medium">New spool</span>
+              <SpoolForm
+                value={newSpool}
+                onChange={setNewSpool}
+                onSubmit={handleCreateSpool}
+                materials={materials}
+                submitting={createSpool.isPending}
+                submitLabel="Create & select"
+              />
+            </div>
+          ) : (
+            <Button variant="outline" size="sm" className="w-fit" onClick={() => setCreatingSpool(true)}>
+              + Create new spool
+            </Button>
+          )}
         </div>
 
         <DialogFooter showCloseButton />

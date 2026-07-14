@@ -4,6 +4,7 @@ import { AlertPanel } from "@/components/AlertPanel";
 import { ReadingCard } from "@/components/ReadingCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { describeSensorLocation } from "@/lib/sensorLocation";
+import { formatDewPoint, formatHumidity, formatPressure, formatTemperature } from "@/lib/format";
 import type { Printer, SensorReadingEntry } from "@/types/api";
 
 interface SensorReadingSectionProps {
@@ -47,14 +48,14 @@ export function SensorReadingSection({ entry, printers = [] }: SensorReadingSect
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <ReadingCard label="Temperature" value={`${entry.temperature_c!.toFixed(1)} °C`} icon={Thermometer} />
+            <ReadingCard label="Temperature" value={formatTemperature(entry.temperature_c)} icon={Thermometer} />
             <ReadingCard
               label="Relative Humidity"
-              value={`${entry.relative_humidity_percent!.toFixed(1)} %`}
+              value={formatHumidity(entry.relative_humidity_percent)}
               icon={Droplets}
             />
-            <ReadingCard label="Pressure" value={`${entry.pressure_kpa!.toFixed(1)} kPa`} icon={Gauge} />
-            <ReadingCard label="Dew Point" value={`${entry.dew_point_c!.toFixed(1)} °C`} icon={CloudFog} />
+            <ReadingCard label="Pressure" value={formatPressure(entry.pressure_kpa)} icon={Gauge} />
+            <ReadingCard label="Dew Point" value={formatDewPoint(entry.dew_point_c)} icon={CloudFog} />
           </div>
 
           <AlertPanel alerts={entry.alerts} />

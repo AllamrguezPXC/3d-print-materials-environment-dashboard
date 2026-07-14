@@ -11,6 +11,7 @@ const PRINTER: Printer = {
   serial_number: null,
   notes: null,
   filament_system_type: "ams",
+  operational_status: "activo",
 };
 
 function makeEntry(overrides: Partial<SensorReadingEntry>): SensorReadingEntry {

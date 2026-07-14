@@ -63,6 +63,21 @@ def test_get_spool_404_for_missing_id(client):
     assert response.status_code == 404
 
 
+def test_create_spool_404_for_nonexistent_material_profile(client):
+    response = client.post("/spools", json={"material_profile_id": 999999, "brand": "Ghost Brand"})
+    assert response.status_code == 404
+
+
+def test_patch_spool_404_for_nonexistent_material_profile(client):
+    material_id = _first_material_profile_id(client)
+    created = client.post(
+        "/spools", json={"material_profile_id": material_id, "brand": "Reassignable Brand"}
+    ).json()
+
+    response = client.patch(f"/spools/{created['id']}", json={"material_profile_id": 999999})
+    assert response.status_code == 404
+
+
 def test_patch_spool_updates_fields(client):
     material_id = _first_material_profile_id(client)
     created = client.post(

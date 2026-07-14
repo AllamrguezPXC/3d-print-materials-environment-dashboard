@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from typing import AsyncIterator
 
 from fastapi import FastAPI
@@ -10,6 +11,7 @@ from app.core.config import get_settings
 from app.db.base import Base
 from app.db.seed import seed
 from app.db.session import SessionLocal, engine
+from app.services.auto_capture import run_auto_capture_loop
 
 # Import models so their tables are registered on Base.metadata before
 # create_all() runs.
@@ -23,7 +25,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as session:
         seed(session)
+
+    auto_capture_task = None
+    if settings.auto_capture_interval_seconds > 0:
+        auto_capture_task = asyncio.create_task(
+            run_auto_capture_loop(settings.auto_capture_interval_seconds)
+        )
+
     yield
+
+    if auto_capture_task is not None:
+        auto_capture_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await auto_capture_task
 
 
 app = FastAPI(

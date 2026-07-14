@@ -13,12 +13,13 @@ from sqlalchemy.orm import Session
 from app.models.filament_spool import FilamentSpool
 from app.models.location import Location
 from app.models.material_profile import MaterialProfile
-from app.models.reading import Reading
 from app.models.sensor import Sensor
 from app.models.spool_assignment import SpoolAssignment
 from app.models.drying_session import DryingSession
 from app.schemas.drying import DryingRecommendation, DryingSessionCreate, DryingSessionUpdate
-from app.services.alert_service import evaluate_humidity_severity
+from app.sensors.base import SensorParseError
+from app.sensors.factory import get_sensor_reader_for_sensor
+from app.services.alert_service import _resolve_covered_location_ids, evaluate_humidity_severity
 
 ADVISORY_DISCLAIMER = (
     "This recommendation is advisory only — the app does not control the dryer directly. "
@@ -55,104 +56,122 @@ def _find_nearest_dryer_location(session: Session) -> Location | None:
     )
 
 
-def _get_last_reading_for_location(session: Session, location_id: int) -> Reading | None:
-    return (
-        session.query(Reading)
-        .filter(Reading.location_id == location_id)
-        .order_by(Reading.timestamp.desc())
-        .first()
-    )
-
-
-def get_drying_recommendations(session: Session) -> list[DryingRecommendation]:
-    """Build drying recommendations for every actively-assigned spool whose
-    latest reading at its location shows warning/critical humidity.
-
-    Spools with no reading history yet at their assigned location are
-    skipped entirely (there is nothing to recommend against yet), and
-    spools currently reading "ok" humidity are also skipped (no drying
-    recommendation is needed while readiness is fine).
+def _assignments_covering(session: Session, location_id: int):
+    """(assignment, spool, profile, location) rows for every active
+    assignment in the sibling-expanded module a sensor at `location_id`
+    covers -- same expansion `alert_service.get_affected_spools` uses, so a
+    spool assigned to any slot of an AMS module a sensor is attached to is
+    covered here too.
     """
-    rows = (
+    covered_ids = _resolve_covered_location_ids(session, location_id)
+    return (
         session.query(SpoolAssignment, FilamentSpool, MaterialProfile, Location)
         .join(FilamentSpool, SpoolAssignment.spool_id == FilamentSpool.id)
         .join(MaterialProfile, FilamentSpool.material_profile_id == MaterialProfile.id)
         .join(Location, SpoolAssignment.location_id == Location.id)
-        .filter(SpoolAssignment.is_active.is_(True))
+        .filter(SpoolAssignment.location_id.in_(covered_ids), SpoolAssignment.is_active.is_(True))
         .all()
     )
 
+
+def get_drying_recommendations(session: Session) -> list[DryingRecommendation]:
+    """Build drying recommendations from every active sensor's LIVE current
+    reading -- the same live computation GET /readings/current uses for the
+    Dashboard's alert panels (Sensor -> live read -> evaluate_humidity_severity),
+    not a persisted Reading row. This is deliberate: a persisted Reading is
+    only ever written when someone uses "Capture reading now" on /history, so
+    it can be stale by minutes relative to what the Dashboard shows live right
+    now -- the exact inconsistency this replaced (a spool flagged critical on
+    the Dashboard but silently absent here, or vice versa).
+
+    A sensor with no location, or whose read fails (offline/misconfigured),
+    contributes nothing (mirrors GET /readings/current's per-sensor error
+    isolation). Spools currently reading "ok" humidity are skipped -- no
+    drying recommendation is needed while readiness is fine.
+    """
     recommendations: list[DryingRecommendation] = []
+    seen_spool_ids: set[int] = set()
 
-    for assignment, spool, profile, location in rows:
-        last_reading = _get_last_reading_for_location(session, location.id)
-        if last_reading is None:
+    active_sensors = session.query(Sensor).filter_by(is_active=True).order_by(Sensor.id.asc()).all()
+
+    for sensor in active_sensors:
+        if sensor.location_id is None:
             continue
 
-        status = evaluate_humidity_severity(last_reading.relative_humidity_percent, profile)
-        if status == "ok":
+        try:
+            raw = get_sensor_reader_for_sensor(sensor).read_current()
+        except (SensorParseError, OSError, ValueError):
             continue
 
-        if location.location_type == "dryer":
-            dryer_location = location
-        else:
-            dryer_location = _find_nearest_dryer_location(session)
+        for assignment, spool, profile, location in _assignments_covering(session, sensor.location_id):
+            if spool.id in seen_spool_ids:
+                continue
 
-        dryer_location_id: int | None = None
-        dryer_max_temp_c: float | None = None
-        dryer_capability_ok: bool | None = None
+            status = evaluate_humidity_severity(raw.relative_humidity_percent, profile)
+            if status == "ok":
+                continue
+            seen_spool_ids.add(spool.id)
 
-        location_desc = _describe_location(location, assignment)
-        spool_desc = f"{spool.brand} {profile.name} {spool.color} spool #{spool.id}"
-
-        message = (
-            f"{location_desc} / {spool_desc} is above its humidity limit ({status}, "
-            f"{last_reading.relative_humidity_percent}% RH). "
-            f"Dry at {profile.drying_temp_c}°C for {profile.drying_time_hours_min}-"
-            f"{profile.drying_time_hours_max} hours."
-        )
-
-        if dryer_location is None:
-            message += " No dryer location is configured in the system yet; add one to verify drying capability."
-        else:
-            dryer_location_id = dryer_location.id
-            dryer_max_temp_c = dryer_location.max_temp_c
-            if dryer_location.max_temp_c is None:
-                dryer_capability_ok = None
-                message += (
-                    f" Dryer location '{dryer_location.name}' has no recorded max temperature; "
-                    f"verify it can sustain {profile.drying_temp_c}°C before use."
-                )
+            if location.location_type == "dryer":
+                dryer_location = location
             else:
-                dryer_capability_ok = dryer_location.max_temp_c >= profile.drying_temp_c
-                if not dryer_capability_ok:
+                dryer_location = _find_nearest_dryer_location(session)
+
+            dryer_location_id: int | None = None
+            dryer_max_temp_c: float | None = None
+            dryer_capability_ok: bool | None = None
+
+            location_desc = _describe_location(location, assignment)
+            spool_desc = f"{spool.brand} {profile.name} {spool.color} spool #{spool.id}"
+
+            message = (
+                f"{location_desc} / {spool_desc} is above its humidity limit ({status}, "
+                f"{round(raw.relative_humidity_percent, 2)}% RH). "
+                f"Dry at {profile.drying_temp_c}°C for {profile.drying_time_hours_min}-"
+                f"{profile.drying_time_hours_max} hours."
+            )
+
+            if dryer_location is None:
+                message += " No dryer location is configured in the system yet; add one to verify drying capability."
+            else:
+                dryer_location_id = dryer_location.id
+                dryer_max_temp_c = dryer_location.max_temp_c
+                if dryer_location.max_temp_c is None:
+                    dryer_capability_ok = None
                     message += (
-                        f" Warning: dryer location '{dryer_location.name}' max temperature "
-                        f"({dryer_location.max_temp_c}°C) is below the recommended "
-                        f"{profile.drying_temp_c}°C — verify the dryer can sustain the requested "
-                        "temperature before drying."
+                        f" Dryer location '{dryer_location.name}' has no recorded max temperature; "
+                        f"verify it can sustain {profile.drying_temp_c}°C before use."
                     )
                 else:
-                    message += (
-                        f" Dryer location '{dryer_location.name}' can sustain the recommended temperature."
-                    )
+                    dryer_capability_ok = dryer_location.max_temp_c >= profile.drying_temp_c
+                    if not dryer_capability_ok:
+                        message += (
+                            f" Warning: dryer location '{dryer_location.name}' max temperature "
+                            f"({dryer_location.max_temp_c}°C) is below the recommended "
+                            f"{profile.drying_temp_c}°C — verify the dryer can sustain the requested "
+                            "temperature before drying."
+                        )
+                    else:
+                        message += (
+                            f" Dryer location '{dryer_location.name}' can sustain the recommended temperature."
+                        )
 
-        message += " " + ADVISORY_DISCLAIMER
+            message += " " + ADVISORY_DISCLAIMER
 
-        recommendations.append(
-            DryingRecommendation(
-                spool_id=spool.id,
-                material_profile_name=profile.name,
-                current_status=status,
-                drying_temp_c=profile.drying_temp_c,
-                drying_time_hours_min=profile.drying_time_hours_min,
-                drying_time_hours_max=profile.drying_time_hours_max,
-                dryer_location_id=dryer_location_id,
-                dryer_capability_ok=dryer_capability_ok,
-                dryer_max_temp_c=dryer_max_temp_c,
-                message=message,
+            recommendations.append(
+                DryingRecommendation(
+                    spool_id=spool.id,
+                    material_profile_name=profile.name,
+                    current_status=status,
+                    drying_temp_c=profile.drying_temp_c,
+                    drying_time_hours_min=profile.drying_time_hours_min,
+                    drying_time_hours_max=profile.drying_time_hours_max,
+                    dryer_location_id=dryer_location_id,
+                    dryer_capability_ok=dryer_capability_ok,
+                    dryer_max_temp_c=dryer_max_temp_c,
+                    message=message,
+                )
             )
-        )
 
     return recommendations
 

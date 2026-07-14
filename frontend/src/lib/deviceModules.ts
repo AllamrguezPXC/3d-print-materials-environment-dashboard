@@ -20,6 +20,20 @@ export interface DeviceModulesResult {
   unassignedEntries: SensorReadingEntry[];
 }
 
+/** Which slot-grid kinds a printer's card should show, per its own
+ * filament_system_type -- not per whatever Location rows happen to exist.
+ * A printer switched away from "external_spool" can still have a leftover
+ * printer_external_spool Location (the backend's sync is deliberately
+ * non-destructive), but showing it anyway would contradict the printer's
+ * own selector: "AMS" selected, yet an External Spool slot still rendered.
+ * ams_external_spool is the one type meant to show both at once. */
+function slotKindsForFilamentSystemType(type: string): { ams: boolean; externalSpool: boolean } {
+  return {
+    ams: type === "ams" || type === "ams_external_spool",
+    externalSpool: type === "external_spool" || type === "ams_external_spool",
+  };
+}
+
 /** Groups printers/locations/sensor readings into device-module view-models
  * for the Dashboard. Every printer always gets a module (even with zero
  * sensors/locations -- a real, unconfigured printer is not fabricated
@@ -31,17 +45,22 @@ export function buildDeviceModules(
   locations: Location[],
   sensorEntries: SensorReadingEntry[],
 ): DeviceModulesResult {
-  const printerModules: PrinterDeviceModule[] = printers.map((printer) => ({
-    kind: "printer",
-    printer,
-    amsLocations: locations.filter(
-      (l) => l.printer_id === printer.id && l.location_type === "printer_ams",
-    ),
-    externalSpoolLocations: locations.filter(
-      (l) => l.printer_id === printer.id && l.location_type === "printer_external_spool",
-    ),
-    sensorEntries: sensorEntries.filter((e) => e.location?.printer_id === printer.id),
-  }));
+  const printerModules: PrinterDeviceModule[] = printers.map((printer) => {
+    const slotKinds = slotKindsForFilamentSystemType(printer.filament_system_type);
+    return {
+      kind: "printer",
+      printer,
+      amsLocations: slotKinds.ams
+        ? locations.filter((l) => l.printer_id === printer.id && l.location_type === "printer_ams")
+        : [],
+      externalSpoolLocations: slotKinds.externalSpool
+        ? locations.filter(
+            (l) => l.printer_id === printer.id && l.location_type === "printer_external_spool",
+          )
+        : [],
+      sensorEntries: sensorEntries.filter((e) => e.location?.printer_id === printer.id),
+    };
+  });
 
   const standaloneEntries = sensorEntries.filter(
     (e) => e.location !== null && e.location.printer_id === null,

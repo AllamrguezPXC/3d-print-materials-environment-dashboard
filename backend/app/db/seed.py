@@ -215,6 +215,7 @@ def _get_or_create_printer(session: Session, spec: dict) -> Printer:
         brand=spec["brand"],
         model=spec["model"],
         filament_system_type=spec.get("filament_system_type", "manual"),
+        operational_status=spec.get("operational_status", "activo"),
     )
     session.add(printer)
     session.flush()

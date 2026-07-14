@@ -207,6 +207,40 @@ does not control the dryer directly — this is validation/tracking only.
   unmodified (all still power `/printers/:id`, zero regression risk) rather than rebuilding them.
   `SensorReadingSection.tsx` itself is no longer used by the Dashboard (still used by
   `PrinterDetail.tsx`, unchanged there).
+- ~~Dashboard had no filters, and 3 correctness bugs: environmental values truncated/1-decimal, an
+  overly-restrictive spool-assignment selector with no create-spool path, Drying Recommendations
+  always empty~~ — **done**, see `docs/Tareas/dashboard-filters-and-fixes/TASK.md` and
+  `docs/Dashboard_Filters_And_Assignments_Guide.md`: `lib/format.ts` centralizes 2-decimal value
+  formatting; `EnvMetricTile.tsx`'s truncation bug fixed (removed `truncate`, widened the metric-tile
+  grid); `lib/spoolAvailability.ts` extracts the already-correct-but-duplicated "available spools"
+  filter; `SlotAssignmentModal.tsx` gained an inline "+ Create new spool" flow; `drying_service.py`
+  now expands to sibling AMS locations (reusing `alert_service._resolve_covered_location_ids`) when
+  looking up the latest reading, fixing a real cross-service inconsistency where a spool could show
+  a critical alert on the Dashboard but never appear in Drying Recommendations. `lib/deviceFilters.ts`
+  + `DashboardFilters.tsx` add a first version of Dashboard filters (search, alert/sensor/slot
+  status, printer brand, filament type/brand/color/status), reusing `FilamentFilters.tsx`'s
+  controlled-component shape. **Deferred from this same task** (user's explicit scope choice, since
+  built in the very next task below): printer operational status, sensor assignment/reassignment
+  embedded in each Dashboard module, AMS↔external-spool system-type switching from the Dashboard,
+  and filter-state persistence across page loads.
+- ~~Sidebar "Alerts" page didn't reflect the Dashboard's live alerts; printer operational status,
+  embedded sensor assignment, AMS↔external-spool switching, and filter persistence all deferred~~ —
+  **done**, see `docs/Tareas/dashboard-admin-controls/TASK.md` and
+  `docs/Dashboard_Admin_Controls_Guide.md`: the Alerts bug was the same "live vs persisted" class
+  already fixed for Drying Recommendations, but `/alerts`/`Alert` back a real resolve/audit
+  workflow, so the fix is a new `AlertsBell.tsx` popover (fed by the same `["current-reading"]`
+  query the Dashboard's `AlertPanel` uses) replacing the sidebar nav link, not making `/alerts`
+  itself live — that page is unchanged. `Printer.operational_status` ("activo"/"inactivo"/
+  "mantenimiento") added following the `filament_system_type` precedent exactly, editable from both
+  `DeviceModuleCard` and `Printers.tsx` (dims the card visually, never gates alerts, filterable).
+  `printer_service._sync_locations_for_filament_system_type` handles AMS↔external-spool switching
+  non-destructively (only ever creates missing Location rows, never deletes — idempotent, no
+  orphaning risk); the Dashboard's toggle is limited to those 2 values, `/printers` keeps all 4.
+  Sensor reassignment needed zero backend changes (`PATCH /sensors/{id}` already worked) — new
+  `SensorAssignmentModal.tsx` mirrors `SlotAssignmentModal`'s shared-modal pattern, and `/sensors`
+  gained its first-ever inline edit control. `hooks/useDeviceFilters.ts` persists Dashboard filters
+  to localStorage (versioned key, merge-over-defaults), with a "Reset filters" button in
+  `Settings.tsx`.
 - ~~No live sensor-trend chart *during* an active drying session~~ — **done**, see
   `docs/Tareas/drying-session-trend-chart/TASK.md`: closes Requirements.md §11.6 ("review measured
   trend"). A "View trend" button per session row (`DryingSessionsTable.tsx`, shown whenever

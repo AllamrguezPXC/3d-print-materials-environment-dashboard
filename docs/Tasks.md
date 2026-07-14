@@ -735,6 +735,246 @@ sensor, rather than building a new visual system from scratch.
 - [x] `docs/Dashboard_Device_Redesign_Guide.md` written (new); updated
   `docs/Frontend_Redesign_Guide.md` §9.
 
+## Phase 30 — Dashboard Correctness Fixes + Advanced Filters
+
+See `docs/Tareas/dashboard-filters-and-fixes/TASK.md` and
+`docs/Dashboard_Filters_And_Assignments_Guide.md` for the full task record. The user reported 3
+concrete bugs from Dashboard screenshots (truncated/1-decimal environmental values, an
+overly-restrictive spool selector with no create-spool path, and Drying Recommendations always
+empty despite visible warnings) plus a much larger feature request (filters, printer operational
+status, sensor assignment from the dashboard, AMS↔external-spool switching from the dashboard).
+Per `CLAUDE.md`'s MVP-focused constraint, the user was asked to prioritize and chose: fix the 3
+bugs + build a first version of Dashboard filters, deferring the rest.
+
+- [x] `lib/format.ts` (new): centralized 2-decimal environmental-value formatters
+  (`formatTemperature`/`formatHumidity`/`formatPressure`/`formatDewPoint`), replacing 5+ duplicated
+  ad hoc `.toFixed(1)` call sites.
+- [x] Fixed `EnvMetricTile.tsx`'s value-truncation bug (`truncate` class inside a `min-w-0`
+  container clipped long values like "31.24 °C" to "31..."): removed truncation, changed the
+  metric-tile grid from `grid-cols-2 sm:grid-cols-4` to a fixed `grid-cols-2` for more width per
+  tile.
+- [x] Backend: `alert_service.py`/`drying_service.py` now round floats before interpolating them
+  into alert/recommendation message strings.
+- [x] `lib/spoolAvailability.ts` (new): extracted the "available spools" filter (already correct,
+  previously duplicated in `DeviceModuleGrid.tsx` and `PrinterDetail.tsx`) into one testable
+  function.
+- [x] `SlotAssignmentModal.tsx`: spool selector now shows each option's `StatusBadge`; added an
+  inline "+ Create new spool" flow (reuses the existing `SpoolForm` + `useCreateSpool()`) that
+  auto-selects the newly created spool.
+- [x] Fixed the real Drying Recommendations bug: `drying_service.py` looked up the latest `Reading`
+  by the exact `location_id` a spool was assigned to, but a shared-AMS-sensor module (per Phase 28)
+  only persists readings at the slot the sensor is attached to — a spool in a sibling slot was
+  silently skipped. Now reuses `alert_service._resolve_covered_location_ids` to expand to sibling
+  locations before looking up the latest reading, matching what the Dashboard's alert panel already
+  shows for that spool.
+- [x] `lib/deviceFilters.ts` + `DashboardFilters.tsx` (new): first version of Dashboard filters
+  (search, alert status, sensor status, slot status, printer brand, filament type/brand/color/
+  status), reusing `FilamentFilters.tsx`'s controlled-component shape, filtering client-side over
+  already-fetched data. Printer brands/filament types/brands/colors are generated dynamically from
+  the data, never hardcoded. Wired into `DeviceModuleGrid.tsx` with a live result counter, removable
+  filter chips, and an explicit "No devices match the current filters." empty state.
+- [x] Tests: `format.test.ts`, `spoolAvailability.test.ts`, `deviceFilters.test.ts` (11 tests),
+  `DashboardFilters.test.tsx`, `SlotAssignmentModal.test.tsx` (new — empty state, create-spool flow,
+  status badge in selector); updated `EnvMetricTile.test.tsx` (no truncate class),
+  `StandaloneLocationCard.test.tsx`/`Dashboard.test.tsx` (2-decimal assertions); backend
+  `test_drying_service.py` new case for sibling-AMS-slot reading expansion.
+- [x] `npx vitest run` (93 passed, 19 files), `tsc -b`/`build`/`lint` clean, backend suite 139
+  passed.
+- [x] `docs/Dashboard_Filters_And_Assignments_Guide.md` written (new); updated
+  `docs/Frontend_Redesign_Guide.md` §9.
+- [x] Playwright browser verification: confirmed full-value 2-decimal display in dark/light mode,
+  filter narrowing (e.g. "No sensor assigned"), the create-spool-from-modal flow syncing to
+  `/spools`, and Drying Recommendations correctly surfacing the AMS sibling-slot spool.
+
+### Phase 30 follow-up — Drying Recommendations vs live alerts inconsistency
+
+During the user's own browser validation, they caught a real remaining bug: Drying Recommendations
+showed 3 criticals while the printer/location cards showed only 1 active alert. The initial
+sibling-AMS-expansion fix above only patched half of Bug 3 — `get_drying_recommendations` still
+read a **persisted** `Reading` row (only ever written via "Capture reading now" on `/history`),
+which could be minutes stale relative to what `GET /readings/current` computes live for the
+Dashboard's alert panels.
+
+- [x] `drying_service.get_drying_recommendations` rewritten to stop touching the `Reading` table
+  entirely: it now iterates every active `Sensor`, takes a live read via the same
+  `get_sensor_reader_for_sensor(...).read_current()` call `GET /readings/current` uses, and expands
+  to covered sibling locations (`alert_service._resolve_covered_location_ids`) before evaluating
+  humidity severity — the identical computation the Dashboard's `AlertPanel` performs, guaranteeing
+  the two can never structurally disagree beyond one poll tick's worth of live-sensor drift.
+- [x] `Dashboard.tsx` now passes its own `refreshInterval` (from `useRefreshInterval()`, the
+  user-configurable Settings value) into `useDryingRecommendations(refreshInterval)` instead of a
+  hardcoded 15s default, so Drying Recommendations refetches on the same cadence as the
+  printer/location alert panels.
+- [x] `backend/tests/services/test_drying_service.py` rewritten: tests now monkeypatch
+  `get_sensor_reader_for_sensor` for a fixed live reading (same pattern as
+  `tests/api/test_sensors.py`) instead of seeding `Reading` rows, since severity is no longer read
+  from that table.
+- [x] Found and fixed a latent test-isolation bug surfaced by this refactor:
+  `test_no_dryer_configured_sets_capability_none` did a blanket `DELETE FROM locations WHERE
+  location_type='dryer'` without cleaning up dependent `SpoolAssignment`/`Sensor` rows first —
+  SQLite reuses a deleted row's freed integer id for the next insert in that table, so the orphaned
+  rows would silently reattach to whatever unrelated new `Location` a later test created next,
+  corrupting that test's data. This was always latent (the old `Reading`-based code just never
+  surfaced it, since `Reading` was cleared every test regardless). Fixed by deleting dependent rows
+  first; verified by running the full suite in multiple file orderings.
+  `tests/api/test_drying.py`'s `test_get_recommendations_returns_empty_list_when_no_reading_history`
+  was also order-dependent for the same underlying reason and was rewritten to assert only its own
+  seeded spool's exclusion, not global emptiness.
+- [x] Cleaned up debugging-artifact rows (test locations/sensors/spools) that had leaked into the
+  real dev database during manual backend debugging via ad hoc scripts that didn't set
+  `DATABASE_URL=sqlite:///:memory:`.
+- [x] `pytest -q` (139 passed, re-verified across 3 file orderings), `npx vitest run` (93 passed).
+- [x] Playwright re-verification: confirmed the printer/location cards and Drying Recommendations
+  now show a consistent 0-vs-0 empty state on the live dev DB after cleanup.
+
+## Phase 31 — Dashboard Admin Controls (bell, printer status, sensor/filament-system assignment, filter persistence)
+
+See `docs/Tareas/dashboard-admin-controls/TASK.md` and `docs/Dashboard_Admin_Controls_Guide.md` for
+the full task record. During browser validation of Phase 30, the user reported the sidebar's
+"Alerts" page didn't reflect the Dashboard's live alerts, and asked for it to become a global
+notification-bell popover — plus the four items Phase 30's own guide had explicitly deferred:
+printer operational status, embedded sensor assignment, AMS↔external-spool switching, and filter
+persistence.
+
+- [x] Diagnosed the Alerts bug as the same "live vs persisted" class already fixed for Drying
+  Recommendations — but `/alerts`/`Alert` back a real resolve/audit workflow this time, so the fix
+  is a new live view (`AlertsBell.tsx`, fed by the same `["current-reading"]` query the Dashboard's
+  `AlertPanel` uses), not making `/alerts` itself live. New `ui/popover.tsx` (Radix wrapper, no new
+  dependency). Sidebar "Alerts" nav link removed from `Layout.tsx`; `/alerts` page unchanged.
+- [x] `Printer.operational_status` ("activo"/"inactivo"/"mantenimiento", default "activo") added
+  following the exact `filament_system_type` precedent (model column, schema, service-layer
+  validation, no DB enum). Editable from `DeviceModuleCard` (Dashboard) and inline in `Printers.tsx`
+  (both call the same `PATCH /printers/{id}` + `useUpdatePrinter()`, staying in sync via the shared
+  query cache). Non-"activo" dims the card visually; never gates or suppresses alerts (administrative
+  status is a separate axis from real environmental risk). New dashboard filter criterion.
+- [x] `printer_service._sync_locations_for_filament_system_type`: non-destructive Location-row sync
+  on a `filament_system_type` change (only ever creates missing rows for the new type — 4 AMS slots
+  or 1 external-spool location — never deletes existing ones), making AMS↔external-spool toggling
+  idempotent and safe against orphaning assignments/sensors. Dashboard toggle limited to
+  ams/external_spool (2 values); `/printers` keeps all 4. `hooks/resources/printers.ts` now
+  invalidates `"locations"` too so the Dashboard picks up newly-synced slots immediately.
+- [x] Sensor assignment/reassignment from the Dashboard needed zero backend changes (`PATCH
+  /sensors/{id}` + the existing AMS-conflict check already supported it) — only UI. Hoisted
+  `buildLocationOptions` from `SensorForm.tsx` into `lib/sensorLocation.ts` (shared with two new
+  helpers, `representativeLocationForPrinter`/`currentSensorForPrinter`); new
+  `SensorAssignmentModal.tsx` mirrors `SlotAssignmentModal`'s shared-modal architecture; reassigning
+  is two sequential calls (unassign then assign), matching the existing spool-reassignment pattern.
+  `/sensors` gained its first-ever inline edit control (previously create/delete only) for 1:1
+  symmetry.
+- [x] `frontend/src/hooks/useDeviceFilters.ts`: filter persistence via localStorage, versioned key,
+  merge-over-defaults (missing keys/malformed JSON never leave a field `undefined`). Unlike
+  `useRefreshInterval` (read-only), this hook's setter persists on every change since filters change
+  directly on the Dashboard. New "Dashboard filters" card in `Settings.tsx` with a "Reset filters"
+  button.
+- [x] Tests: `printerStatus.test.ts`, `sensorLocation.test.ts` (new helpers), `deviceFilters.test.ts`
+  (`printerStatus` criterion), `SensorAssignmentModal.test.tsx` (new), `DeviceModuleCard.test.tsx`
+  (extended: selects, dimming, assign-sensor button), `useDeviceFilters.test.ts` (new),
+  `AlertsBell.test.tsx` (new), `Layout.test.tsx` (new — confirms nav link removed, bell present),
+  `Printers.test.tsx`/`Sensors.test.tsx`/`Settings.test.tsx` (new — first test files for these
+  pages); backend `test_printers.py` extended with `operational_status` + Location-sync tests
+  (idempotent AMS↔external_spool alternation, never-delete guarantee).
+- [x] `pytest -q` (149 passed), `npx vitest run` (146 passed), `tsc -b`/`build`/`lint` clean.
+
+## Phase 32 — Dashboard Admin Controls Round 2 (alert location, auto-capture history, status colors, AMS/spool ghost-assignment fix + hybrid type, sensor creation in modal)
+
+See `docs/Tareas/dashboard-admin-controls-round-2/TASK.md` and
+`docs/Dashboard_Admin_Controls_Round2_Guide.md` for the full task record. Browser validation of
+Phase 31 surfaced five follow-up issues.
+
+- [x] `AlertsBell.tsx` now threads each alert's `SensorReadingEntry.location` through
+  `describeSensorLocation()` (already used elsewhere for this exact purpose) so every popover row
+  shows where the filament is (printer/AMS/external-spool/storage location), falling back to the
+  sensor's serial number for an orphan sensor with no location.
+- [x] Root-caused `/alerts` staying empty forever: `Reading`/`Alert` rows are only ever persisted by
+  `POST /readings`, which nothing called automatically — the Dashboard's live polling
+  (`GET /readings/current`) never persists. New `app/services/auto_capture.py`'s
+  `run_auto_capture_loop`, started as an asyncio task from `app/main.py`'s lifespan
+  (`Settings.auto_capture_interval_seconds`, default 30s), now calls the existing
+  `capture_and_persist_all_active_sensors` automatically on an interval, so real history
+  accumulates without anyone clicking "Capture reading now". Disabled deterministically in tests via
+  `AUTO_CAPTURE_INTERVAL_SECONDS=0` in `conftest.py`.
+- [x] `lib/printerStatus.ts` already defined `printerStatusBadgeClassName()` (green/yellow) but it was
+  never actually applied anywhere, and `inactivo` mapped to grey, not the requested red. Fixed the
+  `inactivo` mapping to `destructive` (red) and applied the classname to the operational-status
+  `Select` trigger in both `DeviceModuleCard.tsx` and `Printers.tsx`.
+- [x] Root-caused the AMS↔external-spool "ghost assignment" bug: `DeviceModuleCard.tsx`'s slot section
+  was an `if amsLocations.length > 0 {...} else if externalSpoolLocations.length > 0 {...}` —
+  mutually exclusive — even though `lib/deviceModules.ts` already computes both arrays independently
+  from real (non-destructively-synced) `Location` rows. After switching types, a printer can
+  legitimately have both kinds of Locations (and an active `SpoolAssignment` on the now-hidden one),
+  but the card only ever rendered one branch. Changed to two independent conditionals (both render
+  when both are non-empty), which fixes the visibility bug with zero backend change and, as a bonus,
+  is exactly what's needed to support a third `ams_external_spool` filament-system-type value for
+  printers that use both at once (`printer_service.py`'s sync now ensures both an AMS set and an
+  external-spool Location when switched to this value; `PrinterForm.FILAMENT_SYSTEM_TYPES` and
+  `DeviceModuleCard`'s Dashboard-embedded toggle both gained the third option;
+  `lib/deviceType.ts` got a matching icon/label).
+- [x] `SensorAssignmentModal.tsx` gained inline "+ Create new sensor" (name/model/serial/type/port),
+  mirroring `SlotAssignmentModal`'s embedded-`SpoolForm` pattern for spools — simpler here since
+  `Sensor.location_id` is a direct field (no separate assignment row), so creating with
+  `location_id` set to the modal's target location assigns it in one step. Disabled (with an inline
+  note) while a sensor is already assigned, since a second one for the same location would trip the
+  existing AMS one-sensor-per-module 400.
+- [x] Tests: `AlertsBell.test.tsx` (location-context cases), `printerStatus.test.ts` (destructive tone
+  for inactivo), `DeviceModuleCard.test.tsx` (dual-rendering case), `deviceType.test.ts`
+  (`ams_external_spool`), `SensorAssignmentModal.test.tsx` (create-and-assign, disabled-while-assigned),
+  new backend `test_auto_capture.py`, `test_printers.py` extended (`ams_external_spool` sync +
+  idempotency).
+- [x] `pytest -q` (153 passed), `npx vitest run` (153 passed), `tsc -b`/`build`/`lint` clean.
+- [x] **Addendum** (same-day follow-on from browser validation): the dual-rendering fix above was
+  itself too permissive — it showed both slot kinds whenever both had real Locations, regardless of
+  the printer's own `filament_system_type` selector (e.g. a printer set to "AMS" still showing an
+  External Spool slot). Fixed by resolving which slot kind(s) apply from `filament_system_type`
+  itself in `lib/deviceModules.ts`'s `buildDeviceModules` (`slotKindsForFilamentSystemType`), which
+  automatically keeps `DeviceModuleCard.tsx` and `deviceFilters.ts` consistent (both already consume
+  this function's output). Real alerts/affected-spools for a now-hidden Location still surface
+  (sensor-driven, not slot-kind-driven) — only the slot tile is hidden. 4 new
+  `deviceModules.test.ts` cases; `npx vitest run` (157 passed), `tsc -b` clean.
+
+## Phase 33 — Final Review: Full-Stack Bug Sweep
+
+See `docs/Tareas/final-review-bug-sweep/TASK.md` and `docs/Final_Review_Bug_Sweep_Guide.md` for the
+full task record. Requested by the user as a last pass before marking the project complete: find
+and fix real bugs, separately identify (without necessarily implementing) further improvement
+opportunities with concrete tools, then re-validate everything.
+
+- [x] Three parallel subagent reviews (backend, frontend, security) + manual Playwright sweep of
+  every page (console-error check on each) + direct `curl` reproduction of every suspected bug
+  before treating it as real.
+- [x] Fixed: `MaterialProfile` create/update accepted internally inconsistent thresholds (e.g.
+  `ideal_rh_max_percent > critical_rh_max_percent`) with zero validation, silently inverting
+  `alert_service`'s severity comparisons for that material. New `_validate_thresholds()` in
+  `material_profile_service.py`, applied to both create and the merged-with-existing-row result of
+  an update.
+- [x] Fixed: SQLite foreign keys were never enforced (no `PRAGMA foreign_keys=ON`) — reproduced
+  concretely (deleting a `Location` referenced by an active `SpoolAssignment` silently succeeded
+  instead of the advertised 400). `db/session.py` now enables the pragma (+ `journal_mode=WAL`,
+  a zero-risk addition that lets the auto-capture background loop coexist with concurrent
+  requests) on every SQLite connection via an `event.listens_for(engine, "connect")` handler.
+- [x] Fixed: several create/update endpoints never checked a referenced foreign key actually
+  existed (`Sensor.location_id`, `SpoolAssignment.spool_id`/`location_id`,
+  `FilamentSpool.material_profile_id`, `Location.printer_id`) — reproduced concretely
+  (`POST /assignments` with nonexistent ids returned 200). Added `_check_*_exists()` helpers
+  mirroring the existing `get_*_or_404`/`create_drying_session` pattern.
+- [x] Fixed: hourly dew-point average in `reading_service.get_readings_history` divided by every
+  reading in the bucket instead of only the ones with a non-null `dew_point_c` — currently latent
+  (no live write path leaves it null) but fixed and regression-tested via direct `save_reading()`
+  insertion.
+- [x] Fixed: `useCreateSensor`/`useUpdateSensor`/`useCreateAssignment`/`useUpdateAssignment` never
+  invalidated the `"current-reading"` query, leaving Dashboard cards stale after a
+  sensor/spool reassignment until the next poll tick. Verified live: the card now updates the
+  instant the mutation resolves.
+- [x] Fixed: `History.tsx` showed "No readings in this range yet" before the user had ever clicked
+  "Load history" (query is `enabled: false`), indistinguishable from a genuine empty result. Added
+  an `isFetched`-gated "choose a range and search" prompt.
+- [x] Documented (not implemented, per explicit scope): route-based code splitting for the ~880kB
+  main chunk, missing DB indexes on hot-path filter columns, a duplicate `get_affected_spools`
+  query per request, missing loading/error states on several list pages, a color-only status dot
+  with no ARIA label, `StatusBadge` missing sensor-type color entries, and a `sensor_type` naming
+  collision between two different value domains.
+- [x] `pytest -q` (170 passed, 12 new), `npx vitest run` (160 passed, 4 new), `tsc -b`/`build`/`lint`
+  clean. All demo data touched during live verification restored to its original state.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

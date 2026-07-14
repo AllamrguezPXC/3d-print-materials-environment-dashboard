@@ -3,6 +3,7 @@ import { Radio } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { SensorForm, type SensorFormValues } from "@/components/SensorForm";
@@ -14,8 +15,10 @@ import {
   useRemoveSensor,
   useSensors,
   useTestReadSensor,
+  useUpdateSensor,
 } from "@/hooks/resources/sensors";
-import { describeSensorLocation } from "@/lib/sensorLocation";
+import { buildLocationOptions } from "@/lib/sensorLocation";
+import { formatHumidity, formatTemperature } from "@/lib/format";
 import type { SensorTestReadResult } from "@/types/api";
 
 const EMPTY_SENSOR: SensorFormValues = {
@@ -27,6 +30,8 @@ const EMPTY_SENSOR: SensorFormValues = {
   location_id: "",
 };
 
+const NO_LOCATION = "none";
+
 export function Sensors() {
   const { data: sensors = [] } = useSensors();
   const { data: locations = [] } = useLocations();
@@ -35,7 +40,9 @@ export function Sensors() {
 
   const createSensor = useCreateSensor();
   const removeSensor = useRemoveSensor();
+  const updateSensor = useUpdateSensor();
   const testRead = useTestReadSensor();
+  const locationOptions = buildLocationOptions(locations, printers);
 
   const [newSensor, setNewSensor] = useState(EMPTY_SENSOR);
   const [testResults, setTestResults] = useState<Record<number, SensorTestReadResult>>({});
@@ -80,6 +87,13 @@ export function Sensors() {
     });
   }
 
+  function handleLocationChange(id: number, value: string) {
+    updateSensor.mutate(
+      { id, body: { location_id: value === NO_LOCATION ? null : Number(value) } },
+      { onError: (err) => notifyError(err.message) },
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-heading font-semibold">Sensors</h1>
@@ -116,10 +130,22 @@ export function Sensors() {
                     <TableCell>{s.sensor_type}</TableCell>
                     <TableCell>{s.port ?? "—"}</TableCell>
                     <TableCell>
-                      {(() => {
-                        const location = locations.find((l) => l.id === s.location_id);
-                        return location ? describeSensorLocation(location, printers) : "—";
-                      })()}
+                      <Select
+                        value={s.location_id ? String(s.location_id) : NO_LOCATION}
+                        onValueChange={(value) => handleLocationChange(s.id, value)}
+                      >
+                        <SelectTrigger size="sm" className="w-44">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_LOCATION}>No location</SelectItem>
+                          {locationOptions.map((option) => (
+                            <SelectItem key={option.id} value={String(option.id)}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={s.is_active ? "ok" : "unknown"} label={s.is_active ? "active" : "inactive"} />
@@ -137,7 +163,7 @@ export function Sensors() {
                         {result &&
                           (result.success ? (
                             <span className="text-xs text-ok">
-                              {result.temperature_c?.toFixed(1)}°C / {result.relative_humidity_percent?.toFixed(1)}%
+                              {formatTemperature(result.temperature_c)} / {formatHumidity(result.relative_humidity_percent)}
                             </span>
                           ) : (
                             <span className="text-xs text-destructive">{result.error}</span>

@@ -9,6 +9,7 @@ import {
   locationsApi,
   materialsApi,
   printersApi,
+  sensorsApi,
   spoolsApi,
 } from "@/api/config";
 import type { CurrentReadingsResponse, SensorReadingEntry } from "@/types/api";
@@ -23,12 +24,14 @@ const mockedGetLocations = vi.mocked(locationsApi.list);
 const mockedGetSpools = vi.mocked(spoolsApi.list);
 const mockedGetMaterials = vi.mocked(materialsApi.list);
 const mockedGetAssignments = vi.mocked(assignmentsApi.list);
+const mockedGetSensors = vi.mocked(sensorsApi.list);
 
 mockedGetPrinters.mockResolvedValue([]);
 mockedGetLocations.mockResolvedValue([]);
 mockedGetSpools.mockResolvedValue([]);
 mockedGetMaterials.mockResolvedValue([]);
 mockedGetAssignments.mockResolvedValue([]);
+mockedGetSensors.mockResolvedValue([]);
 
 function renderDashboard() {
   const queryClient = new QueryClient({
@@ -110,8 +113,8 @@ describe("Dashboard", () => {
 
     await waitFor(() => expect(screen.getByText("Primary Filament Storage Room")).toBeInTheDocument());
     expect(screen.getByText("MOCK-0001")).toBeInTheDocument();
-    expect(screen.getByText("23.1 °C")).toBeInTheDocument();
-    expect(screen.getByText("21.2 %")).toBeInTheDocument();
+    expect(screen.getByText("23.10 °C")).toBeInTheDocument();
+    expect(screen.getByText("21.20 %")).toBeInTheDocument();
     expect(screen.getByText(/humidity is above the ideal range for petg/i)).toBeInTheDocument();
   });
 });
