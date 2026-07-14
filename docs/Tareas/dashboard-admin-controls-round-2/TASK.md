@@ -143,3 +143,14 @@ test), `components/SensorAssignmentModal.tsx` (+ test), `pages/Printers.tsx`.
 - [x] Playwright browser verification completed.
 - [x] Docs updated.
 - [ ] Branch merged only after user validates in the browser.
+
+## Addendum
+
+Same-day follow-on from browser validation: the AMS/external-spool dual-rendering fix above was too
+permissive (showed both kinds whenever both had real Locations, regardless of the printer's own
+`filament_system_type`). Fixed in `lib/deviceModules.ts`'s `buildDeviceModules` — slot kind(s) shown
+are now resolved from `filament_system_type` itself, which keeps `DeviceModuleCard.tsx` and
+`deviceFilters.ts` automatically consistent since both already consume this function's output. See
+`docs/Dashboard_Admin_Controls_Round2_Guide.md`'s "Addendum" section for details. 4 new
+`deviceModules.test.ts` cases; full suite re-verified in browser (A1 mini #1/#2, both type "ams",
+correctly show only the AMS grid now).

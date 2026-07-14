@@ -24,6 +24,17 @@ const AMS_SLOT: Location = {
   slot_index: 0,
 };
 
+const EXTERNAL_SPOOL_LOCATION: Location = {
+  id: 11,
+  name: "External Spool - P1S #1",
+  location_type: "printer_external_spool",
+  printer_id: 1,
+  description: null,
+  max_temp_c: null,
+  notes: null,
+  slot_index: null,
+};
+
 const ROOM: Location = {
   id: 20,
   name: "Primary Filament Storage Room",
@@ -67,6 +78,37 @@ describe("buildDeviceModules", () => {
     expect(result.printerModules[0].amsLocations).toEqual([AMS_SLOT]);
     expect(result.printerModules[0].externalSpoolLocations).toEqual([]);
     expect(result.printerModules[0].sensorEntries).toEqual([entry]);
+  });
+
+  it("hides a leftover external-spool Location when filament_system_type is ams (not the hybrid type)", () => {
+    const result = buildDeviceModules([PRINTER], [AMS_SLOT, EXTERNAL_SPOOL_LOCATION], []);
+
+    expect(result.printerModules[0].amsLocations).toEqual([AMS_SLOT]);
+    expect(result.printerModules[0].externalSpoolLocations).toEqual([]);
+  });
+
+  it("hides a leftover AMS Location when filament_system_type is external_spool", () => {
+    const externalSpoolPrinter = { ...PRINTER, filament_system_type: "external_spool" };
+    const result = buildDeviceModules([externalSpoolPrinter], [AMS_SLOT, EXTERNAL_SPOOL_LOCATION], []);
+
+    expect(result.printerModules[0].amsLocations).toEqual([]);
+    expect(result.printerModules[0].externalSpoolLocations).toEqual([EXTERNAL_SPOOL_LOCATION]);
+  });
+
+  it("shows both AMS and external-spool Locations when filament_system_type is ams_external_spool", () => {
+    const hybridPrinter = { ...PRINTER, filament_system_type: "ams_external_spool" };
+    const result = buildDeviceModules([hybridPrinter], [AMS_SLOT, EXTERNAL_SPOOL_LOCATION], []);
+
+    expect(result.printerModules[0].amsLocations).toEqual([AMS_SLOT]);
+    expect(result.printerModules[0].externalSpoolLocations).toEqual([EXTERNAL_SPOOL_LOCATION]);
+  });
+
+  it("shows neither slot kind for storage_only/manual even if Locations exist", () => {
+    const manualPrinter = { ...PRINTER, filament_system_type: "manual" };
+    const result = buildDeviceModules([manualPrinter], [AMS_SLOT, EXTERNAL_SPOOL_LOCATION], []);
+
+    expect(result.printerModules[0].amsLocations).toEqual([]);
+    expect(result.printerModules[0].externalSpoolLocations).toEqual([]);
   });
 
   it("still produces a module for a printer with zero locations and zero sensors", () => {

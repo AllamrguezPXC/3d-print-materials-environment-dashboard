@@ -921,6 +921,15 @@ Phase 31 surfaced five follow-up issues.
   new backend `test_auto_capture.py`, `test_printers.py` extended (`ams_external_spool` sync +
   idempotency).
 - [x] `pytest -q` (153 passed), `npx vitest run` (153 passed), `tsc -b`/`build`/`lint` clean.
+- [x] **Addendum** (same-day follow-on from browser validation): the dual-rendering fix above was
+  itself too permissive — it showed both slot kinds whenever both had real Locations, regardless of
+  the printer's own `filament_system_type` selector (e.g. a printer set to "AMS" still showing an
+  External Spool slot). Fixed by resolving which slot kind(s) apply from `filament_system_type`
+  itself in `lib/deviceModules.ts`'s `buildDeviceModules` (`slotKindsForFilamentSystemType`), which
+  automatically keeps `DeviceModuleCard.tsx` and `deviceFilters.ts` consistent (both already consume
+  this function's output). Real alerts/affected-spools for a now-hidden Location still surface
+  (sensor-driven, not slot-kind-driven) — only the slot tile is hidden. 4 new
+  `deviceModules.test.ts` cases; `npx vitest run` (157 passed), `tsc -b` clean.
 
 ## Suggested Commit Sequence
 

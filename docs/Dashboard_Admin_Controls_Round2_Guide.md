@@ -101,6 +101,35 @@ to the target location, since creating a second one there would trip the existin
 one-sensor-per-AMS-module 400 the backend already enforces — the user unassigns the current one
 first (the modal's existing control), then creates the replacement.
 
+## Addendum: slot grid must follow the printer's own filament_system_type
+
+Immediately after the above shipped, browser validation surfaced a follow-on bug in the very fix
+that resolved the ghost-assignment issue: `DeviceModuleCard` was now rendering *both* the AMS grid
+and the External Spool slot whenever both had real Location rows — regardless of what the printer's
+own `filament_system_type` selector said. A printer explicitly set to `"ams"` could still show an
+"Ext" slot with an assigned spool underneath its AMS grid, which contradicts the selector right next
+to it and is exactly what the new `ams_external_spool` value exists to represent explicitly.
+
+**Fix:** `lib/deviceModules.ts`'s `buildDeviceModules` now resolves which slot kind(s) apply from the
+printer's `filament_system_type` itself (`slotKindsForFilamentSystemType`) and only includes
+`amsLocations`/`externalSpoolLocations` for the kind(s) that type allows — `"ams"` → AMS only,
+`"external_spool"` → external-spool only, `"ams_external_spool"` → both, `"storage_only"`/`"manual"`
+→ neither. This is a single, centralized change: `DeviceModuleCard.tsx`'s rendering and
+`deviceFilters.ts`'s slot-status/occupancy filters both already consumed `module.amsLocations`/
+`module.externalSpoolLocations` from this same function, so both automatically became consistent
+with the selector with no further changes needed there.
+
+This does **not** hide real risk: a still-active `SpoolAssignment` on a now-hidden Location keeps
+surfacing through the card's Alerts/Affected-Spools panels, since those are driven by the sensor
+entry's own `alerts`/`affected_spools` (matched by printer, not by slot-kind) — only the slot-grid
+*tile* for that location is hidden, never the alert data. Switching to `ams_external_spool` (or back
+to whichever type actually holds the assignment) makes its slot tile reappear.
+
+New/updated: `lib/deviceModules.ts` (`slotKindsForFilamentSystemType` + filtered
+`amsLocations`/`externalSpoolLocations`), `lib/deviceModules.test.ts` (4 new cases: hides leftover
+external-spool Location under `"ams"`, hides leftover AMS Location under `"external_spool"`, shows
+both under `"ams_external_spool"`, shows neither under `"manual"`).
+
 ## Files changed
 
 Backend: `app/core/config.py`, new `app/services/auto_capture.py`, `app/main.py`,
