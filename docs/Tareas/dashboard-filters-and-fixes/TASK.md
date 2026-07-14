@@ -112,4 +112,4 @@ Explore agents: frontend, backend, docs/patterns).
       was serving pre-fix code on port 8001.
 - [x] `docs/Dashboard_Filters_And_Assignments_Guide.md` written.
 - [x] `docs/Frontend_Redesign_Guide.md` / `docs/Tasks.md` updated.
-- [ ] Branch merged only after user validates in the browser.
+- [x] Branch merged only after user validates in the browser.

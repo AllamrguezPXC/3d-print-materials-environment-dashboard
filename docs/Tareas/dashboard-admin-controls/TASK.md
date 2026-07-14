@@ -99,4 +99,4 @@ See the plan file's "Archivos afectados" section for the full list (backend: `pr
 - [x] Playwright browser verification completed.
 - [x] Docs updated (`docs/Dashboard_Admin_Controls_Guide.md` new, `docs/Tasks.md`,
       `docs/Frontend_Redesign_Guide.md`).
-- [ ] Branch merged only after user validates in the browser.
+- [x] Branch merged only after user validates in the browser.

@@ -109,4 +109,4 @@ Frontend: `hooks/resources/sensors.ts`, `hooks/resources/assignments.ts`, `pages
 - [x] Demo data restored to its pre-verification state.
 - [x] Improvement opportunities documented (this file + guide doc), explicitly not implemented.
 - [x] Docs updated (`docs/Tasks.md`, this TASK.md, new guide doc).
-- [ ] Branch merged only after user validates in the browser.
+- [x] Branch merged only after user validates in the browser.

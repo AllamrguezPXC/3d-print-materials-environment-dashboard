@@ -142,7 +142,7 @@ test), `components/SensorAssignmentModal.tsx` (+ test), `pages/Printers.tsx`.
 - [x] Frontend tests green (`tsc -b`, `build`, `lint`, `test` — 153 passed, 27 files).
 - [x] Playwright browser verification completed.
 - [x] Docs updated.
-- [ ] Branch merged only after user validates in the browser.
+- [x] Branch merged only after user validates in the browser.
 
 ## Addendum
 
