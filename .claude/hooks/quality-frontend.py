@@ -1,7 +1,9 @@
 ﻿#!/usr/bin/env python3
 """HOOK: quality-frontend
 Event:   PostToolUse (Write|Edit)
-Purpose: Run ESLint when a frontend TypeScript/JavaScript file is written.
+Purpose: Run oxlint (this project's actual frontend linter -- see
+         frontend/package.json's "lint" script) when a frontend
+         TypeScript/JavaScript file is written.
 """
 import json
 import subprocess
@@ -34,7 +36,11 @@ except ValueError:
 
 try:
     result = subprocess.run(
-        ["npx", "eslint", "--max-warnings=0", str(path)],
+        # Matches frontend/package.json's own "lint" script exactly (plain
+        # `oxlint`, no extra strictness) -- this hook surfaces the same
+        # signal `npm run lint`/CI already would, not a stricter new bar that
+        # would flag this repo's existing, already-tolerated warnings.
+        ["npx", "oxlint", str(path)],
         cwd=str(FRONTEND_DIR),
         capture_output=True,
         text=True,
@@ -44,7 +50,7 @@ try:
         output = (result.stdout + result.stderr).strip()[:400]
         print(json.dumps({
             "suppressOutput": False,
-            "systemMessage": f"ESLint: {output}",
+            "systemMessage": f"oxlint: {output}",
         }))
 except Exception:
     pass

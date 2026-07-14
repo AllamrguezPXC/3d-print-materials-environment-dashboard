@@ -60,9 +60,18 @@ cd backend
 .venv\Scripts\python -m pytest -q
 ```
 
-116+ tests cover the three required endpoints, the sensor abstraction (mock drift/bounds, Dracal
-VCP parser, per-sensor factory), material profile alert evaluation, drying recommendations, serial
-port detection/test-read (mocked, no real hardware dependency), and CRUD for every entity.
+170+ tests cover the three required endpoints, the sensor abstraction (mock drift/bounds, Dracal
+VCP parser, per-sensor factory), material profile alert evaluation (including threshold-ordering
+validation), drying recommendations, serial port detection/test-read (mocked, no real hardware
+dependency), foreign-key existence/integrity checks, and CRUD for every entity.
+
+```bash
+cd frontend
+npx tsc -b          # type-check
+npm run build       # production build
+npm run lint        # oxlint
+npx vitest run       # 160+ tests (or: npm run test)
+```
 
 ## Sensors
 
@@ -101,6 +110,29 @@ Extended REST endpoints exist for sensors (including `GET /sensors/ports` serial
 `POST /sensors/{id}/test-read`), printers, locations (including AMS `slot_index`), materials,
 spools, assignments, alerts, and drying recommendations/sessions — see `http://localhost:8000/docs`
 once running.
+
+## Dashboard features
+
+Beyond live readings, the Dashboard (`/`) groups sensors into per-printer/per-location device
+modules and supports configuring the following directly from the cards — every change is mirrored
+1:1 on `/printers` and `/sensors`:
+
+- **Printer operational status** (activo/inactivo/mantenimiento, color-coded) — administrative
+  only, never suppresses real alerts.
+- **Sensor assignment/reassignment**, including creating a brand-new sensor inline.
+- **Filament-system-type switching** (AMS ↔ External Spool ↔ both at once via the
+  `ams_external_spool` hybrid type).
+- **Filters** (search, alert/sensor/slot status, printer brand/status, filament type/brand/color/
+  status) that persist across page reloads (`Settings` has a "Reset filters" button).
+- A global **notification-bell** popover (top-right, on every page) showing the same live alerts
+  as the Dashboard, with the affected printer/AMS-slot/location named on each one.
+
+A background auto-capture loop (`AUTO_CAPTURE_INTERVAL_SECONDS` in `.env`, default 30s) persists a
+Reading from every active sensor periodically, so `/alerts` and `/history` accumulate real data
+without needing to manually click "Capture reading now."
+
+See `docs/Tasks.md` for the full phase-by-phase build history and `docs/*_Guide.md` for detailed
+write-ups of each feature.
 
 ## Project structure
 
