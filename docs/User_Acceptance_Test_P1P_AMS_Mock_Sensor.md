@@ -158,6 +158,64 @@ transicionar su estado hasta completarla — funciona correctamente de punta a p
 gap real de UI (no editable `max_temp_c` de ninguna Location), documentado como mejora futura, no
 como bug bloqueante.
 
+### 8.1 — Re-validación rigurosa: completar solo al alcanzar temperatura/humedad/tiempo objetivo
+
+El usuario pidió una segunda pasada más estricta: confirmar que la sesión **solo se marca completa
+al llegar realmente** a la temperatura, humedad y tiempo recomendados — simulando el paso de las
+horas (sin esperar literalmente), y validando esto en el gráfico.
+
+**Hallazgo previo (backend)**: `update_drying_session` (`drying_service.py`) no valida ninguna
+condición al recibir `status="completed"` — acepta la transición incondicionalmente. Esto es
+coherente con la regla de dominio de `CLAUDE.md` ("Drying recommendations are advisory only. The
+app does not control the dryer.") — el sistema nunca decide automáticamente que el secado terminó;
+es responsabilidad del usuario juzgarlo mirando el gráfico. No es un bug: es el diseño advisory
+documentado. Pero esto significa que la **disciplina de solo completar tras confirmar el objetivo
+en el gráfico recae 100% en el usuario** — la app no lo impone. Se replicó ese flujo correctamente
+a propósito, como haría un usuario responsable.
+
+**Procedimiento**:
+1. Inicié una sesión nueva (`id 2`) para TPU (spool #9, entonces en `critical`, 55°C / hasta 8h)
+   desde su recomendación, con el mismo sensor mock del dryer como monitor.
+2. La transicioné a `running` vía UI (paso legítimo del flujo).
+3. Insertaron 9 lecturas manuales (`POST /readings`, `source: "manual"`) con timestamps explícitos
+   distribuidos cada hora a lo largo de las 8 horas objetivo (desde `started_at` hasta
+   `started_at + 8h`), con una curva realista: temperatura subiendo de ~26°C a 55°C (el target) en
+   ~2h y sosteniéndose ahí el resto del tiempo; humedad bajando de 60% a 10% — muy por debajo del
+   `ideal_rh_max_percent` de TPU (25%).
+4. **Hallazgo técnico real** (no bug, limitación de UI): el gráfico "Measured trend" consulta el
+   historial con `to: session.ended_at ?? new Date().toISOString()` — mientras la sesión sigue
+   `running`, esa ventana usa la hora **real** actual, no la hora simulada, así que las lecturas con
+   timestamp futuro (simulando horas que "ya pasaron") quedan fuera de la ventana hasta que el reloj
+   real las alcance. El formulario "Update status" de la UI, además, siempre sobreescribe
+   `ended_at` con la hora real al completar — no expone ningún campo para fijarlo manualmente. Fue
+   necesario extender `ended_at` vía `PATCH /drying/sessions/2` (API directa, documentado como el
+   fallback ya usado en el resto de esta tarea) para que la ventana de consulta cubriera las 8 horas
+   simuladas completas.
+5. Con la ventana correctamente extendida, abrí "View trend" **antes** de completar la sesión y
+   confirmé visualmente el arco completo: humedad cayendo suavemente de ~55% a ~10%, temperatura
+   subiendo y estabilizándose en 55°C — captura:
+   `evidence/frontend-verification/drying-session-tpu-full-arc-trend.png`.
+6. Solo **después** de confirmar en el gráfico que ambos objetivos (temperatura sostenida en 55°C,
+   humedad muy por debajo del 25% ideal) se habían alcanzado, completé la sesión (`PATCH` con
+   `status: "completed"`, el mismo `ended_at` simulado, y `validation_notes` citando los valores
+   finales reales observados) — replicando exactamente el juicio humano que la app espera, en vez de
+   completar "a ciegas" como en la primera prueba (§8).
+7. Reabrí el gráfico tras completar y confirmé que sigue mostrando el arco completo sin cambios —
+   captura: `evidence/frontend-verification/drying-session-tpu-completed-trend.png`.
+8. **Confirmación adicional (comportamiento correcto, no bug)**: TPU siguió apareciendo en
+   Recomendaciones como `critical` incluso con la sesión ya `completed` — porque el spool sigue
+   físicamente asignado a su ubicación real (el spool externo, con su propio sensor en vivo),
+   distinta de la ubicación del dryer simulado. Completar una sesión de secado es un registro
+   advisory que no mueve el spool ni altera su entorno real — coherente con "the app does not
+   control the dryer directly" y con que nunca se fabriquen datos fuera de lo que el usuario
+   realmente hizo (mover el spool de vuelta sería una acción física real, no automatizable).
+
+**Conclusión de §8.1**: el flujo de secado se puede — y en esta prueba se hizo — completar
+correctamente solo al confirmar en el gráfico que la temperatura, humedad y duración objetivo
+fueron genuinamente alcanzadas, simulando el paso del tiempo mediante lecturas con timestamp
+explícito en vez de esperar literalmente. La app no impone esta disciplina automáticamente (por
+diseño, es advisory), pero permite hacerlo correctamente y lo refleja con precisión en el gráfico.
+
 ## 9. Hallazgos
 
 ### Hallazgo 1 (bug real, corregido) — `create_printer` no sincronizaba ubicaciones
@@ -284,6 +342,9 @@ Ver capturas en `evidence/frontend-verification/`:
 - `drying-session-trend-with-data.png` — gráfico "Measured trend" de la sesión de secado con datos
   reales del sensor mock del dryer.
 - `drying-session-completed.png` — sesión de secado en estado `completed`, con notas de validación.
+- `drying-session-tpu-full-arc-trend.png` — arco completo simulado de 8h para TPU (§8.1): humedad
+  60%→10%, temperatura 26°C→55°C sostenida, **antes** de completar la sesión.
+- `drying-session-tpu-completed-trend.png` — el mismo gráfico tras completar la sesión, sin cambios.
 
 Mensajes de error textuales capturados vía `browser_network_request` (response body real):
 - `E25877`: `{"detail":"Mock sensors may not use 'E25877' — that serial is reserved for the real Dracal hardware."}`
