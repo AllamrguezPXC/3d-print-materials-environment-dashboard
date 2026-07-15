@@ -121,6 +121,58 @@ def test_patch_printer_updates_operational_status(client):
     assert response.json()["operational_status"] == "inactivo"
 
 
+def test_create_printer_with_ams_type_creates_four_slot_locations(client):
+    # Found live during a UAT session: creating a printer directly with
+    # filament_system_type="ams" (POST) silently produced zero slots, while
+    # switching an existing printer to "ams" (PATCH) correctly auto-created
+    # them. A new user creating an AMS printer from scratch shouldn't see
+    # different behavior than one who creates it manual-first and switches.
+    created = client.post(
+        "/printers",
+        json={"name": "AMS From Creation", "brand": "Bambu Lab", "model": "P1P", "filament_system_type": "ams"},
+    ).json()
+
+    locations = client.get("/locations").json()
+    ams_locations = [
+        loc for loc in locations if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_ams"
+    ]
+    assert len(ams_locations) == 4
+    assert sorted(loc["slot_index"] for loc in ams_locations) == [0, 1, 2, 3]
+
+
+def test_create_printer_with_ams_external_spool_type_creates_both_location_kinds(client):
+    created = client.post(
+        "/printers",
+        json={
+            "name": "Hybrid From Creation",
+            "brand": "Bambu Lab",
+            "model": "P1P",
+            "filament_system_type": "ams_external_spool",
+        },
+    ).json()
+
+    locations = client.get("/locations").json()
+    ams_locations = [
+        loc for loc in locations if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_ams"
+    ]
+    ext_locations = [
+        loc
+        for loc in locations
+        if loc["printer_id"] == created["id"] and loc["location_type"] == "printer_external_spool"
+    ]
+    assert len(ams_locations) == 4
+    assert len(ext_locations) == 1
+
+
+def test_create_printer_with_manual_type_creates_no_locations(client):
+    created = client.post(
+        "/printers", json={"name": "Manual From Creation", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+
+    locations = client.get("/locations").json()
+    assert not any(loc["printer_id"] == created["id"] for loc in locations)
+
+
 def test_patch_printer_to_ams_creates_four_slot_locations(client):
     created = client.post(
         "/printers", json={"name": "AMS Sync Printer", "brand": "Bambu Lab", "model": "P1S"}

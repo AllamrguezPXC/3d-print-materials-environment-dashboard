@@ -118,6 +118,15 @@ def create_printer(session: Session, payload: PrinterCreate) -> Printer:
     session.add(printer)
     session.commit()
     session.refresh(printer)
+
+    # A printer created directly with a non-manual/storage_only type must get
+    # the same implied Location rows a later PATCH to that type would create
+    # (see _sync_locations_for_filament_system_type) -- otherwise a new AMS
+    # printer starts with zero slots until someone toggles its type back and
+    # forth, which is exactly the inconsistency this UAT session caught live.
+    _sync_locations_for_filament_system_type(session, printer, printer.filament_system_type)
+    session.commit()
+    session.refresh(printer)
     return printer
 
 

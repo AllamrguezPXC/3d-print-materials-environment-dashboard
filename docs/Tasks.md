@@ -975,6 +975,41 @@ opportunities with concrete tools, then re-validate everything.
 - [x] `pytest -q` (170 passed, 12 new), `npx vitest run` (160 passed, 4 new), `tsc -b`/`build`/`lint`
   clean. All demo data touched during live verification restored to its original state.
 
+## Phase 34 — User Acceptance Test: P1P + AMS + External Spool + Mock Sensor
+
+- [x] Full report: `docs/User_Acceptance_Test_P1P_AMS_Mock_Sensor.md`, task record:
+  `docs/Tareas/user-acceptance-test-p1p-ams-mock-sensor/TASK.md`.
+- [x] Built a complete realistic scenario end-to-end through the live UI as a brand-new user: a new
+  Bambu Lab P1P printer, 4-slot AMS + external spool, an explicitly-configured mock sensor (never
+  the real serial `E25877`), five specific filaments (PLA×2 red, PETG brown, ASA yellow, TPU
+  white), and 7 deliberate configuration-error scenarios.
+- [x] Found and fixed a real bug: `create_printer` never called
+  `_sync_locations_for_filament_system_type`, so a printer created directly with a non-manual
+  `filament_system_type` (e.g. `ams`) silently got zero Location rows -- only `update_printer`
+  (switching an existing printer's type) did. Fixed by calling the same idempotent sync function
+  from `create_printer` too. 3 new regression tests.
+- [x] All 7 intentional errors behaved correctly: real-serial mock sensor rejected with a clear
+  message naming the real hardware; duplicate serial rejected (400); a second sensor on an
+  already-covered AMS module rejected, naming the conflicting sensor; a material-name typo ("PTEG")
+  is only reachable via the free-text Material Profile form (the spool form's Material field is a
+  closed dropdown) and is accepted with zero dictionary validation -- documented as an intentional
+  design tradeoff (profiles are meant to be fully user-editable), not a bug; an empty spool
+  selector consistently offered "+ Create new spool" with auto-select-after-create (demonstrated on
+  all 5 slots); switching a printer to `ams` with no slots self-heals instantly (the sync fires on
+  every type change, so there's no observable broken/empty-AMS state); marking a printer
+  "Mantenimiento" kept its sensors/alerts fully visible and the status filter correctly scoped to
+  it.
+- [x] High humidity for ASA and TPU was reached organically via repeated live polling of the mock
+  sensor's bounded random walk (no fabricated readings, no manual override) -- both confirmed
+  `critical` and listed correctly in Drying Recommendations (Dashboard and `/drying`) with material,
+  color, location, humidity, severity, drying temp/time, and the advisory-only disclaimer.
+- [x] Also documented (not implemented, no code change warranted): a possible "did you mean PETG?"
+  suggestion for near-miss material names; the 3-second error-notice auto-dismiss may be short for
+  longer messages; `critical_rh_max_percent` is largely redundant in the documented severity formula
+  (`Requirements.md` §8.1) since crossing `warning_rh_max_percent` alone already yields `critical`.
+- [x] `pytest -q` (173 passed, 3 new), `tsc -b`/`build`/`lint`/`vitest run` clean (160 frontend
+  tests, unchanged -- no frontend code touched this session).
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

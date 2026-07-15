@@ -657,6 +657,27 @@ the auto-mode safety classifier specifically to avoid writing a live credential 
 behalf). The user has been advised to rotate/regenerate this PAT in GitHub's settings independent of
 this review.
 
+## User Acceptance Test — Bambu P1P + AMS + External Spool + Mock Sensor — 2026-07-15
+
+Full report: `docs/User_Acceptance_Test_P1P_AMS_Mock_Sensor.md`. A final practical validation pass,
+acting as a brand-new user clicking through the real UI (not re-running automated tests), building
+a complete realistic scenario end-to-end: a new Bambu Lab P1P printer, a 4-slot AMS + external
+spool, an explicitly-configured mock sensor (never the real serial `E25877`), five specific
+filaments (PLA×2 red, PETG brown, ASA yellow, TPU white), simulated high humidity via real sensor
+polling (no fabricated data), and 7 deliberate configuration-error scenarios.
+
+**Result:** 1 real bug found and fixed — `create_printer` didn't sync the Location rows implied by
+a non-manual `filament_system_type` on creation (only `update_printer` did), so a new AMS printer
+created directly (rather than switched to AMS later) silently got zero slots. Fixed in
+`backend/app/services/printer_service.py`, covered by 3 new regression tests. All 7 intentional
+error scenarios behaved correctly (clear rejection messages for invalid/duplicate sensors and AMS
+conflicts; instant self-healing for incomplete AMS config; sensors/alerts stayed visible for a
+printer in "Mantenimiento"). High humidity for ASA and TPU was confirmed reaching `critical`
+severity organically (bounded mock-sensor drift, not fabricated), with both appearing correctly in
+Drying Recommendations on the Dashboard and `/drying`. Re-ran full validation after the fix:
+`pytest -q` → 173 passed (170 previous + 3 new); `tsc -b`/`build`/`lint`/`vitest run` → all clean,
+160 frontend tests (unchanged, no frontend code touched this session).
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.
