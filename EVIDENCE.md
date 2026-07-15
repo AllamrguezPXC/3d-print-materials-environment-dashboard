@@ -678,6 +678,18 @@ Drying Recommendations on the Dashboard and `/drying`. Re-ran full validation af
 `pytest -q` → 173 passed (170 previous + 3 new); `tsc -b`/`build`/`lint`/`vitest run` → all clean,
 160 frontend tests (unchanged, no frontend code touched this session).
 
+**Addendum (same day):** the user explicitly asked whether the drying *session* workflow itself
+(not just the advisory recommendations) had been validated, including a mock environment
+simulating the drying process. It hadn't — this was tested next: created a `dryer`-type Location
+(none existed yet), assigned a second explicit mock sensor to it as the simulated drying
+environment, started a real drying session for the ASA spool from its recommendation, confirmed
+the "Measured trend" chart renders real captured data, and walked the session through its full
+state machine (`recommended` → `running` → `completed`) with validation notes. Found one more UI
+gap (not a bug): a Location's `max_temp_c` — the field that determines whether a dryer "can sustain"
+a material's drying temperature — is not editable anywhere in the UI, only via direct API/backend
+(documented as the explicit fallback, per the same allowance used elsewhere in this task). No code
+was touched for this addendum — see §8 of the full report for details.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

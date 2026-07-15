@@ -21,7 +21,7 @@ porque las pruebas automáticas ya pasaban.
 | Sistema de filamento | AMS + External Spool (`ams_external_spool`) |
 | Estado operativo | Activo (probado temporalmente en Mantenimiento, ver Error 7) |
 | Sensor mock | "Mock Sensor - P1P QA" — serial `MOCK-P1P-QA-001` — asignado al módulo AMS |
-| Sensor mock adicional | "Mock Sensor - P1P External Spool" — serial `MOCK-P1P-QA-002` — asignado al spool externo (ver §11) |
+| Sensor mock adicional | "Mock Sensor - P1P External Spool" — serial `MOCK-P1P-QA-002` — asignado al spool externo (ver §12) |
 | Slot A1 | PLA / Generic / Rojo |
 | Slot A2 | PLA / Generic / Rojo |
 | Slot A3 | PETG / Generic / Marrón |
@@ -53,11 +53,11 @@ porque las pruebas automáticas ya pasaban.
 6. Probé Error 2 (serial duplicado) y Error 3 (segundo sensor en el mismo módulo AMS) — ambos
    rechazados correctamente.
 7. Configuré los slots A1 y A2 (PLA rojo) usando el modal "Configure AMS Slot" → "+ Create new
-   spool" (flujo idéntico al Error 5, ver §9).
+   spool" (flujo idéntico al Error 5, ver tabla en §6).
 8. Probé Error 4 (typo "PTEG") en `/materials` — aceptado sin validación (hallazgo documentado,
    no bug) — luego lo borré y configuré A3 con PETG real (marrón).
 9. Configuré A4 (ASA amarillo) y el External Spool (TPU blanco), creando un segundo sensor mock
-   explícito para esa ubicación (ver §11 — un AMS y un spool externo son microclimas físicamente
+   explícito para esa ubicación (ver §12 — un AMS y un spool externo son microclimas físicamente
    distintos, no pueden compartir sensor).
 10. Dejé que la deriva natural del sensor mock (polling real repetido, sin fabricar datos) empujara
     la humedad hasta niveles críticos para ASA y TPU — confirmado con capturas.
@@ -76,13 +76,13 @@ porque las pruebas automáticas ya pasaban.
 
 | # | Prueba | Resultado esperado | Resultado real | Veredicto |
 |---|---|---|---|---|
-| 1 | Sensor mock con serial `E25877` | Rechazado, mensaje explicando que es el serial real Dracal | `422`: *"Mock sensors may not use 'E25877' — that serial is reserved for the real Dracal hardware."* Confirmado que el mensaje SÍ llega a la UI (ver Nota Metodológica §12.1) | ✅ PASA |
+| 1 | Sensor mock con serial `E25877` | Rechazado, mensaje explicando que es el serial real Dracal | `422`: *"Mock sensors may not use 'E25877' — that serial is reserved for the real Dracal hardware."* Confirmado que el mensaje SÍ llega a la UI (ver Nota Metodológica §13.1) | ✅ PASA |
 | 2 | Sensor duplicado `MOCK-P1P-QA-001` | Rechazado, mensaje claro | `400`: *"A sensor with serial_number 'MOCK-P1P-QA-001' already exists."* | ✅ PASA |
 | 3 | Segundo sensor en la misma ubicación AMS ya cubierta | Rechazado o pide confirmación, indica dónde está asignado | `400`: *"This printer module already has a sensor assigned ('Mock Sensor - P1P QA') — only one sensor covers an entire module's shared microclimate."* Nombra el sensor en conflicto | ✅ PASA |
 | 4 | Material mal escrito "PTEG" | Rechazo, creación de material nuevo, o sugerencia de PETG | El campo Material del formulario de spool es un **dropdown cerrado** (no se puede escribir un typo ahí). La única vía de texto libre es crear un `MaterialProfile` nuevo en `/materials` — se aceptó "PTEG" **sin ninguna validación de nombre/diccionario**. Documentado como comportamiento esperado (perfiles 100% editables por diseño), no como bug | 🟡 Documentado — no es error de la app, es una decisión de diseño (editable, sin diccionario cerrado) |
 | 5 | Slot sin spools disponibles | Debe mostrar todos los disponibles o permitir crear uno nuevo | Confirmado en los 5 slots (A1-A4 + External): "No unassigned spools available." + botón "+ Create new spool" siempre presente, con auto-selección del spool recién creado | ✅ PASA (demostrado 5 veces) |
 | 6 | Cambiar impresora a AMS sin slots configurados | Estado claro, sin romper el dashboard, debe permitir configurar | Mejor que lo esperado: la app **autorrepara al instante** — al cambiar el tipo, crea los 4 slots vacíos automáticamente (ver `_sync_locations_for_filament_system_type` en el código), así que nunca hay un estado "roto" observable, solo slots vacíos listos para configurar | ✅ PASA |
-| 7 | Marcar impresora fuera de servicio | Se ve visualmente distinta, sensores/alertas no desaparecen, filtro funciona | Cambié a "Mantenimiento" (no existe literalmente "out_of_service" — solo activo/inactivo/mantenimiento, ver §12.2); el badge de estado cambió, sensores y alertas del módulo siguieron visibles sin cambios, el filtro por estado mostró correctamente "1 de 10" | ✅ PASA |
+| 7 | Marcar impresora fuera de servicio | Se ve visualmente distinta, sensores/alertas no desaparecen, filtro funciona | Cambié a "Mantenimiento" (no existe literalmente "out_of_service" — solo activo/inactivo/mantenimiento, ver §13.2); el badge de estado cambió, sensores y alertas del módulo siguieron visibles sin cambios, el filtro por estado mostró correctamente "1 de 10" | ✅ PASA |
 
 ## 7. Resultado esperado vs. resultado real (humedad alta)
 
@@ -91,7 +91,7 @@ recomendación de secado (temperatura, tiempo), ubicación y material afectado, 
 Drying Recommendations — nunca "No spools currently need drying."
 
 **Real**: confirmado exactamente así, mediante deriva **real** del sensor mock (sin fabricar
-datos — ver metodología en §12.3):
+datos — ver metodología en §13.3):
 
 - ASA (spool #8): `"ASA spool #8 humidity 46.46% exceeds its critical threshold."` — `critical` —
   *"Dry at 70.0°C for 4.0-6.0h before use."*
@@ -104,7 +104,61 @@ secado, y el disclaimer de "advisory only". Capturas:
 `evidence/frontend-verification/dashboard-p1p-critical-humidity.png`,
 `evidence/frontend-verification/drying-recommendations-asa-tpu-critical.png`.
 
-## 8. Hallazgos
+## 8. Adenda — Flujo completo de sesión de secado (drying session)
+
+La validación inicial (§7) solo cubrió las **recomendaciones** de secado (la lista advisory). El
+usuario preguntó explícitamente si también se probó **crear una sesión de secado real** y
+**configurar un entorno mock que simule ese proceso** — no se había hecho, así que se validó
+después, en la misma sesión de QA:
+
+1. **Creación del dryer**: no existía ninguna ubicación `location_type="dryer"` en el sistema (las
+   recomendaciones decían literalmente *"No dryer location is configured in the system yet"*).
+   Creada "QA Test Dryer" (`dryer`) vía `/printers` → "Add location".
+2. **Hallazgo real (no bug, gap de UI)**: el campo `max_temp_c` de una `Location` — el dato que
+   determina si un dryer "puede sostener" la temperatura objetivo (`dryer_capability_ok`) — **no
+   es editable desde ninguna parte de la UI**, ni al crear ni después (`LocationForm.tsx` solo
+   expone Name/Type/Printer; no hay edición de Location en absoluto en `/printers`). Se fijó vía
+   `PATCH /locations/32` (`max_temp_c: 75`), documentado como el fallback explícitamente autorizado
+   por no existir camino de UI.
+3. **Entorno mock simulado**: creado un segundo sensor mock explícito ("Mock Sensor - QA Dryer",
+   `MOCK-QA-DRYER-001`) asignado a "QA Test Dryer" — este es el "entorno mock de simulación" que
+   representa el ambiente real dentro de un deshidratador físico.
+4. **Verificación de capacidad**: tras el fix del punto 2, las recomendaciones pasaron de "No dryer
+   location is configured" a *"Dryer location 'QA Test Dryer' can sustain the recommended
+   temperature"* — confirmado para PETG (60°C), PLA (45°C), ASA (70°C) y TPU (55°C), todos por
+   debajo del máximo de 75°C configurado.
+5. **Creación de la sesión**: desde la recomendación de ASA (spool #8), botón "Start drying
+   session" → formulario pre-rellenado (spool, dryer, 70°C, 6h) → se seleccionó el sensor mock del
+   dryer como "Monitoring sensor" → "Start session". Sesión creada (`id 1`, `status: recommended`).
+6. **Vista de tendencia ("View trend")**: al abrir inmediatamente, el gráfico se renderizó
+   correctamente pero vacío (sin datos aún — esperado, ya que `Reading` solo se persiste vía
+   captura manual o el loop de auto-captura). Se disparó una captura manual
+   (`POST /readings`, equivalente al botón "Capture reading now" de `/history`) y, al reabrir, el
+   gráfico mostró el punto de dato real (26.27°C / 38.87% RH) correctamente en ambas series
+   (Relative Humidity y Temperature).
+7. **Máquina de estados de la sesión**: confirmado que "Update status" solo ofrece transiciones
+   válidas según el estado actual — desde `recommended`: `{running, cancelled}`; desde `running`:
+   `{completed, failed, cancelled}`. Se transicionó `recommended → running → completed`, con notas
+   de validación (`validation_notes`). Al completarse, `ended_at` se registró automáticamente y el
+   botón "Update status" desapareció (estado terminal, correcto).
+8. **Confirmación de que las recomendaciones son 100% en vivo**: tras completar la sesión, ASA
+   (spool #8) dejó de aparecer en Recomendaciones — no porque el sistema "recuerde" que ya tiene
+   una sesión completada (no existe esa lógica de exclusión), sino porque su humedad real, en ese
+   momento, había bajado naturalmente a 33.79% RH — por debajo de su propio umbral ideal (35%).
+   Verificado explícitamente vía `GET /readings/current` para descartar que fuera una exclusión
+   oculta por estado de sesión en vez de un reflejo honesto del dato ambiental real.
+
+**Capturas**: `evidence/frontend-verification/drying-session-trend-with-data.png` (gráfico con
+datos reales), `evidence/frontend-verification/drying-session-completed.png` (sesión completada en
+la tabla).
+
+**Conclusión de esta adenda**: el flujo completo de sesión de secado — crear dryer, simular su
+entorno con un sensor mock, iniciar sesión desde una recomendación, monitorear con datos reales, y
+transicionar su estado hasta completarla — funciona correctamente de punta a punta. Se encontró 1
+gap real de UI (no editable `max_temp_c` de ninguna Location), documentado como mejora futura, no
+como bug bloqueante.
+
+## 9. Hallazgos
 
 ### Hallazgo 1 (bug real, corregido) — `create_printer` no sincronizaba ubicaciones
 
@@ -144,7 +198,7 @@ implementa esto exactamente como está especificado. No es un bug — es el dise
 es un detalle no obvio que vale la pena señalar para quien edite perfiles de material esperando que
 "critical" solo se dispare cerca de ese valor específico.
 
-## 9. Bugs encontrados
+## 10. Bugs encontrados
 
 ### Bug 1 — `create_printer` no sincronizaba las ubicaciones implícitas por `filament_system_type`
 
@@ -170,13 +224,13 @@ no destructiva ya existente, sin duplicar lógica.
 `test_create_printer_with_manual_type_creates_no_locations` (regresión: `manual` no debe crear
 nada).
 
-## 10. Correcciones realizadas
+## 11. Correcciones realizadas
 
 - `backend/app/services/printer_service.py` — fix del Bug 1 (arriba).
 - `backend/tests/api/test_printers.py` — 3 tests nuevos.
 - Limpieza de datos de prueba: material "PTEG" eliminado tras confirmar el hallazgo del Error 4.
 
-## 11. Limitaciones
+## 12. Limitaciones
 
 - **Un AMS y un spool externo son microclimas físicamente distintos y no pueden compartir un
   sensor** (la regla de "un sensor por módulo AMS" de una tarea anterior de este proyecto no cubre
@@ -194,20 +248,20 @@ nada).
 - El campo `critical_rh_max_percent` es funcionalmente casi redundante en la fórmula de severidad
   (ver Hallazgo 4) — coincide con la especificación documentada, no se propone cambio.
 
-## 12. Notas metodológicas
+## 13. Notas metodológicas
 
-### 12.1 — Confirmación de que las notificaciones de error sí se muestran
+### 13.1 — Confirmación de que las notificaciones de error sí se muestran
 
 Ver Hallazgo 3. Instrumentación temporal (`console.log`) en `useNotice.ts`/`NoticeBanner.tsx`,
 revertida antes de continuar — no queda ningún cambio de ese experimento en el código final.
 
-### 12.2 — Mapeo de "out_of_service" a los estados reales del sistema
+### 13.2 — Mapeo de "out_of_service" a los estados reales del sistema
 
 El sistema solo define `{"activo", "inactivo", "mantenimiento"}` (`VALID_OPERATIONAL_STATUSES` en
 `printer_service.py`). Se usó "Mantenimiento" como el equivalente más cercano a "fuera de
 servicio" para el Error 7.
 
-### 12.3 — Simulación de humedad alta sin fabricar datos
+### 13.3 — Simulación de humedad alta sin fabricar datos
 
 Los sensores mock (`backend/app/sensors/mock.py`) son un random walk acotado (`RH_MIN=15%`,
 `RH_MAX=60%`) con saltos raros (`spike_chance=3%`, `±10%`). No existe endpoint para fijar un valor
@@ -216,7 +270,7 @@ acelerar el tiempo de pared) hasta que la deriva natural alcanzara el rango crí
 (`warning_rh_max_percent=45`) y TPU (`warning_rh_max_percent=35`) — ambos confirmados en `critical`
 sin ninguna manipulación directa del valor.
 
-## 13. Evidencia textual de validación
+## 14. Evidencia textual de validación
 
 Ver capturas en `evidence/frontend-verification/`:
 - `dashboard-p1p-critical-humidity.png` — Dashboard completo con los 5 slots configurados y
@@ -227,13 +281,16 @@ Ver capturas en `evidence/frontend-verification/`:
   aún visibles.
 - `sensors-page-p1p-scenario.png` — `/sensors` con los 2 sensores del escenario.
 - `spools-page-p1p-scenario.png` — `/spools` con los 5 spools correctamente asignados.
+- `drying-session-trend-with-data.png` — gráfico "Measured trend" de la sesión de secado con datos
+  reales del sensor mock del dryer.
+- `drying-session-completed.png` — sesión de secado en estado `completed`, con notas de validación.
 
 Mensajes de error textuales capturados vía `browser_network_request` (response body real):
 - `E25877`: `{"detail":"Mock sensors may not use 'E25877' — that serial is reserved for the real Dracal hardware."}`
 - Serial duplicado: `{"detail":"A sensor with serial_number 'MOCK-P1P-QA-001' already exists."}`
 - Conflicto AMS: `{"detail":"This printer module already has a sensor assigned ('Mock Sensor - P1P QA') -- only one sensor covers an entire module's shared microclimate."}`
 
-## 14. Resultados de comandos ejecutados
+## 15. Resultados de comandos ejecutados
 
 ```bash
 cd backend && pytest -q
@@ -246,22 +303,28 @@ npm run lint         # limpio (6 warnings preexistentes, no errores)
 npx vitest run       # 160 passed, 28 files (sin cambios de frontend en esta sesión)
 ```
 
-## 15. Conclusión final
+## 16. Conclusión final
 
 El escenario completo (impresora P1P, AMS de 4 slots, spool externo, sensor mock explícito,
 5 filamentos específicos, humedad alta real en ASA y TPU, recomendaciones de secado completas) se
 configuró **enteramente desde la UI**, con solo dos excepciones documentadas y justificadas
-(§11): un segundo sensor mock (limitación física real, no arbitraria) y polling repetido vía API
+(§12): un segundo sensor mock (limitación física real, no arbitraria) y polling repetido vía API
 para forzar la deriva natural de humedad (no existe forma de fijar un valor exacto, ni se debería
 inventar una — sería fabricar datos).
 
 Se encontró y corrigió **1 bug real** (creación de impresora no sincronizaba ubicaciones), con
-regresión cubierta por 3 tests nuevos. Se documentaron 3 hallazgos adicionales que **no** son bugs
-(dropdown cerrado de Material, timing de notificaciones, fórmula de severidad) pero que valen la
-pena conocer. Los 7 escenarios de error intencionales respondieron correctamente — rechazo claro
-con mensaje específico en los casos de validación (1, 2, 3), auto-reparación instantánea sin
-romper nada en el caso de configuración incompleta (5, 6), y visibilidad preservada de
-sensores/alertas en el caso de estado administrativo (7).
+regresión cubierta por 3 tests nuevos. Se documentaron 4 hallazgos adicionales que **no** son bugs
+(dropdown cerrado de Material, timing de notificaciones, fórmula de severidad, campo `max_temp_c`
+de Location no editable desde la UI — ver §8) pero que valen la pena conocer. Los 7 escenarios de
+error intencionales respondieron correctamente — rechazo claro con mensaje específico en los casos
+de validación (1, 2, 3), auto-reparación instantánea sin romper nada en el caso de configuración
+incompleta (5, 6), y visibilidad preservada de sensores/alertas en el caso de estado administrativo
+(7).
+
+Además (§8), se validó el flujo completo de **sesión de secado real**: crear un dryer, simular su
+entorno con un sensor mock explícito, iniciar una sesión desde una recomendación, ver su tendencia
+con datos reales, y transicionarla por su máquina de estados hasta completarla — todo funciona
+correctamente de punta a punta.
 
 **El proyecto está listo para entrega.** Ningún hallazgo de esta sesión bloquea la funcionalidad
 central; el único bug real encontrado ya está corregido y probado.
