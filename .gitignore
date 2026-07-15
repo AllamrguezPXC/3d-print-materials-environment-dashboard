@@ -39,5 +39,8 @@ Thumbs.db
 # Playwright MCP verification artifacts (raw session logs, not evidence)
 .playwright-mcp/
 
+# Claude Code internal runtime state (per-session PID lock), not project content
+.claude/scheduled_tasks.lock
+
 # Logs
 *.log
