@@ -11,6 +11,7 @@ const PRINTER: Printer = {
   notes: null,
   filament_system_type: "ams",
   operational_status: "activo",
+  deleted_at: null,
 };
 
 const AMS_SLOT: Location = {
@@ -22,6 +23,7 @@ const AMS_SLOT: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: 0,
+  deleted_at: null,
 };
 
 const EXTERNAL_SPOOL_LOCATION: Location = {
@@ -33,6 +35,7 @@ const EXTERNAL_SPOOL_LOCATION: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: null,
+  deleted_at: null,
 };
 
 const ROOM: Location = {
@@ -44,6 +47,7 @@ const ROOM: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: null,
+  deleted_at: null,
 };
 
 function makeEntry(overrides: Partial<SensorReadingEntry>): SensorReadingEntry {

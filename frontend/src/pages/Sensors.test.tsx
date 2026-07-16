@@ -17,6 +17,7 @@ const PRINTER: Printer = {
   notes: null,
   filament_system_type: "ams",
   operational_status: "activo",
+  deleted_at: null,
 };
 
 const STORAGE_LOCATION: Location = {
@@ -28,6 +29,7 @@ const STORAGE_LOCATION: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: null,
+  deleted_at: null,
 };
 
 const SENSOR: Sensor = {
@@ -39,6 +41,7 @@ const SENSOR: Sensor = {
   port: null,
   is_active: true,
   location_id: null,
+  deleted_at: null,
 };
 
 function renderSensors(sensor: Sensor = SENSOR) {

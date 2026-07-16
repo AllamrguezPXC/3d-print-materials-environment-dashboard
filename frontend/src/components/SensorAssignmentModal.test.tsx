@@ -20,6 +20,7 @@ const PRINTER: Printer = {
   notes: null,
   filament_system_type: "ams",
   operational_status: "activo",
+  deleted_at: null,
 };
 
 const AMS_SLOT: Location = {
@@ -31,6 +32,7 @@ const AMS_SLOT: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: 0,
+  deleted_at: null,
 };
 
 const ASSIGNED_SENSOR: Sensor = {
@@ -42,6 +44,7 @@ const ASSIGNED_SENSOR: Sensor = {
   port: null,
   is_active: true,
   location_id: 10,
+  deleted_at: null,
 };
 
 const UNASSIGNED_SENSOR: Sensor = {
@@ -53,6 +56,7 @@ const UNASSIGNED_SENSOR: Sensor = {
   port: null,
   is_active: true,
   location_id: null,
+  deleted_at: null,
 };
 
 function renderModal(overrides: Partial<React.ComponentProps<typeof SensorAssignmentModal>> = {}) {
@@ -139,6 +143,7 @@ describe("SensorAssignmentModal", () => {
       port: null,
       is_active: true,
       location_id: 10,
+      deleted_at: null,
     });
 
     renderModal();

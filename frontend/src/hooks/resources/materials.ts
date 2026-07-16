@@ -8,3 +8,6 @@ export const useMaterials = hooks.useList;
 export const useCreateMaterial = hooks.useCreate;
 export const useUpdateMaterial = hooks.useUpdate;
 export const useRemoveMaterial = hooks.useRemove;
+export const useArchiveMaterial = hooks.useArchive;
+export const useRestoreMaterial = hooks.useRestore;
+export const useDuplicateMaterial = hooks.useDuplicate;

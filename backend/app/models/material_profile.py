@@ -2,9 +2,10 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.mixins import SoftDeleteMixin
 
 
-class MaterialProfile(Base):
+class MaterialProfile(SoftDeleteMixin, Base):
     """
     <summary>
     Defines environmental thresholds and drying recommendations for a

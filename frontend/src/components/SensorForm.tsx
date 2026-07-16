@@ -13,6 +13,7 @@ export interface SensorFormValues {
   sensor_type: string;
   port: string;
   location_id: string;
+  is_active: boolean;
 }
 
 const SENSOR_TYPES = ["mock", "dracal_vcp", "dracal_cli"];
@@ -25,13 +26,22 @@ interface SensorFormProps {
   locations: Location[];
   printers: Printer[];
   submitting?: boolean;
+  submitLabel?: string;
 }
 
 // dracal_cli identifies its device via serial number only (no COM port --
 // it talks to the sensor over native USB via the dracal-usb-get CLI tool).
 const REQUIRES_PORT = new Set(["dracal_vcp"]);
 
-export function SensorForm({ value, onChange, onSubmit, locations, printers, submitting }: SensorFormProps) {
+export function SensorForm({
+  value,
+  onChange,
+  onSubmit,
+  locations,
+  printers,
+  submitting,
+  submitLabel = "Add sensor",
+}: SensorFormProps) {
   const locationOptions = buildLocationOptions(locations, printers);
   return (
     <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
@@ -114,8 +124,18 @@ export function SensorForm({ value, onChange, onSubmit, locations, printers, sub
           </SelectContent>
         </Select>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="sensor-is-active">Active</Label>
+        <input
+          id="sensor-is-active"
+          type="checkbox"
+          className="size-4"
+          checked={value.is_active}
+          onChange={(e) => onChange({ ...value, is_active: e.target.checked })}
+        />
+      </div>
       <Button type="submit" disabled={submitting}>
-        Add sensor
+        {submitLabel}
       </Button>
     </form>
   );

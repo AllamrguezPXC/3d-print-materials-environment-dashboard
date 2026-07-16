@@ -3,22 +3,22 @@ import { EMPTY_DEVICE_FILTERS, filterDeviceModules, type DeviceFilterContext } f
 import type { PrinterDeviceModule, StandaloneDeviceModule } from "./deviceModules";
 import type { FilamentSpool, Location, MaterialProfile, Printer, SensorReadingEntry, SpoolAssignment } from "@/types/api";
 
-const PRINTER_A: Printer = { id: 1, name: "A1 mini #1", brand: "Bambu Lab", model: "A1 mini", serial_number: null, notes: null, filament_system_type: "ams", operational_status: "activo" };
-const PRINTER_B: Printer = { id: 2, name: "Other Brand #1", brand: "Other Brand", model: "X1", serial_number: null, notes: null, filament_system_type: "ams", operational_status: "activo" };
+const PRINTER_A: Printer = { id: 1, name: "A1 mini #1", brand: "Bambu Lab", model: "A1 mini", serial_number: null, notes: null, filament_system_type: "ams", operational_status: "activo", deleted_at: null };
+const PRINTER_B: Printer = { id: 2, name: "Other Brand #1", brand: "Other Brand", model: "X1", serial_number: null, notes: null, filament_system_type: "ams", operational_status: "activo", deleted_at: null };
 
-const AMS_SLOT: Location = { id: 10, name: "AMS Slot 1 - A1 mini #1", location_type: "printer_ams", printer_id: 1, description: null, max_temp_c: null, notes: null, slot_index: 0 };
+const AMS_SLOT: Location = { id: 10, name: "AMS Slot 1 - A1 mini #1", location_type: "printer_ams", printer_id: 1, description: null, max_temp_c: null, notes: null, slot_index: 0, deleted_at: null };
 
 const MATERIAL_PLA: MaterialProfile = {
   id: 1, name: "PLA", family: "PLA-derived", manufacturer: null, variant: null,
   ideal_temp_min_c: 18, ideal_temp_max_c: 30, warning_temp_min_c: 13, warning_temp_max_c: 35,
   critical_temp_min_c: 8, critical_temp_max_c: 40, ideal_rh_max_percent: 40, warning_rh_max_percent: 50,
   critical_rh_max_percent: 60, drying_temp_c: 45, drying_time_hours_min: 4, drying_time_hours_max: 6,
-  storage_notes: null, drying_notes: null, source_notes: null,
+  storage_notes: null, drying_notes: null, source_notes: null, deleted_at: null,
 };
 const MATERIAL_PETG: MaterialProfile = { ...MATERIAL_PLA, id: 2, name: "PETG", family: "PETG-derived" };
 
-const SPOOL_PLA: FilamentSpool = { id: 100, material_profile_id: 1, brand: "Generic", color: "Black", diameter_mm: 1.75, status: "ready" };
-const SPOOL_PETG: FilamentSpool = { id: 101, material_profile_id: 2, brand: "Polymaker", color: "Orange", diameter_mm: 1.75, status: "watch" };
+const SPOOL_PLA: FilamentSpool = { id: 100, material_profile_id: 1, brand: "Generic", color: "Black", diameter_mm: 1.75, status: "ready", deleted_at: null };
+const SPOOL_PETG: FilamentSpool = { id: 101, material_profile_id: 2, brand: "Polymaker", color: "Orange", diameter_mm: 1.75, status: "watch", deleted_at: null };
 
 function makeEntry(overrides: Partial<SensorReadingEntry> = {}): SensorReadingEntry {
   return {

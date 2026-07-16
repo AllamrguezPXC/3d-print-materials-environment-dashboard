@@ -16,6 +16,7 @@ const PRINTER: Printer = {
   notes: null,
   filament_system_type: "ams",
   operational_status: "activo",
+  deleted_at: null,
 };
 
 function makeLocation(overrides: Partial<Location>): Location {
@@ -28,6 +29,7 @@ function makeLocation(overrides: Partial<Location>): Location {
     max_temp_c: null,
     notes: null,
     slot_index: 0,
+    deleted_at: null,
     ...overrides,
   };
 }
@@ -139,6 +141,7 @@ describe("currentSensorForPrinter", () => {
       port: null,
       is_active: true,
       location_id: null,
+      deleted_at: null,
       ...overrides,
     };
   }

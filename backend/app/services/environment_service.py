@@ -130,7 +130,11 @@ def _build_entry(session: Session, sensor: Sensor, include_alerts: bool) -> Sens
 
 def build_current_readings(session: Session, include_alerts: bool = True) -> CurrentReadingsResponse:
     active_sensors = (
-        session.query(Sensor).filter_by(is_active=True).order_by(Sensor.id.asc()).all()
+        session.query(Sensor)
+        .filter_by(is_active=True)
+        .filter(Sensor.deleted_at.is_(None))
+        .order_by(Sensor.id.asc())
+        .all()
     )
     if not active_sensors:
         return CurrentReadingsResponse(sensors=[], message="No active sensors configured.")

@@ -12,3 +12,6 @@ export const usePrinters = hooks.useList;
 export const useCreatePrinter = hooks.useCreate;
 export const useUpdatePrinter = hooks.useUpdate;
 export const useRemovePrinter = hooks.useRemove;
+export const useArchivePrinter = hooks.useArchive;
+export const useRestorePrinter = hooks.useRestore;
+export const useDuplicatePrinter = hooks.useDuplicate;

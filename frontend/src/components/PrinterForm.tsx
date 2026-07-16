@@ -8,6 +8,8 @@ export interface PrinterFormValues {
   brand: string;
   model: string;
   filament_system_type: string;
+  serial_number: string;
+  notes: string;
 }
 
 const BAMBU_MODELS = ["A1 mini", "P1S", "P1P", "X1 Carbon", "Other"];
@@ -24,9 +26,10 @@ interface PrinterFormProps {
   onChange: (value: PrinterFormValues) => void;
   onSubmit: (e: React.FormEvent) => void;
   submitting?: boolean;
+  submitLabel?: string;
 }
 
-export function PrinterForm({ value, onChange, onSubmit, submitting }: PrinterFormProps) {
+export function PrinterForm({ value, onChange, onSubmit, submitting, submitLabel = "Add printer" }: PrinterFormProps) {
   return (
     <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1.5">
@@ -80,8 +83,25 @@ export function PrinterForm({ value, onChange, onSubmit, submitting }: PrinterFo
           </SelectContent>
         </Select>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="printer-serial">Serial number</Label>
+        <Input
+          id="printer-serial"
+          placeholder="e.g. E25877"
+          value={value.serial_number}
+          onChange={(e) => onChange({ ...value, serial_number: e.target.value })}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="printer-notes">Notes</Label>
+        <Input
+          id="printer-notes"
+          value={value.notes}
+          onChange={(e) => onChange({ ...value, notes: e.target.value })}
+        />
+      </div>
       <Button type="submit" disabled={submitting}>
-        Add printer
+        {submitLabel}
       </Button>
     </form>
   );

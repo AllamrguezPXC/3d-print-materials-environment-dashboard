@@ -110,3 +110,54 @@ def test_delete_material_happy_path(client):
 
     get_response = client.get(f"/materials/{created['id']}")
     assert get_response.status_code == 404
+
+
+def test_archive_material_hides_from_list_and_get(client):
+    created = client.post("/materials", json=MATERIAL_PAYLOAD).json()
+
+    response = client.post(f"/materials/{created['id']}/archive")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is not None
+
+    assert client.get(f"/materials/{created['id']}").status_code == 404
+    assert not any(m["id"] == created["id"] for m in client.get("/materials").json())
+
+
+def test_restore_material_brings_it_back(client):
+    created = client.post("/materials", json=MATERIAL_PAYLOAD).json()
+    client.post(f"/materials/{created['id']}/archive")
+
+    response = client.post(f"/materials/{created['id']}/restore")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is None
+    assert client.get(f"/materials/{created['id']}").status_code == 200
+
+
+def test_list_materials_deleted_only_returns_only_archived(client):
+    created = client.post("/materials", json=MATERIAL_PAYLOAD).json()
+    client.post(f"/materials/{created['id']}/archive")
+
+    body = client.get("/materials", params={"deleted_only": True}).json()
+    assert any(m["id"] == created["id"] for m in body)
+    assert all(m["deleted_at"] is not None for m in body)
+
+
+def test_duplicate_material_creates_independent_copy(client):
+    created = client.post("/materials", json=MATERIAL_PAYLOAD).json()
+
+    response = client.post(f"/materials/{created['id']}/duplicate")
+    assert response.status_code == 200
+    copy = response.json()
+    assert copy["id"] != created["id"]
+    assert copy["name"] == "Test PLA (Copy)"
+    assert copy["ideal_rh_max_percent"] == MATERIAL_PAYLOAD["ideal_rh_max_percent"]
+
+
+def test_create_spool_404_for_archived_material_profile(client):
+    material = client.post("/materials", json=MATERIAL_PAYLOAD).json()
+    client.post(f"/materials/{material['id']}/archive")
+
+    response = client.post(
+        "/spools", json={"material_profile_id": material["id"], "brand": "Archived Material Brand"}
+    )
+    assert response.status_code == 404

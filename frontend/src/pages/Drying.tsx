@@ -18,9 +18,8 @@ import {
 } from "@/hooks/resources/drying";
 import { useLocations } from "@/hooks/resources/locations";
 import { useMaterials } from "@/hooks/resources/materials";
+import { useSensors } from "@/hooks/resources/sensors";
 import { useSpools } from "@/hooks/resources/spools";
-import { sensorsApi } from "@/api/config";
-import { useQuery } from "@tanstack/react-query";
 import type { DryingRecommendation, DryingSessionStatus } from "@/types/api";
 
 const ALL_STATUSES = "all";
@@ -31,7 +30,7 @@ export function Drying() {
   const { data: spools = [] } = useSpools();
   const { data: materials = [] } = useMaterials();
   const { data: locations = [] } = useLocations();
-  const { data: sensors = [] } = useQuery({ queryKey: ["sensors"], queryFn: sensorsApi.list });
+  const { data: sensors = [] } = useSensors();
   const { notice, notifySuccess, notifyError } = useNotice();
 
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);

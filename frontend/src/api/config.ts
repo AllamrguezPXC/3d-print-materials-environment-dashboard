@@ -17,33 +17,49 @@ import type {
 } from "../types/api";
 
 export const materialsApi = {
-  list: () => api.get<MaterialProfile[]>("/materials"),
+  list: (params?: { deletedOnly?: boolean }) =>
+    api.get<MaterialProfile[]>(`/materials${params?.deletedOnly ? "?deleted_only=true" : ""}`),
   create: (body: Partial<MaterialProfile>) => api.post<MaterialProfile>("/materials", body),
   update: (id: number, body: Partial<MaterialProfile>) =>
     api.patch<MaterialProfile>(`/materials/${id}`, body),
   remove: (id: number) => api.delete(`/materials/${id}`),
+  archive: (id: number) => api.post<MaterialProfile>(`/materials/${id}/archive`),
+  restore: (id: number) => api.post<MaterialProfile>(`/materials/${id}/restore`),
+  duplicate: (id: number) => api.post<MaterialProfile>(`/materials/${id}/duplicate`),
 };
 
 export const printersApi = {
-  list: () => api.get<Printer[]>("/printers"),
+  list: (params?: { deletedOnly?: boolean }) =>
+    api.get<Printer[]>(`/printers${params?.deletedOnly ? "?deleted_only=true" : ""}`),
   create: (body: Partial<Printer>) => api.post<Printer>("/printers", body),
   update: (id: number, body: Partial<Printer>) => api.patch<Printer>(`/printers/${id}`, body),
   remove: (id: number) => api.delete(`/printers/${id}`),
+  archive: (id: number) => api.post<Printer>(`/printers/${id}/archive`),
+  restore: (id: number) => api.post<Printer>(`/printers/${id}/restore`),
+  duplicate: (id: number) => api.post<Printer>(`/printers/${id}/duplicate`),
 };
 
 export const locationsApi = {
-  list: () => api.get<Location[]>("/locations"),
+  list: (params?: { deletedOnly?: boolean }) =>
+    api.get<Location[]>(`/locations${params?.deletedOnly ? "?deleted_only=true" : ""}`),
   create: (body: Partial<Location>) => api.post<Location>("/locations", body),
   update: (id: number, body: Partial<Location>) => api.patch<Location>(`/locations/${id}`, body),
   remove: (id: number) => api.delete(`/locations/${id}`),
+  archive: (id: number) => api.post<Location>(`/locations/${id}/archive`),
+  restore: (id: number) => api.post<Location>(`/locations/${id}/restore`),
+  duplicate: (id: number) => api.post<Location>(`/locations/${id}/duplicate`),
 };
 
 export const spoolsApi = {
-  list: () => api.get<FilamentSpool[]>("/spools"),
+  list: (params?: { deletedOnly?: boolean }) =>
+    api.get<FilamentSpool[]>(`/spools${params?.deletedOnly ? "?deleted_only=true" : ""}`),
   create: (body: Partial<FilamentSpool>) => api.post<FilamentSpool>("/spools", body),
   update: (id: number, body: Partial<FilamentSpool>) =>
     api.patch<FilamentSpool>(`/spools/${id}`, body),
   remove: (id: number) => api.delete(`/spools/${id}`),
+  archive: (id: number) => api.post<FilamentSpool>(`/spools/${id}/archive`),
+  restore: (id: number) => api.post<FilamentSpool>(`/spools/${id}/restore`),
+  duplicate: (id: number) => api.post<FilamentSpool>(`/spools/${id}/duplicate`),
 };
 
 export const assignmentsApi = {
@@ -55,10 +71,14 @@ export const assignmentsApi = {
 };
 
 export const sensorsApi = {
-  list: () => api.get<Sensor[]>("/sensors"),
+  list: (params?: { deletedOnly?: boolean }) =>
+    api.get<Sensor[]>(`/sensors${params?.deletedOnly ? "?deleted_only=true" : ""}`),
   create: (body: Partial<Sensor>) => api.post<Sensor>("/sensors", body),
   update: (id: number, body: Partial<Sensor>) => api.patch<Sensor>(`/sensors/${id}`, body),
   remove: (id: number) => api.delete(`/sensors/${id}`),
+  archive: (id: number) => api.post<Sensor>(`/sensors/${id}/archive`),
+  restore: (id: number) => api.post<Sensor>(`/sensors/${id}/restore`),
+  duplicate: (id: number) => api.post<Sensor>(`/sensors/${id}/duplicate`),
   ports: () => api.get<SensorPortInfo[]>("/sensors/ports"),
   testRead: (id: number) => api.post<SensorTestReadResult>(`/sensors/${id}/test-read`),
 };

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Radio } from "lucide-react";
+import { Copy, Pencil, Radio } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { EditSensorModal } from "@/components/EditSensorModal";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,15 +12,16 @@ import { useNotice } from "@/hooks/useNotice";
 import { useLocations } from "@/hooks/resources/locations";
 import { usePrinters } from "@/hooks/resources/printers";
 import {
+  useArchiveSensor,
   useCreateSensor,
-  useRemoveSensor,
+  useDuplicateSensor,
   useSensors,
   useTestReadSensor,
   useUpdateSensor,
 } from "@/hooks/resources/sensors";
 import { buildLocationOptions } from "@/lib/sensorLocation";
 import { formatHumidity, formatTemperature } from "@/lib/format";
-import type { SensorTestReadResult } from "@/types/api";
+import type { Sensor, SensorTestReadResult } from "@/types/api";
 
 const EMPTY_SENSOR: SensorFormValues = {
   name: "",
@@ -28,6 +30,7 @@ const EMPTY_SENSOR: SensorFormValues = {
   sensor_type: "mock",
   port: "",
   location_id: "",
+  is_active: true,
 };
 
 const NO_LOCATION = "none";
@@ -39,13 +42,17 @@ export function Sensors() {
   const { notice, notifySuccess, notifyError } = useNotice();
 
   const createSensor = useCreateSensor();
-  const removeSensor = useRemoveSensor();
+  const archiveSensor = useArchiveSensor();
+  const duplicateSensor = useDuplicateSensor();
   const updateSensor = useUpdateSensor();
   const testRead = useTestReadSensor();
   const locationOptions = buildLocationOptions(locations, printers);
 
   const [newSensor, setNewSensor] = useState(EMPTY_SENSOR);
   const [testResults, setTestResults] = useState<Record<number, SensorTestReadResult>>({});
+
+  const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
+  const [sensorDraft, setSensorDraft] = useState<SensorFormValues>(EMPTY_SENSOR);
 
   function handleAddSensor(e: React.FormEvent) {
     e.preventDefault();
@@ -60,7 +67,7 @@ export function Sensors() {
         serial_number: newSensor.serial_number,
         sensor_type: newSensor.sensor_type,
         port: newSensor.port || null,
-        is_active: true,
+        is_active: newSensor.is_active,
         location_id: newSensor.location_id ? Number(newSensor.location_id) : null,
       },
       {
@@ -74,8 +81,15 @@ export function Sensors() {
   }
 
   function handleDelete(id: number) {
-    removeSensor.mutate(id, {
+    archiveSensor.mutate(id, {
       onSuccess: () => notifySuccess("Sensor deleted."),
+      onError: (err) => notifyError(err.message),
+    });
+  }
+
+  function handleDuplicate(id: number) {
+    duplicateSensor.mutate(id, {
+      onSuccess: () => notifySuccess("Sensor duplicated."),
       onError: (err) => notifyError(err.message),
     });
   }
@@ -91,6 +105,48 @@ export function Sensors() {
     updateSensor.mutate(
       { id, body: { location_id: value === NO_LOCATION ? null : Number(value) } },
       { onError: (err) => notifyError(err.message) },
+    );
+  }
+
+  function openEdit(sensor: Sensor) {
+    setEditingSensor(sensor);
+    setSensorDraft({
+      name: sensor.name,
+      model: sensor.model,
+      serial_number: sensor.serial_number,
+      sensor_type: sensor.sensor_type,
+      port: sensor.port ?? "",
+      location_id: sensor.location_id ? String(sensor.location_id) : "",
+      is_active: sensor.is_active,
+    });
+  }
+
+  function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingSensor || !sensorDraft.name.trim() || !sensorDraft.serial_number.trim()) {
+      notifyError("Name and serial number are required.");
+      return;
+    }
+    updateSensor.mutate(
+      {
+        id: editingSensor.id,
+        body: {
+          name: sensorDraft.name,
+          model: sensorDraft.model,
+          serial_number: sensorDraft.serial_number,
+          sensor_type: sensorDraft.sensor_type,
+          port: sensorDraft.port || null,
+          is_active: sensorDraft.is_active,
+          location_id: sensorDraft.location_id ? Number(sensorDraft.location_id) : null,
+        },
+      },
+      {
+        onSuccess: () => {
+          notifySuccess(`Sensor "${sensorDraft.name}" updated.`);
+          setEditingSensor(null);
+        },
+        onError: (err) => notifyError(err.message),
+      },
     );
   }
 
@@ -171,9 +227,19 @@ export function Sensors() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(s.id)}>
-                        Delete
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(s)}>
+                          <Pencil className="size-3.5" />
+                          Edit
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDuplicate(s.id)}>
+                          <Copy className="size-3.5" />
+                          Duplicate
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDelete(s.id)}>
+                          Delete
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -190,6 +256,19 @@ export function Sensors() {
           />
         </CardContent>
       </Card>
+
+      {editingSensor && (
+        <EditSensorModal
+          open
+          onOpenChange={(open) => !open && setEditingSensor(null)}
+          value={sensorDraft}
+          onChange={setSensorDraft}
+          onSubmit={handleEditSubmit}
+          locations={locations}
+          printers={printers}
+          submitting={updateSensor.isPending}
+        />
+      )}
     </div>
   );
 }

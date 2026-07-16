@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -29,3 +31,4 @@ class PrinterRead(PrinterBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    deleted_at: datetime | None = None

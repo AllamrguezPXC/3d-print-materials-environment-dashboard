@@ -118,6 +118,7 @@ export interface MaterialProfile {
   storage_notes: string | null;
   drying_notes: string | null;
   source_notes: string | null;
+  deleted_at: string | null;
 }
 
 export interface Printer {
@@ -134,6 +135,7 @@ export interface Printer {
   /** "activo" | "inactivo" | "mantenimiento" -- administrative status only;
    * never gates or suppresses alerts. */
   operational_status: string;
+  deleted_at: string | null;
 }
 
 export interface Location {
@@ -147,6 +149,7 @@ export interface Location {
   /** Only meaningful when location_type === "printer_ams": the slot's stable
    * ordinal (0-based) within its printer's AMS. */
   slot_index: number | null;
+  deleted_at: string | null;
 }
 
 export interface Sensor {
@@ -158,6 +161,7 @@ export interface Sensor {
   port: string | null;
   is_active: boolean;
   location_id: number | null;
+  deleted_at: string | null;
 }
 
 /** One serial port detected on the host, from GET /sensors/ports -- transient
@@ -185,6 +189,7 @@ export interface FilamentSpool {
   color: string | null;
   diameter_mm: number;
   status: "ready" | "watch" | "needs_drying" | "quarantine" | "unknown";
+  deleted_at: string | null;
 }
 
 export interface SpoolAssignment {

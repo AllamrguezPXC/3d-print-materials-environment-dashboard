@@ -29,7 +29,13 @@ def capture_and_persist_all_active_sensors(session: Session) -> ReadingsCaptureR
     than aborting the whole request, so one failing physical sensor doesn't
     prevent the others from being captured.
     """
-    active_sensors = session.query(Sensor).filter_by(is_active=True).order_by(Sensor.id.asc()).all()
+    active_sensors = (
+        session.query(Sensor)
+        .filter_by(is_active=True)
+        .filter(Sensor.deleted_at.is_(None))
+        .order_by(Sensor.id.asc())
+        .all()
+    )
     if not active_sensors:
         return ReadingsCaptureResponse(readings=[], message="No active sensors configured.")
 

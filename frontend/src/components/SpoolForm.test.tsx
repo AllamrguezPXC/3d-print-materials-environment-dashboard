@@ -27,6 +27,7 @@ function makeProfile(overrides: Partial<MaterialProfile>): MaterialProfile {
     storage_notes: null,
     drying_notes: null,
     source_notes: null,
+    deleted_at: null,
     ...overrides,
   };
 }

@@ -23,12 +23,14 @@ def get_assignment_or_404(session: Session, assignment_id: int) -> SpoolAssignme
 
 
 def _check_spool_exists(session: Session, spool_id: int) -> None:
-    if session.get(FilamentSpool, spool_id) is None:
+    spool = session.get(FilamentSpool, spool_id)
+    if spool is None or spool.deleted_at is not None:
         raise HTTPException(status_code=404, detail=f"Filament spool {spool_id} not found.")
 
 
 def _check_location_exists(session: Session, location_id: int) -> None:
-    if session.get(Location, location_id) is None:
+    location = session.get(Location, location_id)
+    if location is None or location.deleted_at is not None:
         raise HTTPException(status_code=404, detail=f"Location {location_id} not found.")
 
 

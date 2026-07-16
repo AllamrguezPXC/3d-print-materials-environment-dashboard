@@ -39,8 +39,8 @@ export function History() {
   const [sensorId, setSensorId] = useState(ALL);
   const [locationId, setLocationId] = useState(ALL);
 
-  const { data: sensors = [] } = useQuery({ queryKey: ["sensors"], queryFn: sensorsApi.list });
-  const { data: locations = [] } = useQuery({ queryKey: ["locations"], queryFn: locationsApi.list });
+  const { data: sensors = [] } = useQuery({ queryKey: ["sensors"], queryFn: () => sensorsApi.list() });
+  const { data: locations = [] } = useQuery({ queryKey: ["locations"], queryFn: () => locationsApi.list() });
 
   const {
     data: history,

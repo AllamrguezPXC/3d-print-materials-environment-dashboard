@@ -152,3 +152,41 @@ def test_patch_unknown_session_returns_404(client):
     response = client.patch("/drying/sessions/999999", json={"status": "cancelled"})
 
     assert response.status_code == 404
+
+
+def test_post_session_with_archived_spool_returns_404(client):
+    with SessionLocal() as session:
+        _profile, location, spool = _seed_petg_spool(session, location_name="Archived Spool Box")
+        location_id = location.id
+        spool_id = spool.id
+
+    client.post(f"/spools/{spool_id}/archive")
+
+    payload = {
+        "spool_id": spool_id,
+        "dryer_location_id": location_id,
+        "target_temp_c": 60.0,
+        "target_duration_hours": 5.0,
+    }
+    response = client.post("/drying/sessions", json=payload)
+
+    assert response.status_code == 404
+
+
+def test_post_session_with_archived_dryer_location_returns_404(client):
+    with SessionLocal() as session:
+        _profile, location, spool = _seed_petg_spool(session, location_name="Archived Location Box")
+        location_id = location.id
+        spool_id = spool.id
+
+    client.post(f"/locations/{location_id}/archive")
+
+    payload = {
+        "spool_id": spool_id,
+        "dryer_location_id": location_id,
+        "target_temp_c": 60.0,
+        "target_duration_hours": 5.0,
+    }
+    response = client.post("/drying/sessions", json=payload)
+
+    assert response.status_code == 404

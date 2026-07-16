@@ -21,7 +21,9 @@ def test_build_current_readings_returns_empty_list_with_message_when_no_active_s
 
 def test_build_current_readings_returns_one_entry_per_active_sensor(client):
     with SessionLocal() as session:
-        active_count = session.query(Sensor).filter_by(is_active=True).count()
+        active_count = (
+            session.query(Sensor).filter_by(is_active=True).filter(Sensor.deleted_at.is_(None)).count()
+        )
         result = build_current_readings(session)
         assert len(result.sensors) == active_count
         assert result.message is None

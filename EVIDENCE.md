@@ -704,6 +704,72 @@ with the real current time, so simulating a future arc required extending `ended
 API call (the same documented fallback pattern used throughout this task) before completing. No
 code changes — see §8.1 of the full report.
 
+## Equipment Manager CRUD Completeness — Edit, Duplicate, Trash/Restore — 2026-07-16
+
+Full task doc: `docs/Tareas/equipment-manager-crud-completeness/TASK.md`.
+
+**Trigger:** the user asked for a validation pass on whether all 5 equipment types (printers,
+sensors, dryers/locations, materials, spools) support edit, delete, duplicate ("save as template"),
+and restore-after-delete — envisioning the app as a versatile, easy-to-configure hardware manager.
+An audit found hard-delete already solid in all 5, edit inconsistent across pages despite the
+backend already supporting full-field PATCH, and duplicate/restore entirely absent. The user chose,
+via `AskUserQuestion`, to plan and implement all three gaps in one pass (Plan Mode used per
+CLAUDE.md's operating rules, approved via `ExitPlanMode`).
+
+**Design decision (additive, zero regression risk):** rather than converting the existing `DELETE`
+endpoints to soft-delete (which would silently defeat their referential-integrity guard — a
+soft-deleted row never triggers `IntegrityError` since nothing is destroyed), a new
+`SoftDeleteMixin` (`deleted_at`) was added to all 5 models, with two new endpoints per resource
+(`POST /{resource}/{id}/archive`, `POST /{resource}/{id}/restore`) sitting alongside the untouched
+`DELETE`. Every existing `DELETE`-endpoint test still passes unmodified.
+
+**Backend TDD evidence:** wrote failing/new pytest coverage per entity before/alongside each
+service change — `archive_X hides from list and GET`, `restore_X brings it back`,
+`list_X(deleted_only=true) returns only archived`, `duplicate_X creates an independent copy with
+correct uniqueness adjustments` (printer clears serial + resets status; sensor gets a `-COPY` serial
+suffix + clears location), and FK-existence checks now reject references to archived rows (e.g.
+creating a sensor on an archived location returns 404). Also added a regression test confirming an
+archived sensor disappears from `GET /readings/current`. Full backend suite: **203/203 passing**.
+
+**Security-relevant fix caught during implementation (self-caught, not user-reported):**
+`Sensor.serial_number` had a DB-level `unique=True` constraint that would have silently defeated the
+"archived sensor's serial becomes reusable" design goal — the Python-level uniqueness check would
+pass, but the INSERT would still raise `IntegrityError` regardless. Fixed by removing the DB-level
+constraint (kept the index) since uniqueness is now enforced only at the service layer, which can
+express "unique among non-deleted rows" where a plain SQLite `UNIQUE` column cannot.
+
+**Frontend implementation delegated to the `frontend-react-dashboard` subagent** (types, API config,
+`useResource` hook factory, 3 new Edit modals, page wiring, new `/trash` page, tests) given the scope
+across ~20 files; the subagent's work was **independently re-verified** rather than trusted at face
+value — re-ran `tsc -b`, `npm run build`, `npm run lint`, and `npx vitest run` myself (all clean;
+173/173 tests across 32 files) and read through the actual diffs (`Trash.tsx`, `useResource.ts`,
+`Printers.tsx`) before accepting the work as done.
+
+**Live Playwright MCP verification** (per CLAUDE.md's Browser Verification section) — required
+stopping and restarting the local `uvicorn` dev server (with the user's explicit confirmation,
+since it was a process already running before this session and not one Claude Code had itself
+started) and deleting `backend/environment_monitor.db` (no Alembic in this project) to pick up the
+5 new `deleted_at` columns:
+- **Printer**: edited serial_number + notes via the new Edit modal, confirmed persistence via API.
+- **Location**: duplicated "Storage Box A" → confirmed `(Copy)` suffix → archived it ("Delete") →
+  confirmed it vanished from Printers & Locations but appeared in `/trash` → restored it → confirmed
+  it reappeared → archived again → "Delete permanently" from Trash (with the `window.confirm`
+  dialog handled) → confirmed gone via API.
+- **Sensor**: duplicated "Mock Sensor 2" → confirmed serial `MOCK-0002-COPY` and `location_id: null`
+  via API → archived it; permanent delete correctly returned 400 (the dev server's live
+  auto-capture loop had already written a `Reading` referencing it) — confirming the pre-existing
+  referential-integrity guard still works unchanged after this feature; left archived in Trash as
+  harmless cleanup.
+- **Material profile**: duplicated "PLA" → confirmed `PLA (Copy)` with all thresholds copied via
+  API → cleaned up (hard-deleted, no references).
+- **Spool**: duplicated a PLA/Black spool → confirmed an independent row with the same
+  brand/color/status and no name suffix (spools have no name field) → cleaned up.
+- Confirmed the `/trash` page's empty-state and populated-state rendering, and that dark mode
+  remains the default (screenshot captured).
+
+**Result:** all 3 gaps (full edit parity, duplicate-as-template, archive/restore via Trash) closed
+across all 5 equipment types, with zero changes to existing `DELETE` behavior or tests.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

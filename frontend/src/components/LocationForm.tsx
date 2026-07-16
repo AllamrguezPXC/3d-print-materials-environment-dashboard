@@ -8,6 +8,10 @@ export interface LocationFormValues {
   name: string;
   location_type: string;
   printer_id: string;
+  description: string;
+  max_temp_c: string;
+  notes: string;
+  slot_index: string;
 }
 
 const LOCATION_TYPES = ["printer_ams", "printer_external_spool", "storage_box", "dry_box", "dryer", "room"];
@@ -19,9 +23,17 @@ interface LocationFormProps {
   onSubmit: (e: React.FormEvent) => void;
   printers: Printer[];
   submitting?: boolean;
+  submitLabel?: string;
 }
 
-export function LocationForm({ value, onChange, onSubmit, printers, submitting }: LocationFormProps) {
+export function LocationForm({
+  value,
+  onChange,
+  onSubmit,
+  printers,
+  submitting,
+  submitLabel = "Add location",
+}: LocationFormProps) {
   return (
     <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1.5">
@@ -70,8 +82,46 @@ export function LocationForm({ value, onChange, onSubmit, printers, submitting }
           </SelectContent>
         </Select>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="location-description">Description</Label>
+        <Input
+          id="location-description"
+          value={value.description}
+          onChange={(e) => onChange({ ...value, description: e.target.value })}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="location-max-temp">Max temp °C</Label>
+        <Input
+          id="location-max-temp"
+          type="number"
+          value={value.max_temp_c}
+          onChange={(e) => onChange({ ...value, max_temp_c: e.target.value })}
+          className="w-28"
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="location-notes">Notes</Label>
+        <Input
+          id="location-notes"
+          value={value.notes}
+          onChange={(e) => onChange({ ...value, notes: e.target.value })}
+        />
+      </div>
+      {value.location_type === "printer_ams" && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="location-slot-index">Slot index</Label>
+          <Input
+            id="location-slot-index"
+            type="number"
+            value={value.slot_index}
+            onChange={(e) => onChange({ ...value, slot_index: e.target.value })}
+            className="w-24"
+          />
+        </div>
+      )}
       <Button type="submit" disabled={submitting}>
-        Add location
+        {submitLabel}
       </Button>
     </form>
   );

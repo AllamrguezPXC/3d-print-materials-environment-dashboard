@@ -20,6 +20,7 @@ const PRINTER: Printer = {
   notes: null,
   filament_system_type: "ams",
   operational_status: "activo",
+  deleted_at: null,
 };
 
 const AMS_SLOT: Location = {
@@ -31,6 +32,7 @@ const AMS_SLOT: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: 0,
+  deleted_at: null,
 };
 
 const EXT_SPOOL_LOCATION: Location = {
@@ -42,6 +44,7 @@ const EXT_SPOOL_LOCATION: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: null,
+  deleted_at: null,
 };
 
 const MATERIAL: MaterialProfile = {
@@ -65,9 +68,10 @@ const MATERIAL: MaterialProfile = {
   storage_notes: null,
   drying_notes: null,
   source_notes: null,
+  deleted_at: null,
 };
 
-const SPOOL: FilamentSpool = { id: 1, material_profile_id: 1, brand: "Generic", color: "Black", diameter_mm: 1.75, status: "ready" };
+const SPOOL: FilamentSpool = { id: 1, material_profile_id: 1, brand: "Generic", color: "Black", diameter_mm: 1.75, status: "ready", deleted_at: null };
 
 function makeEntry(overrides: Partial<SensorReadingEntry>): SensorReadingEntry {
   return {

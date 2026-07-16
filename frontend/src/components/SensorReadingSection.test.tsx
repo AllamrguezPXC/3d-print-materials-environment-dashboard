@@ -12,6 +12,7 @@ const PRINTER: Printer = {
   notes: null,
   filament_system_type: "ams",
   operational_status: "activo",
+  deleted_at: null,
 };
 
 function makeEntry(overrides: Partial<SensorReadingEntry>): SensorReadingEntry {

@@ -2,9 +2,10 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.mixins import SoftDeleteMixin
 
 
-class Location(Base):
+class Location(SoftDeleteMixin, Base):
     """
     <summary>
     Represents where a sensor is installed: a printer's AMS/external spool

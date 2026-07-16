@@ -10,6 +10,7 @@ import { Printers } from "./pages/Printers";
 import { Sensors } from "./pages/Sensors";
 import { Settings } from "./pages/Settings";
 import { Spools } from "./pages/Spools";
+import { Trash } from "./pages/Trash";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="spools" element={<Spools />} />
           <Route path="sensors" element={<Sensors />} />
           <Route path="drying" element={<Drying />} />
+          <Route path="trash" element={<Trash />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

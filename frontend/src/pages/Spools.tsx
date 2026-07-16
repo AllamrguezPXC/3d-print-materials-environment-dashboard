@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Copy, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AddFilamentModal } from "@/components/AddFilamentModal";
@@ -17,7 +17,13 @@ import { useAssignments, useCreateAssignment } from "@/hooks/resources/assignmen
 import { useLocations } from "@/hooks/resources/locations";
 import { useMaterials } from "@/hooks/resources/materials";
 import { usePrinters } from "@/hooks/resources/printers";
-import { useCreateSpool, useRemoveSpool, useSpools, useUpdateSpool } from "@/hooks/resources/spools";
+import {
+  useArchiveSpool,
+  useCreateSpool,
+  useDuplicateSpool,
+  useSpools,
+  useUpdateSpool,
+} from "@/hooks/resources/spools";
 import type { FilamentSpool, Location } from "@/types/api";
 
 const EMPTY_SPOOL: SpoolFormValues = { material_profile_id: "", brand: "", color: "", status: "ready" };
@@ -35,7 +41,8 @@ export function Spools() {
 
   const createSpool = useCreateSpool();
   const updateSpool = useUpdateSpool();
-  const removeSpool = useRemoveSpool();
+  const archiveSpool = useArchiveSpool();
+  const duplicateSpool = useDuplicateSpool();
   const createAssignment = useCreateAssignment();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -149,9 +156,15 @@ export function Spools() {
   }
 
   function handleDelete(spool: FilamentSpool) {
-    if (!window.confirm(`Delete this ${spool.brand} spool? This cannot be undone.`)) return;
-    removeSpool.mutate(spool.id, {
+    archiveSpool.mutate(spool.id, {
       onSuccess: () => notifySuccess("Spool deleted."),
+      onError: (err) => notifyError(err.message),
+    });
+  }
+
+  function handleDuplicate(spool: FilamentSpool) {
+    duplicateSpool.mutate(spool.id, {
+      onSuccess: () => notifySuccess("Spool duplicated."),
       onError: (err) => notifyError(err.message),
     });
   }
@@ -228,6 +241,9 @@ export function Spools() {
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon-sm" onClick={() => openEdit(s)} title="Edit">
               <Pencil className="size-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon-sm" onClick={() => handleDuplicate(s)} title="Duplicate">
+              <Copy className="size-3.5" />
             </Button>
             <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(s)} title="Delete">
               <Trash2 className="size-3.5" />

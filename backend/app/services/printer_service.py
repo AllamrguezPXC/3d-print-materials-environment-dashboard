@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.time import utc_now
 from app.models.location import Location
 from app.models.printer import Printer
 from app.schemas.printer import PrinterCreate, PrinterUpdate
@@ -100,11 +101,24 @@ def _sync_locations_for_filament_system_type(session: Session, printer: Printer,
     # a specific slot shape today.
 
 
-def list_printers(session: Session) -> list[Printer]:
-    return session.query(Printer).order_by(Printer.id.asc()).all()
+def list_printers(session: Session, deleted_only: bool = False) -> list[Printer]:
+    query = session.query(Printer).order_by(Printer.id.asc())
+    if deleted_only:
+        return query.filter(Printer.deleted_at.is_not(None)).all()
+    return query.filter(Printer.deleted_at.is_(None)).all()
 
 
 def get_printer_or_404(session: Session, printer_id: int) -> Printer:
+    """Normal lookup -- 404s for an archived printer, same as a missing one,
+    so every ordinary read/update/reference treats "archived" as "gone"."""
+    printer = session.get(Printer, printer_id)
+    if printer is None or printer.deleted_at is not None:
+        raise HTTPException(status_code=404, detail=f"Printer {printer_id} not found.")
+    return printer
+
+
+def _get_printer_including_deleted_or_404(session: Session, printer_id: int) -> Printer:
+    """For restore/permanent-delete, which must find an already-archived row."""
     printer = session.get(Printer, printer_id)
     if printer is None:
         raise HTTPException(status_code=404, detail=f"Printer {printer_id} not found.")
@@ -154,7 +168,9 @@ def update_printer(session: Session, printer_id: int, payload: PrinterUpdate) ->
 
 
 def delete_printer(session: Session, printer_id: int) -> None:
-    printer = get_printer_or_404(session, printer_id)
+    """Permanent removal -- used only from the Trash view. Works whether the
+    printer is currently archived or not."""
+    printer = _get_printer_including_deleted_or_404(session, printer_id)
     session.delete(printer)
     try:
         session.commit()
@@ -164,3 +180,37 @@ def delete_printer(session: Session, printer_id: int) -> None:
             status_code=400,
             detail=f"Printer {printer_id} cannot be deleted because it is referenced by other records (e.g. locations).",
         ) from exc
+
+
+def archive_printer(session: Session, printer_id: int) -> Printer:
+    printer = get_printer_or_404(session, printer_id)
+    printer.deleted_at = utc_now()
+    session.commit()
+    session.refresh(printer)
+    return printer
+
+
+def restore_printer(session: Session, printer_id: int) -> Printer:
+    printer = _get_printer_including_deleted_or_404(session, printer_id)
+    printer.deleted_at = None
+    session.commit()
+    session.refresh(printer)
+    return printer
+
+
+def duplicate_printer(session: Session, printer_id: int) -> Printer:
+    """Copies a printer's own configuration fields as a starting template --
+    never its Locations/sensors/spools. A real hardware serial_number isn't
+    carried over (two printers can't share one), and the copy always starts
+    "activo" regardless of the source's operational_status."""
+    printer = get_printer_or_404(session, printer_id)
+    payload = PrinterCreate(
+        name=f"{printer.name} (Copy)",
+        brand=printer.brand,
+        model=printer.model,
+        serial_number=None,
+        notes=printer.notes,
+        filament_system_type=printer.filament_system_type,
+        operational_status="activo",
+    )
+    return create_printer(session, payload)
