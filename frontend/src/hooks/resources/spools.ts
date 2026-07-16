@@ -8,3 +8,6 @@ export const useSpools = hooks.useList;
 export const useCreateSpool = hooks.useCreate;
 export const useUpdateSpool = hooks.useUpdate;
 export const useRemoveSpool = hooks.useRemove;
+export const useArchiveSpool = hooks.useArchive;
+export const useRestoreSpool = hooks.useRestore;
+export const useDuplicateSpool = hooks.useDuplicate;

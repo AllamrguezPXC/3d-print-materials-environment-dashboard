@@ -110,3 +110,63 @@ def test_delete_spool_happy_path(client):
 
     get_response = client.get(f"/spools/{created['id']}")
     assert get_response.status_code == 404
+
+
+def test_archive_spool_hides_from_list_and_get(client):
+    material_id = _first_material_profile_id(client)
+    created = client.post(
+        "/spools", json={"material_profile_id": material_id, "brand": "Archivable Brand"}
+    ).json()
+
+    response = client.post(f"/spools/{created['id']}/archive")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is not None
+
+    assert client.get(f"/spools/{created['id']}").status_code == 404
+    assert not any(s["id"] == created["id"] for s in client.get("/spools").json())
+
+
+def test_restore_spool_brings_it_back(client):
+    material_id = _first_material_profile_id(client)
+    created = client.post(
+        "/spools", json={"material_profile_id": material_id, "brand": "Restorable Brand"}
+    ).json()
+    client.post(f"/spools/{created['id']}/archive")
+
+    response = client.post(f"/spools/{created['id']}/restore")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is None
+    assert client.get(f"/spools/{created['id']}").status_code == 200
+
+
+def test_list_spools_deleted_only_returns_only_archived(client):
+    material_id = _first_material_profile_id(client)
+    created = client.post(
+        "/spools", json={"material_profile_id": material_id, "brand": "Deleted Only Brand"}
+    ).json()
+    client.post(f"/spools/{created['id']}/archive")
+
+    body = client.get("/spools", params={"deleted_only": True}).json()
+    assert any(s["id"] == created["id"] for s in body)
+    assert all(s["deleted_at"] is not None for s in body)
+
+
+def test_duplicate_spool_creates_independent_copy(client):
+    material_id = _first_material_profile_id(client)
+    created = client.post(
+        "/spools",
+        json={
+            "material_profile_id": material_id,
+            "brand": "Original Brand",
+            "color": "Orange",
+            "remaining_weight_g": 500.0,
+        },
+    ).json()
+
+    response = client.post(f"/spools/{created['id']}/duplicate")
+    assert response.status_code == 200
+    copy = response.json()
+    assert copy["id"] != created["id"]
+    assert copy["brand"] == "Original Brand"
+    assert copy["color"] == "Orange"
+    assert copy["remaining_weight_g"] == 500.0

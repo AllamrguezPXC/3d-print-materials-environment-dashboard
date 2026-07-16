@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { getAvailableSpools } from "./spoolAvailability";
 import type { FilamentSpool, SpoolAssignment } from "@/types/api";
 
-const SPOOL_1: FilamentSpool = { id: 1, material_profile_id: 1, brand: "Generic", color: "Black", diameter_mm: 1.75, status: "ready" };
-const SPOOL_2: FilamentSpool = { id: 2, material_profile_id: 1, brand: "Generic", color: "Blue", diameter_mm: 1.75, status: "ready" };
-const SPOOL_3: FilamentSpool = { id: 3, material_profile_id: 1, brand: "Generic", color: "Red", diameter_mm: 1.75, status: "watch" };
+const SPOOL_1: FilamentSpool = { id: 1, material_profile_id: 1, brand: "Generic", color: "Black", diameter_mm: 1.75, status: "ready", deleted_at: null };
+const SPOOL_2: FilamentSpool = { id: 2, material_profile_id: 1, brand: "Generic", color: "Blue", diameter_mm: 1.75, status: "ready", deleted_at: null };
+const SPOOL_3: FilamentSpool = { id: 3, material_profile_id: 1, brand: "Generic", color: "Red", diameter_mm: 1.75, status: "watch", deleted_at: null };
 
 function assignment(overrides: Partial<SpoolAssignment>): SpoolAssignment {
   return { id: 1, spool_id: 1, location_id: 1, slot_name: null, is_active: true, ...overrides };

@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface ResourceApi<T, TCreate, TUpdate> {
-  list: () => Promise<T[]>;
+  list: (params?: { deletedOnly?: boolean }) => Promise<T[]>;
   create?: (body: TCreate) => Promise<T>;
   update?: (id: number, body: TUpdate) => Promise<T>;
   remove?: (id: number) => Promise<unknown>;
+  archive?: (id: number) => Promise<T>;
+  restore?: (id: number) => Promise<T>;
+  duplicate?: (id: number) => Promise<T>;
 }
 
 interface ResourceHooksOptions {
@@ -29,8 +32,8 @@ export function createResourceHooks<T, TCreate = Partial<T>, TUpdate = Partial<T
 ) {
   const invalidateKeys = [queryKey, ...(options?.invalidates ?? [])];
 
-  function useList() {
-    return useQuery({ queryKey: [queryKey], queryFn: api.list });
+  function useList(params?: { deletedOnly?: boolean }) {
+    return useQuery({ queryKey: [queryKey, params], queryFn: () => api.list(params) });
   }
 
   function useInvalidateAll() {
@@ -62,5 +65,29 @@ export function createResourceHooks<T, TCreate = Partial<T>, TUpdate = Partial<T
     });
   }
 
-  return { useList, useCreate, useUpdate, useRemove };
+  function useArchive() {
+    const invalidateAll = useInvalidateAll();
+    return useMutation({
+      mutationFn: (id: number) => api.archive!(id),
+      onSuccess: invalidateAll,
+    });
+  }
+
+  function useRestore() {
+    const invalidateAll = useInvalidateAll();
+    return useMutation({
+      mutationFn: (id: number) => api.restore!(id),
+      onSuccess: invalidateAll,
+    });
+  }
+
+  function useDuplicate() {
+    const invalidateAll = useInvalidateAll();
+    return useMutation({
+      mutationFn: (id: number) => api.duplicate!(id),
+      onSuccess: invalidateAll,
+    });
+  }
+
+  return { useList, useCreate, useUpdate, useRemove, useArchive, useRestore, useDuplicate };
 }

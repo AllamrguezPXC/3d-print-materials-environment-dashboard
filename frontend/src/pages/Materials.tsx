@@ -1,12 +1,18 @@
 import { useState } from "react";
-import { Boxes } from "lucide-react";
+import { Boxes, Copy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { MaterialProfileForm, type MaterialProfileFormValues } from "@/components/MaterialProfileForm";
 import { useNotice } from "@/hooks/useNotice";
-import { useCreateMaterial, useMaterials, useRemoveMaterial, useUpdateMaterial } from "@/hooks/resources/materials";
+import {
+  useArchiveMaterial,
+  useCreateMaterial,
+  useDuplicateMaterial,
+  useMaterials,
+  useUpdateMaterial,
+} from "@/hooks/resources/materials";
 import type { MaterialProfile } from "@/types/api";
 
 const EMPTY_DRAFT: MaterialProfileFormValues = {
@@ -29,6 +35,7 @@ const EMPTY_DRAFT: MaterialProfileFormValues = {
   storage_notes: null,
   drying_notes: null,
   source_notes: null,
+  deleted_at: null,
 };
 
 export function Materials() {
@@ -36,7 +43,8 @@ export function Materials() {
   const { notice, notifySuccess, notifyError } = useNotice();
   const createMaterial = useCreateMaterial();
   const updateMaterial = useUpdateMaterial();
-  const removeMaterial = useRemoveMaterial();
+  const archiveMaterial = useArchiveMaterial();
+  const duplicateMaterial = useDuplicateMaterial();
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<MaterialProfileFormValues>(EMPTY_DRAFT);
@@ -82,11 +90,18 @@ export function Materials() {
   }
 
   function handleDelete(id: number) {
-    removeMaterial.mutate(id, {
+    archiveMaterial.mutate(id, {
       onSuccess: () => {
         notifySuccess("Profile deleted.");
         if (editingId === id) cancelEdit();
       },
+      onError: (err) => notifyError(err.message),
+    });
+  }
+
+  function handleDuplicate(id: number) {
+    duplicateMaterial.mutate(id, {
+      onSuccess: () => notifySuccess("Profile duplicated."),
       onError: (err) => notifyError(err.message),
     });
   }
@@ -136,6 +151,10 @@ export function Materials() {
                   <TableCell className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => startEdit(p)}>
                       Edit
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleDuplicate(p.id)}>
+                      <Copy className="size-3.5" />
+                      Duplicate
                     </Button>
                     <Button variant="destructive" size="sm" onClick={() => handleDelete(p.id)}>
                       Delete

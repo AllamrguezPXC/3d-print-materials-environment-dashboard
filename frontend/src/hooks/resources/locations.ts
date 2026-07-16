@@ -8,3 +8,6 @@ export const useLocations = hooks.useList;
 export const useCreateLocation = hooks.useCreate;
 export const useUpdateLocation = hooks.useUpdate;
 export const useRemoveLocation = hooks.useRemove;
+export const useArchiveLocation = hooks.useArchive;
+export const useRestoreLocation = hooks.useRestore;
+export const useDuplicateLocation = hooks.useDuplicate;

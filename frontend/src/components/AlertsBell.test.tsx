@@ -143,6 +143,7 @@ describe("AlertsBell", () => {
       notes: null,
       filament_system_type: "ams",
       operational_status: "activo",
+      deleted_at: null,
     };
     mockedGetPrinters.mockResolvedValue([printer]);
     mockedGetCurrentReading.mockResolvedValue({

@@ -331,3 +331,134 @@ def test_patch_sensor_404_for_nonexistent_location(client):
 
     response = client.patch(f"/sensors/{created['id']}", json={"location_id": 999999})
     assert response.status_code == 404
+
+
+def test_archive_sensor_hides_from_list_and_get(client):
+    created = client.post(
+        "/sensors",
+        json={
+            "name": "Archivable Sensor",
+            "model": "mock",
+            "serial_number": "MOCK-ARCHIVE-0001",
+            "sensor_type": "mock",
+        },
+    ).json()
+
+    response = client.post(f"/sensors/{created['id']}/archive")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is not None
+
+    assert client.get(f"/sensors/{created['id']}").status_code == 404
+    assert not any(s["id"] == created["id"] for s in client.get("/sensors").json())
+
+
+def test_restore_sensor_brings_it_back(client):
+    created = client.post(
+        "/sensors",
+        json={
+            "name": "Restorable Sensor",
+            "model": "mock",
+            "serial_number": "MOCK-RESTORE-0001",
+            "sensor_type": "mock",
+        },
+    ).json()
+    client.post(f"/sensors/{created['id']}/archive")
+
+    response = client.post(f"/sensors/{created['id']}/restore")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is None
+    assert client.get(f"/sensors/{created['id']}").status_code == 200
+
+
+def test_list_sensors_deleted_only_returns_only_archived(client):
+    created = client.post(
+        "/sensors",
+        json={
+            "name": "Deleted Only Sensor",
+            "model": "mock",
+            "serial_number": "MOCK-DELONLY-0001",
+            "sensor_type": "mock",
+        },
+    ).json()
+    client.post(f"/sensors/{created['id']}/archive")
+
+    body = client.get("/sensors", params={"deleted_only": True}).json()
+    assert any(s["id"] == created["id"] for s in body)
+    assert all(s["deleted_at"] is not None for s in body)
+
+
+def test_archived_sensor_serial_number_is_reusable(client):
+    payload = {
+        "name": "Serial Reuse Original",
+        "model": "mock",
+        "serial_number": "MOCK-REUSE-0001",
+        "sensor_type": "mock",
+    }
+    created = client.post("/sensors", json=payload).json()
+    client.post(f"/sensors/{created['id']}/archive")
+
+    response = client.post(
+        "/sensors",
+        json={**payload, "name": "Serial Reuse New"},
+    )
+    assert response.status_code == 200
+
+
+def test_duplicate_sensor_creates_independent_copy_with_adjusted_serial(client):
+    # A standalone (non-printer) location avoids the AMS-sibling-conflict
+    # check entirely, so this test isn't coupled to other tests' mutations
+    # of the shared seeded AMS module state.
+    own_location = client.post(
+        "/locations", json={"name": "Duplicate Sensor Test Room", "location_type": "room"}
+    ).json()
+    created = client.post(
+        "/sensors",
+        json={
+            "name": "Original Sensor",
+            "model": "mock",
+            "serial_number": "MOCK-DUPLICATE-0001",
+            "sensor_type": "mock",
+            "location_id": own_location["id"],
+        },
+    ).json()
+
+    response = client.post(f"/sensors/{created['id']}/duplicate")
+    assert response.status_code == 200
+    copy = response.json()
+    assert copy["id"] != created["id"]
+    assert copy["name"] == "Original Sensor (Copy)"
+    assert copy["serial_number"] == "MOCK-DUPLICATE-0001-COPY"
+    assert copy["location_id"] is None
+
+
+def test_archived_sensor_excluded_from_current_readings(client):
+    mock_sensor = next(s for s in client.get("/sensors").json() if s["serial_number"] == "MOCK-0001")
+
+    before = client.get("/readings/current").json()
+    assert any(e["sensor"]["id"] == mock_sensor["id"] for e in before["sensors"])
+
+    client.post(f"/sensors/{mock_sensor['id']}/archive")
+
+    after = client.get("/readings/current").json()
+    assert not any(e["sensor"]["id"] == mock_sensor["id"] for e in after["sensors"])
+
+    client.post(f"/sensors/{mock_sensor['id']}/restore")
+
+
+def test_create_sensor_404_for_archived_location(client):
+    location = client.post(
+        "/locations", json={"name": "Archived Room For Sensor", "location_type": "room"}
+    ).json()
+    client.post(f"/locations/{location['id']}/archive")
+
+    response = client.post(
+        "/sensors",
+        json={
+            "name": "Sensor On Archived Location",
+            "model": "mock",
+            "serial_number": "MOCK-ARCHIVEDLOCATION-0001",
+            "sensor_type": "mock",
+            "location_id": location["id"],
+        },
+    )
+    assert response.status_code == 404

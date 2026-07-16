@@ -11,10 +11,13 @@ from app.schemas.sensor import (
 )
 from app.services.sensor_ports import list_available_ports, test_read_sensor
 from app.services.sensor_service import (
+    archive_sensor,
     create_sensor,
     delete_sensor,
+    duplicate_sensor,
     get_sensor_or_404,
     list_sensors,
+    restore_sensor,
     update_sensor,
 )
 
@@ -23,8 +26,8 @@ router = APIRouter(prefix="/sensors", tags=["sensors"])
 
 @router.get("", response_model=list[SensorRead])
 @router.get("/", response_model=list[SensorRead], include_in_schema=False)
-def list_all_sensors(db: Session = Depends(get_db)) -> list[SensorRead]:
-    return list_sensors(db)
+def list_all_sensors(deleted_only: bool = False, db: Session = Depends(get_db)) -> list[SensorRead]:
+    return list_sensors(db, deleted_only=deleted_only)
 
 
 @router.post("", response_model=SensorRead)
@@ -57,3 +60,18 @@ def remove_sensor(sensor_id: int, db: Session = Depends(get_db)) -> None:
 @router.post("/{sensor_id}/test-read", response_model=SensorTestReadResult)
 def test_read(sensor_id: int, db: Session = Depends(get_db)) -> SensorTestReadResult:
     return test_read_sensor(db, sensor_id)
+
+
+@router.post("/{sensor_id}/archive", response_model=SensorRead)
+def archive_existing_sensor(sensor_id: int, db: Session = Depends(get_db)) -> SensorRead:
+    return archive_sensor(db, sensor_id)
+
+
+@router.post("/{sensor_id}/restore", response_model=SensorRead)
+def restore_existing_sensor(sensor_id: int, db: Session = Depends(get_db)) -> SensorRead:
+    return restore_sensor(db, sensor_id)
+
+
+@router.post("/{sensor_id}/duplicate", response_model=SensorRead)
+def duplicate_existing_sensor(sensor_id: int, db: Session = Depends(get_db)) -> SensorRead:
+    return duplicate_sensor(db, sensor_id)

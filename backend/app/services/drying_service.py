@@ -92,7 +92,13 @@ def get_drying_recommendations(session: Session) -> list[DryingRecommendation]:
     recommendations: list[DryingRecommendation] = []
     seen_spool_ids: set[int] = set()
 
-    active_sensors = session.query(Sensor).filter_by(is_active=True).order_by(Sensor.id.asc()).all()
+    active_sensors = (
+        session.query(Sensor)
+        .filter_by(is_active=True)
+        .filter(Sensor.deleted_at.is_(None))
+        .order_by(Sensor.id.asc())
+        .all()
+    )
 
     for sensor in active_sensors:
         if sensor.location_id is None:
@@ -183,16 +189,16 @@ def create_drying_session(session: Session, payload: DryingSessionCreate) -> Dry
     not start or control any physical dryer.
     """
     spool = session.get(FilamentSpool, payload.spool_id)
-    if spool is None:
+    if spool is None or spool.deleted_at is not None:
         raise HTTPException(status_code=404, detail=f"Spool {payload.spool_id} not found.")
 
     dryer_location = session.get(Location, payload.dryer_location_id)
-    if dryer_location is None:
+    if dryer_location is None or dryer_location.deleted_at is not None:
         raise HTTPException(status_code=404, detail=f"Location {payload.dryer_location_id} not found.")
 
     if payload.sensor_id is not None:
         sensor = session.get(Sensor, payload.sensor_id)
-        if sensor is None:
+        if sensor is None or sensor.deleted_at is not None:
             raise HTTPException(status_code=404, detail=f"Sensor {payload.sensor_id} not found.")
 
     drying_session = DryingSession(

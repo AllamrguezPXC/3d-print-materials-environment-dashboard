@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.time import utc_now
 from app.models.material_profile import MaterialProfile
 from app.schemas.material_profile import MaterialProfileCreate, MaterialProfileUpdate
 
@@ -61,11 +62,21 @@ def _validate_thresholds(values: dict[str, float]) -> None:
         )
 
 
-def list_material_profiles(session: Session) -> list[MaterialProfile]:
-    return session.query(MaterialProfile).order_by(MaterialProfile.id.asc()).all()
+def list_material_profiles(session: Session, deleted_only: bool = False) -> list[MaterialProfile]:
+    query = session.query(MaterialProfile).order_by(MaterialProfile.id.asc())
+    if deleted_only:
+        return query.filter(MaterialProfile.deleted_at.is_not(None)).all()
+    return query.filter(MaterialProfile.deleted_at.is_(None)).all()
 
 
 def get_material_profile_or_404(session: Session, material_id: int) -> MaterialProfile:
+    profile = session.get(MaterialProfile, material_id)
+    if profile is None or profile.deleted_at is not None:
+        raise HTTPException(status_code=404, detail=f"Material profile {material_id} not found.")
+    return profile
+
+
+def _get_material_profile_including_deleted_or_404(session: Session, material_id: int) -> MaterialProfile:
     profile = session.get(MaterialProfile, material_id)
     if profile is None:
         raise HTTPException(status_code=404, detail=f"Material profile {material_id} not found.")
@@ -97,7 +108,8 @@ def update_material_profile(
 
 
 def delete_material_profile(session: Session, material_id: int) -> None:
-    profile = get_material_profile_or_404(session, material_id)
+    """Permanent removal -- used only from the Trash view."""
+    profile = _get_material_profile_including_deleted_or_404(session, material_id)
     session.delete(profile)
     try:
         session.commit()
@@ -110,3 +122,47 @@ def delete_material_profile(session: Session, material_id: int) -> None:
                 "existing filament spools."
             ),
         ) from exc
+
+
+def archive_material_profile(session: Session, material_id: int) -> MaterialProfile:
+    profile = get_material_profile_or_404(session, material_id)
+    profile.deleted_at = utc_now()
+    session.commit()
+    session.refresh(profile)
+    return profile
+
+
+def restore_material_profile(session: Session, material_id: int) -> MaterialProfile:
+    profile = _get_material_profile_including_deleted_or_404(session, material_id)
+    profile.deleted_at = None
+    session.commit()
+    session.refresh(profile)
+    return profile
+
+
+def duplicate_material_profile(session: Session, material_id: int) -> MaterialProfile:
+    """Copies a material profile's thresholds/drying settings as a starting
+    point for a variant (e.g. a manufacturer-specific override)."""
+    profile = get_material_profile_or_404(session, material_id)
+    payload = MaterialProfileCreate(
+        name=f"{profile.name} (Copy)",
+        family=profile.family,
+        manufacturer=profile.manufacturer,
+        variant=profile.variant,
+        ideal_temp_min_c=profile.ideal_temp_min_c,
+        ideal_temp_max_c=profile.ideal_temp_max_c,
+        warning_temp_min_c=profile.warning_temp_min_c,
+        warning_temp_max_c=profile.warning_temp_max_c,
+        critical_temp_min_c=profile.critical_temp_min_c,
+        critical_temp_max_c=profile.critical_temp_max_c,
+        ideal_rh_max_percent=profile.ideal_rh_max_percent,
+        warning_rh_max_percent=profile.warning_rh_max_percent,
+        critical_rh_max_percent=profile.critical_rh_max_percent,
+        drying_temp_c=profile.drying_temp_c,
+        drying_time_hours_min=profile.drying_time_hours_min,
+        drying_time_hours_max=profile.drying_time_hours_max,
+        storage_notes=profile.storage_notes,
+        drying_notes=profile.drying_notes,
+        source_notes=profile.source_notes,
+    )
+    return create_material_profile(session, payload)

@@ -22,6 +22,7 @@ const LOCATION: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: 0,
+  deleted_at: null,
 };
 
 const MATERIAL: MaterialProfile = {
@@ -45,9 +46,10 @@ const MATERIAL: MaterialProfile = {
   storage_notes: null,
   drying_notes: null,
   source_notes: null,
+  deleted_at: null,
 };
 
-const SPOOL: FilamentSpool = { id: 1, material_profile_id: 1, brand: "Generic", color: "Black", diameter_mm: 1.75, status: "ready" };
+const SPOOL: FilamentSpool = { id: 1, material_profile_id: 1, brand: "Generic", color: "Black", diameter_mm: 1.75, status: "ready", deleted_at: null };
 
 function renderModal(overrides: Partial<React.ComponentProps<typeof SlotAssignmentModal>> = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -94,7 +96,7 @@ describe("SlotAssignmentModal", () => {
 
   it("creates a spool and auto-selects it on success", async () => {
     const user = userEvent.setup();
-    const created: FilamentSpool = { id: 99, material_profile_id: 1, brand: "NewBrand", color: null, diameter_mm: 1.75, status: "ready" };
+    const created: FilamentSpool = { id: 99, material_profile_id: 1, brand: "NewBrand", color: null, diameter_mm: 1.75, status: "ready", deleted_at: null };
     mockedCreate.mockResolvedValue(created);
     const { onSelectedSpoolIdChange } = renderModal();
 

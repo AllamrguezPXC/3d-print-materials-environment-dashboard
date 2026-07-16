@@ -330,3 +330,81 @@ def test_delete_printer_happy_path(client):
 
     get_response = client.get(f"/printers/{created['id']}")
     assert get_response.status_code == 404
+
+
+def test_archive_printer_hides_from_list_and_get(client):
+    created = client.post(
+        "/printers", json={"name": "Archivable Printer", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+
+    response = client.post(f"/printers/{created['id']}/archive")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is not None
+
+    assert client.get(f"/printers/{created['id']}").status_code == 404
+    assert not any(p["id"] == created["id"] for p in client.get("/printers").json())
+
+
+def test_restore_printer_brings_it_back(client):
+    created = client.post(
+        "/printers", json={"name": "Restorable Printer", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+    client.post(f"/printers/{created['id']}/archive")
+
+    response = client.post(f"/printers/{created['id']}/restore")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is None
+
+    assert client.get(f"/printers/{created['id']}").status_code == 200
+    assert any(p["id"] == created["id"] for p in client.get("/printers").json())
+
+
+def test_list_printers_deleted_only_returns_only_archived(client):
+    created = client.post(
+        "/printers", json={"name": "Deleted Only Printer", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+    client.post(f"/printers/{created['id']}/archive")
+
+    response = client.get("/printers", params={"deleted_only": True})
+    assert response.status_code == 200
+    body = response.json()
+    assert any(p["id"] == created["id"] for p in body)
+    assert all(p["deleted_at"] is not None for p in body)
+
+
+def test_duplicate_printer_creates_independent_copy(client):
+    created = client.post(
+        "/printers",
+        json={
+            "name": "Original Printer",
+            "brand": "Bambu Lab",
+            "model": "P1P",
+            "serial_number": "REAL-SERIAL-0001",
+            "operational_status": "mantenimiento",
+        },
+    ).json()
+
+    response = client.post(f"/printers/{created['id']}/duplicate")
+    assert response.status_code == 200
+    copy = response.json()
+    assert copy["id"] != created["id"]
+    assert copy["name"] == "Original Printer (Copy)"
+    assert copy["serial_number"] is None
+    assert copy["operational_status"] == "activo"
+
+
+def test_delete_printer_permanently_works_after_archive(client):
+    """Delete remains a hard-delete used from the Trash view -- must still
+    work on an already-archived row."""
+    created = client.post(
+        "/printers", json={"name": "Permanently Deletable Printer", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+    client.post(f"/printers/{created['id']}/archive")
+
+    response = client.delete(f"/printers/{created['id']}")
+    assert response.status_code == 204
+
+    assert client.get("/printers", params={"deleted_only": True}).json()
+    assert not any(
+        p["id"] == created["id"] for p in client.get("/printers", params={"deleted_only": True}).json()
+    )

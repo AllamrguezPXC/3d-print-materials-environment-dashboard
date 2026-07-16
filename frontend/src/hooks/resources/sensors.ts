@@ -16,6 +16,9 @@ export const useSensors = hooks.useList;
 export const useCreateSensor = hooks.useCreate;
 export const useUpdateSensor = hooks.useUpdate;
 export const useRemoveSensor = hooks.useRemove;
+export const useArchiveSensor = hooks.useArchive;
+export const useRestoreSensor = hooks.useRestore;
+export const useDuplicateSensor = hooks.useDuplicate;
 
 export function useTestReadSensor() {
   return useMutation({ mutationFn: (id: number) => sensorsApi.testRead(id) });

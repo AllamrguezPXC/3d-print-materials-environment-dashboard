@@ -12,6 +12,7 @@ import {
   Radio,
   Settings as SettingsIcon,
   Thermometer,
+  Trash2,
   WifiOff,
   X,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { to: "/spools", label: "Spools", end: false, icon: Package },
   { to: "/sensors", label: "Sensors", end: false, icon: Radio },
   { to: "/drying", label: "Drying", end: false, icon: Droplets },
+  { to: "/trash", label: "Trash", end: false, icon: Trash2 },
   { to: "/settings", label: "Settings", end: false, icon: SettingsIcon },
 ] as const;
 

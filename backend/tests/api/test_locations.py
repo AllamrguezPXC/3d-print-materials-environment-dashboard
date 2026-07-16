@@ -109,3 +109,66 @@ def test_patch_location_404_for_nonexistent_printer(client):
 
     response = client.patch(f"/locations/{created['id']}", json={"printer_id": 999999})
     assert response.status_code == 404
+
+
+def test_archive_location_hides_from_list_and_get(client):
+    created = client.post(
+        "/locations", json={"name": "Archivable Room", "location_type": "room"}
+    ).json()
+
+    response = client.post(f"/locations/{created['id']}/archive")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is not None
+
+    assert client.get(f"/locations/{created['id']}").status_code == 404
+    assert not any(loc["id"] == created["id"] for loc in client.get("/locations").json())
+
+
+def test_restore_location_brings_it_back(client):
+    created = client.post(
+        "/locations", json={"name": "Restorable Room", "location_type": "room"}
+    ).json()
+    client.post(f"/locations/{created['id']}/archive")
+
+    response = client.post(f"/locations/{created['id']}/restore")
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is None
+    assert client.get(f"/locations/{created['id']}").status_code == 200
+
+
+def test_list_locations_deleted_only_returns_only_archived(client):
+    created = client.post(
+        "/locations", json={"name": "Deleted Only Room", "location_type": "room"}
+    ).json()
+    client.post(f"/locations/{created['id']}/archive")
+
+    body = client.get("/locations", params={"deleted_only": True}).json()
+    assert any(loc["id"] == created["id"] for loc in body)
+    assert all(loc["deleted_at"] is not None for loc in body)
+
+
+def test_duplicate_location_creates_independent_copy(client):
+    created = client.post(
+        "/locations",
+        json={"name": "Original Dryer", "location_type": "dryer", "max_temp_c": 60.0},
+    ).json()
+
+    response = client.post(f"/locations/{created['id']}/duplicate")
+    assert response.status_code == 200
+    copy = response.json()
+    assert copy["id"] != created["id"]
+    assert copy["name"] == "Original Dryer (Copy)"
+    assert copy["max_temp_c"] == 60.0
+
+
+def test_create_location_404_for_archived_printer(client):
+    printer = client.post(
+        "/printers", json={"name": "Archived Printer For Location", "brand": "Bambu Lab", "model": "P1P"}
+    ).json()
+    client.post(f"/printers/{printer['id']}/archive")
+
+    response = client.post(
+        "/locations",
+        json={"name": "Orphan Slot", "location_type": "printer_ams", "printer_id": printer["id"]},
+    )
+    assert response.status_code == 404

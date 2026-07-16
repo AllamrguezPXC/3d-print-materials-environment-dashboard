@@ -2,9 +2,10 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.mixins import SoftDeleteMixin
 
 
-class Printer(Base):
+class Printer(SoftDeleteMixin, Base):
     """
     <summary>
     Represents a 3D printer (e.g. a Bambu Lab A1 mini, P1S, or P1P) that

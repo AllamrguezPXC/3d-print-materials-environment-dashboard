@@ -33,6 +33,7 @@ class SensorRead(SensorBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
 
 
 class SensorPortInfo(BaseModel):

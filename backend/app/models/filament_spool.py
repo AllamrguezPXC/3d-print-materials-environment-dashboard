@@ -4,9 +4,10 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.mixins import SoftDeleteMixin
 
 
-class FilamentSpool(Base):
+class FilamentSpool(SoftDeleteMixin, Base):
     """
     <summary>
     Represents a physical filament spool, linked to the MaterialProfile

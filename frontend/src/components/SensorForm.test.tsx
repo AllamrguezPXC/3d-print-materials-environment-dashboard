@@ -13,6 +13,7 @@ const PRINTER: Printer = {
   notes: null,
   filament_system_type: "ams",
   operational_status: "activo",
+  deleted_at: null,
 };
 
 const AMS_SLOTS: Location[] = [0, 1, 2, 3].map((slot_index) => ({
@@ -24,6 +25,7 @@ const AMS_SLOTS: Location[] = [0, 1, 2, 3].map((slot_index) => ({
   max_temp_c: null,
   notes: null,
   slot_index,
+  deleted_at: null,
 }));
 
 const STORAGE_BOX: Location = {
@@ -35,6 +37,7 @@ const STORAGE_BOX: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: null,
+  deleted_at: null,
 };
 
 const LOCATIONS = [...AMS_SLOTS, STORAGE_BOX];
@@ -46,6 +49,7 @@ const EMPTY_VALUE: SensorFormValues = {
   sensor_type: "mock",
   port: "",
   location_id: "",
+  is_active: true,
 };
 
 describe("SensorForm location picker", () => {

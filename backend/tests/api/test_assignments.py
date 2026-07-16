@@ -102,3 +102,25 @@ def test_patch_assignment_404_when_reassigning_to_nonexistent_location(client):
 
     response = client.patch(f"/assignments/{created['id']}", json={"location_id": 999999})
     assert response.status_code == 404
+
+
+def test_create_assignment_404_for_archived_spool(client):
+    spool_id = _first_spool_id(client)
+    location_id = _first_location_id(client)
+    client.post(f"/spools/{spool_id}/archive")
+
+    response = client.post("/assignments", json={"spool_id": spool_id, "location_id": location_id})
+    assert response.status_code == 404
+
+    client.post(f"/spools/{spool_id}/restore")
+
+
+def test_create_assignment_404_for_archived_location(client):
+    spool_id = _first_spool_id(client)
+    location_id = _first_location_id(client)
+    client.post(f"/locations/{location_id}/archive")
+
+    response = client.post("/assignments", json={"spool_id": spool_id, "location_id": location_id})
+    assert response.status_code == 404
+
+    client.post(f"/locations/{location_id}/restore")

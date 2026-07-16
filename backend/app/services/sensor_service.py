@@ -4,17 +4,28 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.time import utc_now
 from app.models.location import Location
 from app.models.sensor import Sensor
 from app.schemas.sensor import SensorCreate, SensorUpdate
 from app.services.sensor_validation import validate_sensor_fields
 
 
-def list_sensors(session: Session) -> list[Sensor]:
-    return session.query(Sensor).order_by(Sensor.id.asc()).all()
+def list_sensors(session: Session, deleted_only: bool = False) -> list[Sensor]:
+    query = session.query(Sensor).order_by(Sensor.id.asc())
+    if deleted_only:
+        return query.filter(Sensor.deleted_at.is_not(None)).all()
+    return query.filter(Sensor.deleted_at.is_(None)).all()
 
 
 def get_sensor_or_404(session: Session, sensor_id: int) -> Sensor:
+    sensor = session.get(Sensor, sensor_id)
+    if sensor is None or sensor.deleted_at is not None:
+        raise HTTPException(status_code=404, detail=f"Sensor {sensor_id} not found.")
+    return sensor
+
+
+def _get_sensor_including_deleted_or_404(session: Session, sensor_id: int) -> Sensor:
     sensor = session.get(Sensor, sensor_id)
     if sensor is None:
         raise HTTPException(status_code=404, detail=f"Sensor {sensor_id} not found.")
@@ -22,7 +33,9 @@ def get_sensor_or_404(session: Session, sensor_id: int) -> Sensor:
 
 
 def _check_duplicate_serial(session: Session, serial_number: str, *, exclude_id: int | None = None) -> None:
-    query = session.query(Sensor).filter_by(serial_number=serial_number)
+    # An archived sensor's serial is free to reuse -- it's been "removed",
+    # not merely renamed.
+    query = session.query(Sensor).filter_by(serial_number=serial_number).filter(Sensor.deleted_at.is_(None))
     if exclude_id is not None:
         query = query.filter(Sensor.id != exclude_id)
     if query.first() is not None:
@@ -35,14 +48,16 @@ def _check_duplicate_serial(session: Session, serial_number: str, *, exclude_id:
 def _check_location_exists(session: Session, location_id: int | None) -> None:
     if location_id is None:
         return
-    if session.get(Location, location_id) is None:
+    location = session.get(Location, location_id)
+    if location is None or location.deleted_at is not None:
         raise HTTPException(status_code=404, detail=f"Location {location_id} not found.")
 
 
 def _check_ams_sensor_conflict(session: Session, location_id: int | None, *, exclude_id: int | None = None) -> None:
     """Physically, one sensor covers an entire printer module's (e.g. an AMS)
     shared microclimate -- reject assigning a second sensor to any sibling
-    Location of a printer module that already has one assigned."""
+    Location of a printer module that already has one assigned. An archived
+    sensor no longer counts as "assigned" for this check."""
     if location_id is None:
         return
     location = session.get(Location, location_id)
@@ -55,7 +70,7 @@ def _check_ams_sensor_conflict(session: Session, location_id: int | None, *, exc
             Location.location_type == location.location_type,
         )
     ]
-    query = session.query(Sensor).filter(Sensor.location_id.in_(sibling_ids))
+    query = session.query(Sensor).filter(Sensor.location_id.in_(sibling_ids), Sensor.deleted_at.is_(None))
     if exclude_id is not None:
         query = query.filter(Sensor.id != exclude_id)
     existing = query.first()
@@ -137,7 +152,8 @@ def update_sensor(session: Session, sensor_id: int, payload: SensorUpdate) -> Se
 
 
 def delete_sensor(session: Session, sensor_id: int) -> None:
-    sensor = get_sensor_or_404(session, sensor_id)
+    """Permanent removal -- used only from the Trash view."""
+    sensor = _get_sensor_including_deleted_or_404(session, sensor_id)
     session.delete(sensor)
     try:
         session.commit()
@@ -147,3 +163,37 @@ def delete_sensor(session: Session, sensor_id: int) -> None:
             status_code=400,
             detail=f"Sensor {sensor_id} cannot be deleted because it is referenced by other records.",
         ) from exc
+
+
+def archive_sensor(session: Session, sensor_id: int) -> Sensor:
+    sensor = get_sensor_or_404(session, sensor_id)
+    sensor.deleted_at = utc_now()
+    session.commit()
+    session.refresh(sensor)
+    return sensor
+
+
+def restore_sensor(session: Session, sensor_id: int) -> Sensor:
+    sensor = _get_sensor_including_deleted_or_404(session, sensor_id)
+    sensor.deleted_at = None
+    session.commit()
+    session.refresh(sensor)
+    return sensor
+
+
+def duplicate_sensor(session: Session, sensor_id: int) -> Sensor:
+    """Copies a sensor's configuration as a starting template. serial_number
+    gets a "-COPY" suffix (serials are unique) and location_id is cleared so
+    the copy never silently re-triggers the AMS-conflict guard -- the user
+    assigns it deliberately via the now-independent sensor."""
+    sensor = get_sensor_or_404(session, sensor_id)
+    payload = SensorCreate(
+        name=f"{sensor.name} (Copy)",
+        model=sensor.model,
+        serial_number=f"{sensor.serial_number}-COPY",
+        sensor_type=sensor.sensor_type,
+        port=sensor.port,
+        is_active=sensor.is_active,
+        location_id=None,
+    )
+    return create_sensor(session, payload)

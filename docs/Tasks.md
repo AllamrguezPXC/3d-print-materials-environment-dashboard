@@ -1010,6 +1010,67 @@ opportunities with concrete tools, then re-validate everything.
 - [x] `pytest -q` (173 passed, 3 new), `tsc -b`/`build`/`lint`/`vitest run` clean (160 frontend
   tests, unchanged -- no frontend code touched this session).
 
+## Phase 20 — Equipment Manager CRUD Completeness (Edit, Duplicate, Trash/Restore)
+
+- [x] Audited all 5 equipment/config entity types (Printers, Sensors, Locations/Dryers, Materials,
+  Spools) for edit/duplicate/delete/restore completeness. Found: hard delete already solid
+  (referential-integrity guarded) in all 5; edit was inconsistent (Materials fully editable,
+  Spools mostly, Printers/Sensors/Locations only exposed 0-2 fields via the UI despite the
+  backend's PATCH schemas already supporting every field); duplicate ("save as template") and
+  restore-after-delete didn't exist anywhere.
+- [x] Backend: new `SoftDeleteMixin` (`deleted_at` column) applied to all 5 models via multiple
+  inheritance. Additive design -- the existing `DELETE` endpoints are unchanged (still hard-delete
+  with the same referential-integrity 400 guard, same tests pass unmodified) and now double as
+  "permanent delete" from the Trash view. Two new endpoints per resource:
+  `POST /{resource}/{id}/archive` (soft-delete) and `POST /{resource}/{id}/restore`. Every
+  `list_X` gained a `deleted_only` filter (`?deleted_only=true` on the `GET` list routes) and every
+  `get_X_or_404` now excludes archived rows, with a parallel `_get_X_including_deleted_or_404`
+  helper for restore/permanent-delete.
+- [x] Backend: `duplicate_X` per entity reuses the existing `create_X` validation instead of
+  reimplementing it, with entity-specific uniqueness adjustments -- printer clears
+  `serial_number` and resets `operational_status` to `"activo"`; sensor gets a `-COPY` serial
+  suffix and clears `location_id` (avoids re-triggering the AMS-conflict guard); location/material
+  suffix the name `" (Copy)"`; spool copies all fields with no suffix (no name field).
+- [x] Backend: excluded archived sensors from the 3 live "active sensors" read loops
+  (`environment_service.build_current_readings`, `drying_service.get_drying_recommendations`,
+  `reading_service.py`'s capture loop) so archiving a sensor actually stops it from being read/
+  alerted on live. Filtered archived rows out of every cross-entity `_check_*_exists` FK validator
+  (`sensor_service`, `location_service`, `spool_assignment_service`, `drying_service`'s session
+  creation) and out of `sensor_service`'s AMS-conflict and duplicate-serial checks -- an archived
+  sensor no longer blocks a new sensor on the same AMS module or reuse of its own serial (required
+  removing the DB-level `unique=True` on `Sensor.serial_number`, since a plain unique constraint
+  can't express "unique among non-deleted rows"; uniqueness is now enforced only at the service
+  layer).
+- [x] Backend tests: `archive_X`/`restore_X`/`duplicate_X`/`deleted_only` coverage across all 5
+  entities, FK-rejects-archived-reference coverage, and confirmation that an archived sensor
+  disappears from `GET /readings/current`. Full suite: 203/203 passing.
+- [x] Frontend: extended `PrinterForm` (`serial_number`, `notes`), `SensorForm` (`is_active`
+  toggle), `LocationForm` (`description`, `max_temp_c`, `notes`, conditional `slot_index`) --
+  closing the one true edit-parity gap (Locations had zero edit capability before this). New
+  `EditPrinterModal`/`EditSensorModal`/`EditLocationModal` (same thin-wrapper pattern as the
+  existing `EditSpoolModal`). `useResource.ts`'s `createResourceHooks` factory gained
+  `useArchive`/`useRestore`/`useDuplicate` and a `deletedOnly` list param.
+- [x] Frontend: "Duplicate" buttons wired on all 5 pages; existing "Delete" buttons now call
+  `archive` instead of the hard `remove` (same label, same success/error notify pattern, just
+  reversible now). New "Edit" buttons added to Printers, Locations, and Sensors tables (Materials
+  and Spools already had Edit). New unified `/trash` page combines all 5 resources'
+  `deletedOnly` lists into one table sorted by `deleted_at` descending, with Restore and Delete
+  permanently (`window.confirm`-guarded) actions; nav item + route added.
+- [x] Frontend tests for the 3 new Edit modals + Trash page, plus fixture updates across the suite
+  for the widened types (`deleted_at` added to all 5 API types). Full suite: 173/173 passing
+  across 32 test files. `tsc -b`/`build`/`lint` all clean.
+- [x] Live Playwright MCP verification against a real `uvicorn`/Vite dev pair (dev SQLite DB
+  deleted and `uvicorn` restarted first, since this project has no Alembic migrations, to pick up
+  the 5 new `deleted_at` columns): edited a printer's serial/notes and confirmed persistence via
+  API; duplicated a location, confirmed the `(Copy)` suffix, archived it, confirmed it vanished
+  from Printers & Locations but appeared in `/trash`, restored it, confirmed it reappeared,
+  archived it again and permanently deleted it from Trash, confirmed it's gone via API; duplicated
+  a sensor and confirmed the `-COPY` serial suffix and cleared `location_id`; duplicated a material
+  profile and a spool and confirmed both copy correctly. One test sensor duplicate stayed archived
+  in Trash because permanent-delete correctly hit the pre-existing referential-integrity guard
+  (the dev server's live auto-capture loop had already written a `Reading` for it) -- confirmed the
+  guard still works exactly as before this feature, left as harmless cleanup.
+
 ## Suggested Commit Sequence
 
 1. `chore: initialize project docs and claude code configuration`

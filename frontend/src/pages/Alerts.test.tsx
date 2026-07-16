@@ -37,6 +37,7 @@ const LOCATION: Location = {
   max_temp_c: null,
   notes: null,
   slot_index: 0,
+  deleted_at: null,
 };
 
 const ACTIVE_ALERT: AlertOut = {
