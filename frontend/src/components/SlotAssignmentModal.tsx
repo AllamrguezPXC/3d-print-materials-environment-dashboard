@@ -98,7 +98,7 @@ export function SlotAssignmentModal({
             <span className="text-sm font-medium">Assign an existing spool</span>
             <div className="flex items-center gap-2">
               <Select value={selectedSpoolId} onValueChange={onSelectedSpoolIdChange}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="min-w-0 flex-1">
                   <SelectValue placeholder="Select spool…" />
                 </SelectTrigger>
                 <SelectContent>

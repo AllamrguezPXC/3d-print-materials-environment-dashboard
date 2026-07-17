@@ -770,6 +770,57 @@ started) and deleting `backend/environment_monitor.db` (no Alembic in this proje
 **Result:** all 3 gaps (full edit parity, duplicate-as-template, archive/restore via Trash) closed
 across all 5 equipment types, with zero changes to existing `DELETE` behavior or tests.
 
+## Bug Fix — Sensor-assignment "+ Create new sensor" dead end — 2026-07-16
+
+Full task doc: `docs/Tareas/fix-sensor-assignment-create-new-disabled/TASK.md`.
+
+The user attached a screenshot of the Dashboard's "Assign sensor — P1S #1" modal (opened via a
+device module's "Change" button) and asked what was causing it to look that way. Rather than
+guessing from the code alone, the exact modal state was **reproduced live** with Playwright MCP
+against the running dev servers (same printer, same MOCK-0004 sensor, same dropdown selection) —
+the reproduction pixel-matched the user's screenshot, ruling out a rendering/CSS bug and
+confirming the component was behaving exactly as coded.
+
+**Root cause:** `SensorAssignmentModal.tsx`'s two "point this module at a sensor" paths were
+inconsistent. Reassigning to an *existing* sensor already did a clean 2-step swap (unassign the
+module's current sensor, then assign the newly picked one — `DeviceModuleGrid.tsx`). Creating a
+*new* sensor had no equivalent: the button was disabled whenever a sensor was already assigned,
+with a message telling the user to unassign first — but clicking "Unassign" closes the entire
+dialog (`handleUnassignSensor` calls `setSensorAssignmentPrinter(null)` on success), so the
+suggested workaround required leaving the flow and reopening it from scratch. A functional but
+confusing dead end, which is what read as "broken" in the screenshot.
+
+**Fix:** `handleCreateSensor` now mirrors the existing-sensor swap — unassigns the current sensor
+first (if any), then creates the new one already pointed at the target location, both awaited in
+sequence. The "+ Create new sensor" button is no longer disabled, and the guidance text was
+changed from a blocking instruction to a heads-up naming the sensor that will be displaced.
+
+**Validation:** updated/added `SensorAssignmentModal.test.tsx` coverage (9/9 passing); full
+frontend suite clean (`tsc -b`/`lint`/`vitest run`, 174/174 across 32 files); live Playwright MCP
+re-verification of the fixed flow — created a new mock sensor from the modal, confirmed via
+`GET /sensors` that the previous sensor was unassigned and the new one took its place at the same
+location, then restored the original demo data (the throwaway test sensor was left archived in
+Trash, since a live auto-capture `Reading` blocked its hard delete — the same pre-existing
+referential-integrity guard working as intended, not a new issue).
+
+**Follow-up (same task, second screenshot):** after the fix above shipped, the user reported a
+second, related issue via another screenshot — selecting a long-labeled sensor (e.g.
+`E25877 (currently at Primary Filament Storage Room)`) in the same modal made the select box and
+"Assign" button visibly spill out past the dialog's right edge. Reproduced live again, then
+diagnosed with direct DOM measurement (`getBoundingClientRect`/`getComputedStyle` on the actual
+elements, not guesswork): this is the classic flexbox/grid "automatic minimum size" gotcha — every
+flex/grid item defaults to `min-width: auto`, refusing to shrink below its content's intrinsic
+width unless something in the *entire ancestor chain* resets it to 0. Adding `min-w-0` to only the
+`SelectTrigger` itself wasn't enough, because several nested `flex` wrapper `div`s between the
+dialog and the select each still had the default `min-width: auto`, letting the long unbreakable
+text's intrinsic width propagate all the way up. Fixed by adding `min-w-0` to every nested
+container in that chain (in both `SensorAssignmentModal.tsx` and the analogous, latently-affected
+`SlotAssignmentModal.tsx`), plus a defensive `overflow-hidden` on the shared `DialogContent`
+primitive so any future overflow clips at the rounded corners instead of visually escaping.
+Re-verified via direct DOM measurement (`triggerRect.right <= dialogRect.right`, now true) and a
+before/after screenshot. Full details:
+`docs/Tareas/fix-sensor-assignment-create-new-disabled/TASK.md`.
+
 ## Notes
 
 Do not mark anything complete until the action has actually been performed in Claude Code or GitHub.

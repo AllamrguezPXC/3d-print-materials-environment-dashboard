@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { PortSelect } from "@/components/PortSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/StatusBadge";
-import { useCreateSensor } from "@/hooks/resources/sensors";
+import { useCreateSensor, useUpdateSensor } from "@/hooks/resources/sensors";
 import { describeSensorLocation } from "@/lib/sensorLocation";
 import type { Location, Printer, Sensor } from "@/types/api";
 
@@ -66,13 +66,24 @@ export function SensorAssignmentModal({
 }: SensorAssignmentModalProps) {
   const [creatingSensor, setCreatingSensor] = useState(false);
   const [newSensor, setNewSensor] = useState<NewSensorValues>(EMPTY_NEW_SENSOR);
+  const [createError, setCreateError] = useState<string | null>(null);
   const createSensor = useCreateSensor();
+  const updateSensor = useUpdateSensor();
 
-  function handleCreateSensor(e: React.FormEvent) {
+  // Mirrors the "reassign to an existing sensor" swap (unassign the current
+  // sensor, then point the new one at this module) so creating a brand new
+  // sensor is just as available as picking one from the dropdown -- neither
+  // path should require the user to manually Unassign and reopen the dialog
+  // first.
+  async function handleCreateSensor(e: React.FormEvent) {
     e.preventDefault();
     if (!targetLocation || !newSensor.name.trim() || !newSensor.serial_number.trim()) return;
-    createSensor.mutate(
-      {
+    setCreateError(null);
+    try {
+      if (currentSensor) {
+        await updateSensor.mutateAsync({ id: currentSensor.id, body: { location_id: null } });
+      }
+      await createSensor.mutateAsync({
         name: newSensor.name,
         model: newSensor.model,
         serial_number: newSensor.serial_number,
@@ -80,14 +91,12 @@ export function SensorAssignmentModal({
         port: REQUIRES_PORT.has(newSensor.sensor_type) ? newSensor.port || null : null,
         location_id: targetLocation.id,
         is_active: true,
-      },
-      {
-        onSuccess: () => {
-          setNewSensor(EMPTY_NEW_SENSOR);
-          setCreatingSensor(false);
-        },
-      },
-    );
+      });
+      setNewSensor(EMPTY_NEW_SENSOR);
+      setCreatingSensor(false);
+    } catch (err) {
+      setCreateError((err as Error).message);
+    }
   }
 
   return (
@@ -97,7 +106,7 @@ export function SensorAssignmentModal({
           <DialogTitle>Assign sensor — {printer.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           {currentSensor ? (
             <div className="flex flex-col gap-2 rounded-md border border-border p-3">
               <div className="flex items-center gap-2">
@@ -115,13 +124,13 @@ export function SensorAssignmentModal({
           )}
 
           {targetLocation ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <span className="text-sm font-medium">
                 {currentSensor ? "Reassign to a different sensor" : "Assign an existing sensor"}
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <Select value={selectedSensorId} onValueChange={onSelectedSensorIdChange}>
-                  <SelectTrigger className="flex-1">
+                  <SelectTrigger className="min-w-0 flex-1">
                     <SelectValue placeholder="Select sensor…" />
                   </SelectTrigger>
                   <SelectContent>
@@ -217,11 +226,9 @@ export function SensorAssignmentModal({
                       </div>
                     )}
                   </div>
-                  {createSensor.isError && (
-                    <p className="text-xs text-destructive">{(createSensor.error as Error).message}</p>
-                  )}
+                  {createError && <p className="text-xs text-destructive">{createError}</p>}
                   <div className="flex gap-2">
-                    <Button type="submit" size="sm" disabled={createSensor.isPending}>
+                    <Button type="submit" size="sm" disabled={createSensor.isPending || updateSensor.isPending}>
                       Create &amp; assign
                     </Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => setCreatingSensor(false)}>
@@ -230,19 +237,13 @@ export function SensorAssignmentModal({
                   </div>
                 </form>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-fit"
-                  disabled={currentSensor !== null}
-                  onClick={() => setCreatingSensor(true)}
-                >
+                <Button variant="outline" size="sm" className="w-fit" onClick={() => setCreatingSensor(true)}>
                   + Create new sensor
                 </Button>
               )}
-              {currentSensor && (
+              {currentSensor && !creatingSensor && (
                 <p className="text-xs text-muted-foreground">
-                  Unassign the current sensor before creating a new one for this module.
+                  Creating a new sensor here will unassign {currentSensor.serial_number} from this module.
                 </p>
               )}
             </div>
