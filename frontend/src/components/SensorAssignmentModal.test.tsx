@@ -157,10 +157,38 @@ describe("SensorAssignmentModal", () => {
     );
   });
 
-  it("disables creating a new sensor while one is already assigned", () => {
+  it("allows creating a new sensor while one is already assigned, with a heads-up it will be swapped out", () => {
     renderModal({ currentSensor: ASSIGNED_SENSOR, candidateSensors: [] });
 
-    expect(screen.getByRole("button", { name: /\+ create new sensor/i })).toBeDisabled();
-    expect(screen.getByText(/unassign the current sensor before creating/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /\+ create new sensor/i })).toBeEnabled();
+    expect(screen.getByText(/creating a new sensor here will unassign mock-0001/i)).toBeInTheDocument();
+  });
+
+  it("unassigns the current sensor before creating and assigning the new one", async () => {
+    const user = userEvent.setup();
+    const mockedUpdateSensor = vi.mocked(sensorsApi.update);
+    mockedUpdateSensor.mockResolvedValue({ ...ASSIGNED_SENSOR, location_id: null });
+    mockedCreateSensor.mockResolvedValue({
+      id: 3,
+      name: "New Sensor",
+      model: "mock",
+      serial_number: "MOCK-0003",
+      sensor_type: "mock",
+      port: null,
+      is_active: true,
+      location_id: 10,
+      deleted_at: null,
+    });
+
+    renderModal({ currentSensor: ASSIGNED_SENSOR, candidateSensors: [] });
+    await user.click(screen.getByRole("button", { name: /\+ create new sensor/i }));
+    await user.type(screen.getByLabelText("Name"), "New Sensor");
+    await user.type(screen.getByLabelText("Serial number"), "MOCK-0003");
+    await user.click(screen.getByRole("button", { name: /create & assign/i }));
+
+    expect(mockedUpdateSensor).toHaveBeenCalledWith(1, { location_id: null });
+    expect(mockedCreateSensor).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "New Sensor", serial_number: "MOCK-0003", location_id: 10 }),
+    );
   });
 });
