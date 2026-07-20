@@ -41,7 +41,7 @@ Fuera (Fase 2+, diferido): rediseño completo de Filament Manager (filtros/búsq
 
 1. `cd backend && pytest -q` — suite completa en verde, sin romper `test_readings_current.py`/`test_readings_post.py`/`test_readings_history.py`.
 2. `cd frontend && npx tsc -b && npm run build && npm run lint` sin errores.
-3. Playwright MCP: P1S #1 muestra 4 slots reales; impresora sin AMS muestra estado vacío explícito; `/sensors` funcional con detección de puertos y test-read; sensor mock con serial `E25877` sigue rechazado (422).
+3. Playwright MCP: P1S #1 muestra 4 slots reales; impresora sin AMS muestra estado vacío explícito; `/sensors` funcional con detección de puertos y test-read; sensor mock con serial `E27297` sigue rechazado (422).
 4. Confirmar que ninguna impresora sin AMS sembrado muestra slots fabricados, y que ningún sensor/lectura se inventa para una ubicación sin sensor activo.
 
 ## Completion Criteria

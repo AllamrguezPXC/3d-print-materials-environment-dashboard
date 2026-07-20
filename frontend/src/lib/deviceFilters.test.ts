@@ -85,7 +85,7 @@ describe("filterDeviceModules", () => {
     const mockModule = makePrinterModule();
     const realModule = makePrinterModule({
       printer: PRINTER_B,
-      sensorEntries: [makeEntry({ sensor: { id: 2, serial_number: "E25877", model: "VCP", sensor_type: "real" } })],
+      sensorEntries: [makeEntry({ sensor: { id: 2, serial_number: "E27297", model: "VCP", sensor_type: "real" } })],
     });
 
     const result = filterDeviceModules([mockModule, realModule], [], { ...EMPTY_DEVICE_FILTERS, sensorStatus: "real" }, CTX_EMPTY);
@@ -174,10 +174,10 @@ describe("filterDeviceModules", () => {
     const other = makePrinterModule({
       printer: PRINTER_B,
       amsLocations: [{ ...AMS_SLOT, id: 20, name: "AMS Slot 1 - Other Brand #1" }],
-      sensorEntries: [makeEntry({ sensor: { id: 2, serial_number: "E25877", model: "VCP", sensor_type: "real" } })],
+      sensorEntries: [makeEntry({ sensor: { id: 2, serial_number: "E27297", model: "VCP", sensor_type: "real" } })],
     });
 
-    const bySerial = filterDeviceModules([module, other], [], { ...EMPTY_DEVICE_FILTERS, search: "e25877" }, CTX_EMPTY);
+    const bySerial = filterDeviceModules([module, other], [], { ...EMPTY_DEVICE_FILTERS, search: "E27297" }, CTX_EMPTY);
     const byName = filterDeviceModules([module, other], [], { ...EMPTY_DEVICE_FILTERS, search: "A1 mini" }, CTX_EMPTY);
 
     expect(bySerial.printerModules.map((m) => m.printer.id)).toEqual([2]);

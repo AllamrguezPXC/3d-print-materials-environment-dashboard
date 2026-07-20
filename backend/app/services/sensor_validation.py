@@ -8,7 +8,7 @@ sensor's current merged state -- can validate it correctly.
 """
 
 VALID_SENSOR_TYPES = {"dracal_vcp", "dracal_cli", "mock"}
-FORBIDDEN_MOCK_SERIAL = "E25877"
+FORBIDDEN_MOCK_SERIAL = "E27297"
 MOCK_SERIAL_PREFIX = "MOCK-"
 
 

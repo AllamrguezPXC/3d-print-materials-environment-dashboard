@@ -9,7 +9,7 @@ Build a local web application for monitoring environmental conditions that affec
 The system monitors live temperature, relative humidity, and atmospheric pressure using a Dracal PTH450-class sensor, starting with the available device:
 
 - Model: `VCP-PTH450-CAL`
-- Serial: `E25877`
+- Serial: `E27297`
 - Channels: temperature, relative humidity, atmospheric/barometric pressure
 - Initial installation target: inside or near Bambu Lab AMS / AMS Lite areas, next to active printer filament, or in filament storage areas
 - Future expansion: multiple Dracal sensors of the same model assigned to different printers, AMS units, dryers, or storage locations
@@ -775,7 +775,7 @@ Use environment variables through Pydantic Settings or equivalent:
 ```text
 APP_ENV=development
 DATABASE_URL=sqlite:///./environment_monitor.db
-DRACAL_SERIAL_NUMBER=E25877
+DRACAL_SERIAL_NUMBER=E27297
 DRACAL_VCP_PORT=COM3
 MOCK_SENSOR_COUNT=3
 CORS_ORIGINS=http://localhost:5173
@@ -794,10 +794,10 @@ On first run, seed:
 
 - default material profiles
 - 7 printers from the user’s current Bambu Lab access
-- one real Dracal sensor entry with serial `E25877`
+- one real Dracal sensor entry with serial `E27297`
 - a few mock sensors for demo locations, with serials that unambiguously
   identify them as mock (`MOCK-0001`, `MOCK-0002`, ...) and are never
-  `E25877`
+  `E27297`
 - sample spool assignments
 
 Seed should be idempotent, and every seeded sensor row passes the same

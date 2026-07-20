@@ -53,7 +53,7 @@ PROTECTED_PATHS = [
     'docs/Requirements.md (source of truth — do not overwrite)',
     'docs/Tasks.md (task checklist — do not overwrite)',
     'SENSOR_MODE default must remain mock unless explicitly testing real hardware',
-    'Dracal sensor serial number is E25877 — do not hardcode a different serial',
+    'Dracal sensor serial number is E27297 — do not hardcode a different serial',
 ]
 
 # .env files to search for ANTHROPIC_API_KEY
@@ -411,7 +411,7 @@ def build_system_prompt():
         'de traspaso de contexto (context handoff) en inglés.\n\n'
         'El proyecto es 3D Print Materials Environment Data Monitoring Dashboard — aplicación web '
         'local (no cloud) para monitoreo ambiental en vivo de almacenamiento y preparación de '
-        'filamentos de impresión 3D, usando un sensor Dracal VCP-PTH450-CAL (serial E25877) con '
+        'filamentos de impresión 3D, usando un sensor Dracal VCP-PTH450-CAL (serial E27297) con '
         'modo mock activado por defecto.\n\n'
         'Stack: backend FastAPI + SQLAlchemy + SQLite + Python 3.11 (en backend/), '
         'frontend React + Vite + TypeScript + Recharts (en frontend/).\n\n'
@@ -638,7 +638,7 @@ For full context review the transcript at the path provided in the hook payload 
 - **Branch**: main (verify with `git branch`)
 - **Backend**: `backend/` — FastAPI + SQLAlchemy + SQLite + Python 3.11
 - **Frontend**: `frontend/` — React + Vite + TypeScript
-- **Sensor**: Dracal VCP-PTH450-CAL, serial E25877; `SENSOR_MODE` defaults to `mock`
+- **Sensor**: Dracal VCP-PTH450-CAL, serial E27297; `SENSOR_MODE` defaults to `mock`
 - **Docs**: `docs/Requirements.md`, `docs/Tasks.md`
 
 ---

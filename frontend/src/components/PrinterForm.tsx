@@ -87,7 +87,7 @@ export function PrinterForm({ value, onChange, onSubmit, submitting, submitLabel
         <Label htmlFor="printer-serial">Serial number</Label>
         <Input
           id="printer-serial"
-          placeholder="e.g. E25877"
+          placeholder="e.g. E27297"
           value={value.serial_number}
           onChange={(e) => onChange({ ...value, serial_number: e.target.value })}
         />

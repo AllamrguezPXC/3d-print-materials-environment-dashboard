@@ -34,7 +34,7 @@ def test_test_read_succeeds_for_mock_sensor(client):
 
 
 def test_test_read_returns_controlled_error_without_crashing(client, monkeypatch):
-    real_sensor = next(s for s in client.get("/sensors").json() if s["serial_number"] == "E25877")
+    real_sensor = next(s for s in client.get("/sensors").json() if s["serial_number"] == "E27297")
 
     class FailingReader:
         def read_current(self):
@@ -62,7 +62,7 @@ def test_list_sensors_includes_seeded_real_sensor(client):
     assert response.status_code == 200
     body = response.json()
     assert isinstance(body, list)
-    assert any(s["serial_number"] == "E25877" for s in body)
+    assert any(s["serial_number"] == "E27297" for s in body)
 
 
 def test_create_and_fetch_sensor(client):
@@ -130,11 +130,11 @@ def test_create_sensor_rejects_unknown_sensor_type(client):
     assert response.status_code == 422
 
 
-def test_create_mock_sensor_rejects_e25877_serial(client):
+def test_create_mock_sensor_rejects_E27297_serial(client):
     payload = {
         "name": "Impersonator",
         "model": "mock",
-        "serial_number": "E25877",
+        "serial_number": "E27297",
         "sensor_type": "mock",
     }
     response = client.post("/sensors", json=payload)
@@ -168,7 +168,7 @@ def test_create_dracal_cli_sensor_does_not_require_port(client):
     payload = {
         "name": "USB Native Dracal",
         "model": "VCP-PTH450-CAL",
-        "serial_number": "E27297",
+        "serial_number": "E88888",
         "sensor_type": "dracal_cli",
         "port": None,
     }

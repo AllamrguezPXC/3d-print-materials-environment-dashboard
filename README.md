@@ -2,7 +2,7 @@
 
 A local full-stack web application for live environmental monitoring of 3D-printing filament
 storage and readiness — temperature, relative humidity, atmospheric pressure, and dew point —
-using a Dracal `VCP-PTH450-CAL` sensor (serial `E25877`), alongside independently-simulated mock
+using a Dracal `VCP-PTH450-CAL` sensor (serial `E27297`), alongside independently-simulated mock
 sensors (seeded by default) so the app runs fully without hardware.
 
 See `docs/Requirements.md` for the full specification and `docs/Tasks.md` for the implementation
@@ -36,7 +36,7 @@ copy ..\.env.example .env   # Windows; cp ../.env.example .env on macOS/Linux �
 
 The API is now at `http://localhost:8000` (interactive docs at `http://localhost:8000/docs`).
 On first run it creates `backend/environment_monitor.db` (SQLite) and seeds default material
-profiles, 7 Bambu Lab printers, the real Dracal sensor record (serial `E25877`), a few
+profiles, 7 Bambu Lab printers, the real Dracal sensor record (serial `E27297`), a few
 independently-simulated mock sensors/locations (serials `MOCK-0001`, `MOCK-0002`, ...), a full
 4-slot AMS demo on `P1S #1`, and demo filament spools — safe to restart repeatedly (seeding is
 idempotent). If you're updating from an older clone, delete `backend/environment_monitor.db` before
@@ -81,10 +81,10 @@ is no global sensor mode. Each row picks its own implementation via `sensor_type
 - `mock` — a bounded random-walk simulator with a slow daily sinusoid and rare excursions, seeded
   independently per sensor (from its own serial number) so multiple mock sensors never move in
   lockstep. Mock sensors must use a `MOCK-`-prefixed serial and may never use the real hardware
-  serial `E25877`; both rules are enforced on create/update. Seeded mock sensors are active by
+  serial `E27297`; both rules are enforced on create/update. Seeded mock sensors are active by
   default so the app always runs without hardware.
 - `dracal_vcp` — reads real Dracal VCP-PTH450 serial lines over the sensor row's own `port` (e.g.
-  `COM3`) and validates against its own `serial_number` (e.g. `E25877`). Requires a non-empty
+  `COM3`) and validates against its own `serial_number` (e.g. `E27297`). Requires a non-empty
   `port`, enforced on create/update.
 - `dracal_cli` — reads a real Dracal USB sensor via the vendor's `dracal-usb-get` CLI tool instead
   of a virtual COM port, for devices whose Windows driver binds to the generic USB class rather

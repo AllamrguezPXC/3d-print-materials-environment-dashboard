@@ -48,7 +48,7 @@ Es decir:
 - No deben mostrarse valores live si no hay sensores configurados.
 - Un sensor mock debe comportarse como un sensor registrado más dentro del sistema.
 - Un sensor mock debe tener su propio ID y serial ficticio claramente identificable como mock.
-- Un sensor mock nunca debe usar el serial real `E25877` ni simular ser el Dracal real.
+- Un sensor mock nunca debe usar el serial real `E27297` ni simular ser el Dracal real.
 - El sensor Dracal real debe ser un tipo de sensor físico configurado explícitamente.
 - El frontend debe mostrar lecturas live de todos los sensores activos y configurados, no de un único sensor global.
 
@@ -143,10 +143,10 @@ Un sensor Dracal real debe ser un registro explícito del sistema, por ejemplo:
 
 ```json
 {
-  "id": "sensor_dracal_e25877",
+  "id": "sensor_dracal_E27297",
   "name": "Dracal PTH450 Main Sensor",
   "type": "dracal_vcp",
-  "serial_number": "E25877",
+  "serial_number": "E27297",
   "port": "COM3",
   "location_id": 1,
   "is_active": true
@@ -155,9 +155,9 @@ Un sensor Dracal real debe ser un registro explícito del sistema, por ejemplo:
 
 Reglas importantes:
 
-- Un sensor mock no puede usar el serial `E25877`.
+- Un sensor mock no puede usar el serial `E27297`.
 - Un sensor mock debe tener un serial o identificador que empiece por algo claramente ficticio, por ejemplo `MOCK-`.
-- Un sensor Dracal real sí puede usar `E25877`.
+- Un sensor Dracal real sí puede usar `E27297`.
 - El tipo de sensor debe validarse.
 - No deben aceptarse tipos desconocidos.
 - Los sensores inactivos no deben aparecer en la lectura live.
@@ -337,7 +337,7 @@ Estos endpoints deben permitir:
 Validaciones obligatorias:
 
 - No permitir tipo desconocido.
-- No permitir sensor mock con serial `E25877`.
+- No permitir sensor mock con serial `E27297`.
 - No permitir sensor mock sin serial claramente mock.
 - No permitir sensor Dracal VCP sin puerto si el sistema requiere puerto.
 - No permitir duplicados de serial si esto puede causar ambigüedad.
@@ -428,7 +428,7 @@ El Dracal disponible es:
 
 ```text
 Modelo: VCP-PTH450-CAL
-Serial: E25877
+Serial: E27297
 ```
 
 Pero ahora debe estar representado como sensor físico registrado.
@@ -436,7 +436,7 @@ Pero ahora debe estar representado como sensor físico registrado.
 Debe poder configurarse con:
 
 - Tipo: `dracal_vcp`
-- Serial: `E25877`
+- Serial: `E27297`
 - Puerto: por ejemplo `COM3`, `COM4` u otro según el equipo local.
 - Estado activo.
 - Ubicación asignada.
@@ -473,7 +473,7 @@ Actualiza o crea tests en pytest para cubrir como mínimo:
 - Un sensor mock configurado produce lecturas válidas.
 - Dos sensores mock configurados producen lecturas independientes.
 - Un sensor Dracal VCP usa su configuración real.
-- Un sensor mock no puede usar el serial real `E25877`.
+- Un sensor mock no puede usar el serial real `E27297`.
 - Un sensor mock debe tener serial con prefijo o formato mock.
 - `GET /readings/current` devuelve todos los sensores activos configurados.
 - `GET /readings/current` devuelve lista vacía si no hay sensores activos.
@@ -515,7 +515,7 @@ Actualiza también:
 
 Asegura que:
 
-- No se permita crear sensores mock con serial `E25877`.
+- No se permita crear sensores mock con serial `E27297`.
 - No se permita crear sensores con tipo desconocido.
 - Los errores de lectura de hardware no rompan todo el endpoint.
 - Si un sensor físico falla, se devuelva estado de error solo para ese sensor.
@@ -596,7 +596,7 @@ Al final entrega un resumen con:
 - No uses mock como fallback automático.
 - No uses mock como modo global por defecto.
 - No generes lecturas si no hay sensores activos configurados.
-- No asignes el serial `E25877` a sensores mock.
+- No asignes el serial `E27297` a sensores mock.
 - No rompas los tres endpoints requeridos por la asignación.
 - No elimines funcionalidad existente sin justificarlo.
 - No cambies el frontend sin mantener compatibilidad con el backend.
@@ -677,7 +677,7 @@ Es decir:
 - No deben mostrarse valores live si no hay sensores configurados.
 - Un sensor mock debe comportarse como un sensor registrado más dentro del sistema.
 - Un sensor mock debe tener su propio ID y serial ficticio claramente identificable como mock.
-- Un sensor mock nunca debe usar el serial real `E25877` ni simular ser el Dracal real.
+- Un sensor mock nunca debe usar el serial real `E27297` ni simular ser el Dracal real.
 - El sensor Dracal real debe ser un tipo de sensor físico configurado explícitamente.
 - El frontend debe mostrar lecturas live de todos los sensores activos y configurados, no de un único sensor global.
 
@@ -772,10 +772,10 @@ Un sensor Dracal real debe ser un registro explícito del sistema, por ejemplo:
 
 ```json
 {
-  "id": "sensor_dracal_e25877",
+  "id": "sensor_dracal_E27297",
   "name": "Dracal PTH450 Main Sensor",
   "type": "dracal_vcp",
-  "serial_number": "E25877",
+  "serial_number": "E27297",
   "port": "COM3",
   "location_id": 1,
   "is_active": true
@@ -784,9 +784,9 @@ Un sensor Dracal real debe ser un registro explícito del sistema, por ejemplo:
 
 Reglas importantes:
 
-- Un sensor mock no puede usar el serial `E25877`.
+- Un sensor mock no puede usar el serial `E27297`.
 - Un sensor mock debe tener un serial o identificador que empiece por algo claramente ficticio, por ejemplo `MOCK-`.
-- Un sensor Dracal real sí puede usar `E25877`.
+- Un sensor Dracal real sí puede usar `E27297`.
 - El tipo de sensor debe validarse.
 - No deben aceptarse tipos desconocidos.
 - Los sensores inactivos no deben aparecer en la lectura live.
@@ -966,7 +966,7 @@ Estos endpoints deben permitir:
 Validaciones obligatorias:
 
 - No permitir tipo desconocido.
-- No permitir sensor mock con serial `E25877`.
+- No permitir sensor mock con serial `E27297`.
 - No permitir sensor mock sin serial claramente mock.
 - No permitir sensor Dracal VCP sin puerto si el sistema requiere puerto.
 - No permitir duplicados de serial si esto puede causar ambigüedad.
@@ -1057,7 +1057,7 @@ El Dracal disponible es:
 
 ```text
 Modelo: VCP-PTH450-CAL
-Serial: E25877
+Serial: E27297
 ```
 
 Pero ahora debe estar representado como sensor físico registrado.
@@ -1065,7 +1065,7 @@ Pero ahora debe estar representado como sensor físico registrado.
 Debe poder configurarse con:
 
 - Tipo: `dracal_vcp`
-- Serial: `E25877`
+- Serial: `E27297`
 - Puerto: por ejemplo `COM3`, `COM4` u otro según el equipo local.
 - Estado activo.
 - Ubicación asignada.
@@ -1102,7 +1102,7 @@ Actualiza o crea tests en pytest para cubrir como mínimo:
 - Un sensor mock configurado produce lecturas válidas.
 - Dos sensores mock configurados producen lecturas independientes.
 - Un sensor Dracal VCP usa su configuración real.
-- Un sensor mock no puede usar el serial real `E25877`.
+- Un sensor mock no puede usar el serial real `E27297`.
 - Un sensor mock debe tener serial con prefijo o formato mock.
 - `GET /readings/current` devuelve todos los sensores activos configurados.
 - `GET /readings/current` devuelve lista vacía si no hay sensores activos.
@@ -1144,7 +1144,7 @@ Actualiza también:
 
 Asegura que:
 
-- No se permita crear sensores mock con serial `E25877`.
+- No se permita crear sensores mock con serial `E27297`.
 - No se permita crear sensores con tipo desconocido.
 - Los errores de lectura de hardware no rompan todo el endpoint.
 - Si un sensor físico falla, se devuelva estado de error solo para ese sensor.
@@ -1225,7 +1225,7 @@ Al final entrega un resumen con:
 - No uses mock como fallback automático.
 - No uses mock como modo global por defecto.
 - No generes lecturas si no hay sensores activos configurados.
-- No asignes el serial `E25877` a sensores mock.
+- No asignes el serial `E27297` a sensores mock.
 - No rompas los tres endpoints requeridos por la asignación.
 - No elimines funcionalidad existente sin justificarlo.
 - No cambies el frontend sin mantener compatibilidad con el backend.
@@ -1272,7 +1272,7 @@ For full context review the transcript at the path provided in the hook payload 
 - **Branch**: main (verify with `git branch`)
 - **Backend**: `backend/` — FastAPI + SQLAlchemy + SQLite + Python 3.11
 - **Frontend**: `frontend/` — React + Vite + TypeScript
-- **Sensor**: Dracal VCP-PTH450-CAL, serial E25877; `SENSOR_MODE` defaults to `mock`
+- **Sensor**: Dracal VCP-PTH450-CAL, serial E27297; `SENSOR_MODE` defaults to `mock`
 - **Docs**: `docs/Requirements.md`, `docs/Tasks.md`
 
 ---
@@ -1315,7 +1315,7 @@ Es decir:
 - No deben mostrarse valores live si no hay sensores configurados.
 - Un sensor mock debe comportarse como un sensor registrado más dentro del sistema.
 - Un sensor mock debe tener su propio ID y serial ficticio claramente identificable como mock.
-- Un sensor mock nunca debe usar el serial real `E25877` ni simular ser el Dracal real.
+- Un sensor mock nunca debe usar el serial real `E27297` ni simular ser el Dracal real.
 - El sensor Dracal real debe ser un tipo de sensor físico configurado explícitamente.
 - El frontend debe mostrar lecturas live de todos los sensores activos y configurados, no de un único sensor global.
 
@@ -1410,10 +1410,10 @@ Un sensor Dracal real debe ser un registro explícito del sistema, por ejemplo:
 
 ```json
 {
-  "id": "sensor_dracal_e25877",
+  "id": "sensor_dracal_E27297",
   "name": "Dracal PTH450 Main Sensor",
   "type": "dracal_vcp",
-  "serial_number": "E25877",
+  "serial_number": "E27297",
   "port": "COM3",
   "location_id": 1,
   "is_active": true
@@ -1422,9 +1422,9 @@ Un sensor Dracal real debe ser un registro explícito del sistema, por ejemplo:
 
 Reglas importantes:
 
-- Un sensor mock no puede usar el serial `E25877`.
+- Un sensor mock no puede usar el serial `E27297`.
 - Un sensor mock debe tener un serial o identificador que empiece por algo claramente ficticio, por ejemplo `MOCK-`.
-- Un sensor Dracal real sí puede usar `E25877`.
+- Un sensor Dracal real sí puede usar `E27297`.
 - El tipo de sensor debe validarse.
 - No deben aceptarse tipos desconocidos.
 - Los sensores inactivos no deben aparecer en la lectura live.
@@ -1604,7 +1604,7 @@ Estos endpoints deben permitir:
 Validaciones obligatorias:
 
 - No permitir tipo desconocido.
-- No permitir sensor mock con serial `E25877`.
+- No permitir sensor mock con serial `E27297`.
 - No permitir sensor mock sin serial claramente mock.
 - No permitir sensor Dracal VCP sin puerto si el sistema requiere puerto.
 - No permitir duplicados de serial si esto puede causar ambigüedad.
@@ -1695,7 +1695,7 @@ El Dracal disponible es:
 
 ```text
 Modelo: VCP-PTH450-CAL
-Serial: E25877
+Serial: E27297
 ```
 
 Pero ahora debe estar representado como sensor físico registrado.
@@ -1703,7 +1703,7 @@ Pero ahora debe estar representado como sensor físico registrado.
 Debe poder configurarse con:
 
 - Tipo: `dracal_vcp`
-- Serial: `E25877`
+- Serial: `E27297`
 - Puerto: por ejemplo `COM3`, `COM4` u otro según el equipo local.
 - Estado activo.
 - Ubicación asignada.
@@ -1740,7 +1740,7 @@ Actualiza o crea tests en pytest para cubrir como mínimo:
 - Un sensor mock configurado produce lecturas válidas.
 - Dos sensores mock configurados producen lecturas independientes.
 - Un sensor Dracal VCP usa su configuración real.
-- Un sensor mock no puede usar el serial real `E25877`.
+- Un sensor mock no puede usar el serial real `E27297`.
 - Un sensor mock debe tener serial con prefijo o formato mock.
 - `GET /readings/current` devuelve todos los sensores activos configurados.
 - `GET /readings/current` devuelve lista vacía si no hay sensores activos.
@@ -1782,7 +1782,7 @@ Actualiza también:
 
 Asegura que:
 
-- No se permita crear sensores mock con serial `E25877`.
+- No se permita crear sensores mock con serial `E27297`.
 - No se permita crear sensores con tipo desconocido.
 - Los errores de lectura de hardware no rompan todo el endpoint.
 - Si un sensor físico falla, se devuelva estado de error solo para ese sensor.
@@ -1863,7 +1863,7 @@ Al final entrega un resumen con:
 - No uses mock como fallback automático.
 - No uses mock como modo global por defecto.
 - No generes lecturas si no hay sensores activos configurados.
-- No asignes el serial `E25877` a sensores mock.
+- No asignes el serial `E27297` a sensores mock.
 - No rompas los tres endpoints requeridos por la asignación.
 - No elimines funcionalidad existente sin justificarlo.
 - No cambies el frontend sin mantener compatibilidad con el backend.
@@ -2156,7 +2156,7 @@ Review the last tool calls detected:
 | `docs/Requirements.md (source of truth — do not overwrite)` | PROTECTED — never modify |
 | `docs/Tasks.md (task checklist — do not overwrite)` | PROTECTED — never modify |
 | `SENSOR_MODE default must remain mock unless explicitly testing real hardware` | PROTECTED — never modify |
-| `Dracal sensor serial number is E25877 — do not hardcode a different serial` | PROTECTED — never modify |
+| `Dracal sensor serial number is E27297 — do not hardcode a different serial` | PROTECTED — never modify |
 
 ---
 

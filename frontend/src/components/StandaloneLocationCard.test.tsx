@@ -12,7 +12,7 @@ const ROOM: LocationInfo = {
 
 function makeEntry(overrides: Partial<SensorReadingEntry>): SensorReadingEntry {
   return {
-    sensor: { id: 1, serial_number: "E25877", model: "VCP-PTH450-CAL", sensor_type: "real" },
+    sensor: { id: 1, serial_number: "E27297", model: "VCP-PTH450-CAL", sensor_type: "real" },
     location_id: 1,
     location: ROOM,
     timestamp: "2026-07-13T12:00:00Z",

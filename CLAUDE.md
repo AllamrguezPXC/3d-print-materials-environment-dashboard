@@ -23,7 +23,7 @@ The project must demonstrate effective use of Claude Code for the assignment "Da
 Primary hardware target:
 
 - Dracal `VCP-PTH450-CAL`
-- Serial number `E25877`
+- Serial number `E27297`
 - Measures temperature, relative humidity, and atmospheric pressure
 
 Initial printer context:

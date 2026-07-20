@@ -63,7 +63,7 @@ With both `uvicorn` (backend) and `npm run dev` (frontend) running locally, drov
 Playwright MCP rather than relying on `npm run build`/type-check alone:
 
 1. Dashboard (`/`) — confirmed live polling of `GET /readings/current` renders temperature/RH/
-   pressure/dew point cards, sensor serial `E25877`, and `source: mock`. Screenshot:
+   pressure/dew point cards, sensor serial `E27297`, and `source: mock`. Screenshot:
    `evidence/frontend-verification/dashboard-dark.png`.
 2. Theme toggle — clicked "Light mode", confirmed the whole UI re-themes via the `data-theme`
    attribute and persists. Screenshot: `evidence/frontend-verification/dashboard-light.png`.
@@ -87,7 +87,7 @@ Full task record: `docs/Tareas/eliminar-sensor-mode-global/TASK.md`.
 
 **Motivation (security-relevant bug found during audit):** the previous global `get_sensor_reader(settings)`
 factory seeded the single cached `MockSensorReader` with `settings.dracal_serial_number` — meaning
-in `SENSOR_MODE=mock`, the mock sensor reported the *real* hardware serial `E25877`
+in `SENSOR_MODE=mock`, the mock sensor reported the *real* hardware serial `E27297`
 (`backend/tests/api/test_readings_current.py` previously asserted this directly). A mock sensor
 impersonating the real hardware's identity is a data-integrity/trust problem worth fixing on its
 own, independent of the rest of the refactor.
@@ -106,7 +106,7 @@ Final backend suite: **110 passed, 0 failed** (`cd backend && pytest -q`).
 
 **Security-relevant validation added** (`backend/app/services/sensor_validation.py`, wired into
 `sensor_service.create_sensor`/`update_sensor` and the startup seed script): a mock sensor can never
-be created or updated to use the real serial `E25877`; mock sensors must use an unambiguous
+be created or updated to use the real serial `E27297`; mock sensors must use an unambiguous
 `MOCK-`-prefixed serial; Dracal-type sensors require a non-empty `port`; duplicate serials are
 rejected with a friendly 400 instead of surfacing a raw `IntegrityError` as an unhandled 500.
 
@@ -156,7 +156,7 @@ behavior with no real-hardware dependency).
   fabricated grid — confirmed the "never invent AMS" constraint holds.
 - `sensors-page-port-scan.png` — `/sensors` lists all 4 configured sensors; a live port scan
   returned real detected COM ports on the host; test-read against a mock sensor returned a real
-  inline reading; `POST /sensors` with `sensor_type="mock"` and `serial_number="E25877"` still
+  inline reading; `POST /sensors` with `sensor_type="mock"` and `serial_number="E27297"` still
   returns 422 through this new UI's own create form path.
 
 ## Real-Hardware Validation — DracalCliSensorReader (`dracal_cli`)
@@ -185,7 +185,7 @@ suite: 124 passed.
 - `POST /sensors/5/test-read` returned a real, non-fabricated reading (`23.72°C / 47.21% RH /
   101040 Pa`) matching what Dracal's own CalView tool showed live for the same device.
 - `GET /readings/current` correctly listed the sensor as `source: "real"`, `error: null`, alongside
-  the seeded (non-functional, no real hardware attached) `E25877` `dracal_vcp` entry showing its
+  the seeded (non-functional, no real hardware attached) `E27297` `dracal_vcp` entry showing its
   own isolated connection error — confirming per-sensor error isolation holds across sensor types.
 - Dashboard screenshot: `evidence/frontend-verification/dashboard-real-dracal-cli-sensor.png` — the
   `E27297` section renders with real temperature/RH/pressure/dew-point values under location
@@ -662,7 +662,7 @@ this review.
 Full report: `docs/User_Acceptance_Test_P1P_AMS_Mock_Sensor.md`. A final practical validation pass,
 acting as a brand-new user clicking through the real UI (not re-running automated tests), building
 a complete realistic scenario end-to-end: a new Bambu Lab P1P printer, a 4-slot AMS + external
-spool, an explicitly-configured mock sensor (never the real serial `E25877`), five specific
+spool, an explicitly-configured mock sensor (never the real serial `E27297`), five specific
 filaments (PLA×2 red, PETG brown, ASA yellow, TPU white), simulated high humidity via real sensor
 polling (no fabricated data), and 7 deliberate configuration-error scenarios.
 
@@ -805,7 +805,7 @@ referential-integrity guard working as intended, not a new issue).
 
 **Follow-up (same task, second screenshot):** after the fix above shipped, the user reported a
 second, related issue via another screenshot — selecting a long-labeled sensor (e.g.
-`E25877 (currently at Primary Filament Storage Room)`) in the same modal made the select box and
+`E27297 (currently at Primary Filament Storage Room)`) in the same modal made the select box and
 "Assign" button visibly spill out past the dialog's right edge. Reproduced live again, then
 diagnosed with direct DOM measurement (`getBoundingClientRect`/`getComputedStyle` on the actual
 elements, not guesswork): this is the classic flexbox/grid "automatic minimum size" gotcha — every

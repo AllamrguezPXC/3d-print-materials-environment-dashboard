@@ -111,7 +111,7 @@ This task list is designed for an intermediate developer working with Claude Cod
 - [x] Handle malformed payloads with clear exceptions.
 - [x] Add pytest coverage for valid line, invalid line, wrong serial, missing channel.
 - [x] Implement optional pyserial reader if hardware is available.
-- [x] Add `.env.example` with `DRACAL_VCP_PORT=COM3` and `DRACAL_SERIAL_NUMBER=E25877`.
+- [x] Add `.env.example` with `DRACAL_VCP_PORT=COM3` and `DRACAL_SERIAL_NUMBER=E27297`.
 - [x] Keep mock mode as default. (Superseded: there is no global mode anymore — seeded mock sensor rows are `is_active=true` by default, so the app still runs fully without hardware. See Phase 17.)
 
 ## Phase 10 — Frontend Foundation
@@ -198,7 +198,7 @@ This task list is designed for an intermediate developer working with Claude Cod
 See `docs/Tareas/eliminar-sensor-mode-global/TASK.md` for the full task record.
 
 - [x] Add `Sensor` field/cross-field validation (`sensor_type` enum, mock serial
-  can't be `E25877`, mock serial must start with `MOCK-`, Dracal-type sensors
+  can't be `E27297`, mock serial must start with `MOCK-`, Dracal-type sensors
   require a `port`, friendly 400 on duplicate serial) in
   `backend/app/services/sensor_validation.py`, wired into `sensor_service.py`
   create/update and into the startup seed script.
@@ -215,7 +215,7 @@ See `docs/Tareas/eliminar-sensor-mode-global/TASK.md` for the full task record.
   active sensor in one call, returning one result per sensor.
 - [x] Rewrite/extend backend tests: sensor factory, `/sensors` validation,
   `environment_service`, `GET /readings/current`, `POST /readings`, seed
-  idempotency (no mock uses `E25877`, all use `MOCK-`).
+  idempotency (no mock uses `E27297`, all use `MOCK-`).
 - [x] Update frontend: new list-shaped types, `Dashboard.tsx` renders one
   `SensorReadingSection` per active sensor with an isolated error state and an
   empty state, `SystemStatusBadge` now reports sensors-online count instead of
@@ -261,7 +261,7 @@ in `docs/Frontend_Redesign_Guide.md` §9, not built here.
 - [x] Full backend `pytest` green (116 passed), frontend `tsc -b`/`build`/`lint`
   clean, Playwright MCP verification: P1S #1 shows 4 real slots, A1 mini #2
   (no seeded AMS) shows the explicit empty state, mock sensor creation with
-  serial `E25877` still rejected (422), live port scan returns real detected
+  serial `E27297` still rejected (422), live port scan returns real detected
   COM ports, test-read returns a real mock-sensor reading inline.
 - [x] Update `docs/Requirements.md` (§6, §12.2, §14.1, §14.2),
   `docs/Frontend_Redesign_Guide.md` §9 (reconciled the `SensorStatusGrid`
@@ -981,7 +981,7 @@ opportunities with concrete tools, then re-validate everything.
   `docs/Tareas/user-acceptance-test-p1p-ams-mock-sensor/TASK.md`.
 - [x] Built a complete realistic scenario end-to-end through the live UI as a brand-new user: a new
   Bambu Lab P1P printer, 4-slot AMS + external spool, an explicitly-configured mock sensor (never
-  the real serial `E25877`), five specific filaments (PLA×2 red, PETG brown, ASA yellow, TPU
+  the real serial `E27297`), five specific filaments (PLA×2 red, PETG brown, ASA yellow, TPU
   white), and 7 deliberate configuration-error scenarios.
 - [x] Found and fixed a real bug: `create_printer` never called
   `_sync_locations_for_filament_system_type`, so a printer created directly with a non-manual

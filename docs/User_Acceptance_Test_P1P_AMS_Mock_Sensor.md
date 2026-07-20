@@ -48,7 +48,7 @@ porque las pruebas automáticas ya pasaban.
 3. **Hallazgo real**: crear la impresora directamente con ese tipo no generó los slots ni el
    spool externo (ver §10, Bug 1). Lo resolví cambiando el tipo (Manual → AMS + External Spool)
    desde la misma tabla, lo que sí disparó la sincronización — luego corregí el bug de raíz.
-4. Creé el sensor mock e intenté el Error 1 (serial real `E25877`) — rechazado correctamente.
+4. Creé el sensor mock e intenté el Error 1 (serial real `E27297`) — rechazado correctamente.
 5. Creé el sensor válido `MOCK-P1P-QA-001` y lo asigné al módulo AMS.
 6. Probé Error 2 (serial duplicado) y Error 3 (segundo sensor en el mismo módulo AMS) — ambos
    rechazados correctamente.
@@ -76,7 +76,7 @@ porque las pruebas automáticas ya pasaban.
 
 | # | Prueba | Resultado esperado | Resultado real | Veredicto |
 |---|---|---|---|---|
-| 1 | Sensor mock con serial `E25877` | Rechazado, mensaje explicando que es el serial real Dracal | `422`: *"Mock sensors may not use 'E25877' — that serial is reserved for the real Dracal hardware."* Confirmado que el mensaje SÍ llega a la UI (ver Nota Metodológica §13.1) | ✅ PASA |
+| 1 | Sensor mock con serial `E27297` | Rechazado, mensaje explicando que es el serial real Dracal | `422`: *"Mock sensors may not use 'E27297' — that serial is reserved for the real Dracal hardware."* Confirmado que el mensaje SÍ llega a la UI (ver Nota Metodológica §13.1) | ✅ PASA |
 | 2 | Sensor duplicado `MOCK-P1P-QA-001` | Rechazado, mensaje claro | `400`: *"A sensor with serial_number 'MOCK-P1P-QA-001' already exists."* | ✅ PASA |
 | 3 | Segundo sensor en la misma ubicación AMS ya cubierta | Rechazado o pide confirmación, indica dónde está asignado | `400`: *"This printer module already has a sensor assigned ('Mock Sensor - P1P QA') — only one sensor covers an entire module's shared microclimate."* Nombra el sensor en conflicto | ✅ PASA |
 | 4 | Material mal escrito "PTEG" | Rechazo, creación de material nuevo, o sugerencia de PETG | El campo Material del formulario de spool es un **dropdown cerrado** (no se puede escribir un typo ahí). La única vía de texto libre es crear un `MaterialProfile` nuevo en `/materials` — se aceptó "PTEG" **sin ninguna validación de nombre/diccionario**. Documentado como comportamiento esperado (perfiles 100% editables por diseño), no como bug | 🟡 Documentado — no es error de la app, es una decisión de diseño (editable, sin diccionario cerrado) |
@@ -347,7 +347,7 @@ Ver capturas en `evidence/frontend-verification/`:
 - `drying-session-tpu-completed-trend.png` — el mismo gráfico tras completar la sesión, sin cambios.
 
 Mensajes de error textuales capturados vía `browser_network_request` (response body real):
-- `E25877`: `{"detail":"Mock sensors may not use 'E25877' — that serial is reserved for the real Dracal hardware."}`
+- `E27297`: `{"detail":"Mock sensors may not use 'E27297' — that serial is reserved for the real Dracal hardware."}`
 - Serial duplicado: `{"detail":"A sensor with serial_number 'MOCK-P1P-QA-001' already exists."}`
 - Conflicto AMS: `{"detail":"This printer module already has a sensor assigned ('Mock Sensor - P1P QA') -- only one sensor covers an entire module's shared microclimate."}`
 

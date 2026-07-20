@@ -24,7 +24,7 @@ def test_rejects_malformed_line():
 
 def test_rejects_wrong_serial_when_expected_serial_configured():
     with pytest.raises(SensorParseError):
-        parse_vcp_line(VALID_LINE, expected_serial="E25877")
+        parse_vcp_line(VALID_LINE, expected_serial="E27297")
 
 
 def test_accepts_matching_expected_serial():

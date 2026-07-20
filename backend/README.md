@@ -26,7 +26,7 @@ See `../.env.example` at the repo root:
 APP_ENV=development
 DATABASE_URL=sqlite:///./environment_monitor.db
 SENSOR_MODE=mock
-DRACAL_SERIAL_NUMBER=E25877
+DRACAL_SERIAL_NUMBER=E27297
 DRACAL_VCP_PORT=COM3
 MOCK_SENSOR_COUNT=3
 CORS_ORIGINS=http://localhost:5173

@@ -30,7 +30,7 @@ handled gracefully rather than crashing or silently corrupting data.
   correctly, including dashboard filters.
 - Run pytest / tsc / build / lint / vitest. Fix any real bugs found (not test expectations).
 - Do not use a global mock fallback, do not hardcode this scenario into permanent components, do
-  not touch the real Dracal serial `E25877`, do not silently omit any bug found.
+  not touch the real Dracal serial `E27297`, do not silently omit any bug found.
 
 ## Files & Modules Involved
 

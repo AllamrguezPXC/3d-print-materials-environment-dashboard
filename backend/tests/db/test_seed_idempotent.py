@@ -32,7 +32,7 @@ def test_seed_is_idempotent(db_session):
 def test_seed_creates_real_dracal_sensor(db_session):
     seed(db_session)
 
-    real_sensor = db_session.query(Sensor).filter_by(serial_number="E25877").first()
+    real_sensor = db_session.query(Sensor).filter_by(serial_number="E27297").first()
     assert real_sensor is not None
     assert real_sensor.sensor_type == "dracal_vcp"
     assert real_sensor.model == "VCP-PTH450-CAL"
@@ -45,5 +45,5 @@ def test_seed_never_assigns_real_serial_to_a_mock_sensor(db_session):
     mock_sensors = db_session.query(Sensor).filter_by(sensor_type="mock").all()
     assert len(mock_sensors) > 0
     for sensor in mock_sensors:
-        assert sensor.serial_number != "E25877"
+        assert sensor.serial_number != "E27297"
         assert sensor.serial_number.startswith("MOCK-")

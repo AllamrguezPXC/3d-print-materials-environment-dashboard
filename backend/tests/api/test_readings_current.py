@@ -70,14 +70,14 @@ def test_get_current_reading_returns_empty_list_and_message_when_all_sensors_ina
 
 
 def test_get_current_reading_real_sensor_error_does_not_prevent_mock_entries(client):
-    # The seeded real Dracal sensor (serial E25877) has no hardware attached
+    # The seeded real Dracal sensor (serial E27297) has no hardware attached
     # in this environment -- its entry should carry a non-null `error` while
     # the mock sensors' entries still succeed with real numeric readings.
     response = client.get("/readings/current")
     assert response.status_code == 200
     body = response.json()
 
-    real_entry = next(e for e in body["sensors"] if e["sensor"]["serial_number"] == "E25877")
+    real_entry = next(e for e in body["sensors"] if e["sensor"]["serial_number"] == "E27297")
     assert real_entry["error"] is not None
     assert real_entry["temperature_c"] is None
 

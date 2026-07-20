@@ -177,7 +177,7 @@ Every handoff document must contain exactly these 19 sections in this order:
 ---
 
 ## 11. Sensor Mode and Safety Constraints
-[ALWAYS states current SENSOR_MODE (default mock), the Dracal serial E25877
+[ALWAYS states current SENSOR_MODE (default mock), the Dracal serial E27297
 constraint, and any other safety rules mentioned — see below]
 
 ---
@@ -244,7 +244,7 @@ Docs: docs/Requirements.md (source of truth) | docs/Tasks.md (task list)
 
 SAFETY CONSTRAINTS — do not violate:
 - SENSOR_MODE must default to `mock`; only switch to `dracal_vcp` when explicitly testing real hardware
-- Dracal sensor serial number is E25877 — do not hardcode a different serial
+- Dracal sensor serial number is E27297 — do not hardcode a different serial
 - Never persist Alert rows from GET /readings/current polling — only POST /readings persists
 
 After reading this document, confirm the active task and next step before
@@ -270,7 +270,7 @@ of whether they were mentioned in the session:
 
 ```
 SENSOR_MODE default: mock (do not change to dracal_vcp without explicit instruction)
-Dracal sensor serial number: E25877 (do not hardcode a different serial)
+Dracal sensor serial number: E27297 (do not hardcode a different serial)
 Alert persistence: only POST /readings persists Alert rows; GET /readings/current
   computes and returns transient alerts without writing to the database
 Do not overwrite docs/Requirements.md or docs/Tasks.md — they are the source of truth

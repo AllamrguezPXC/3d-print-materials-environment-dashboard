@@ -27,11 +27,11 @@ def test_get_sensor_reader_for_sensor_mock_returns_mock_reader():
 
 
 def test_get_sensor_reader_for_sensor_dracal_returns_dracal_reader_with_row_port_and_serial():
-    sensor = _sensor(id=2, sensor_type="dracal_vcp", serial_number="E25877", port="COM7")
+    sensor = _sensor(id=2, sensor_type="dracal_vcp", serial_number="E27297", port="COM7")
     reader = get_sensor_reader_for_sensor(sensor)
     assert isinstance(reader, DracalVcpSensorReader)
     assert reader.port == "COM7"
-    assert reader.expected_serial == "E25877"
+    assert reader.expected_serial == "E27297"
 
 
 def test_get_sensor_reader_for_sensor_dracal_cli_returns_cli_reader_with_row_serial():

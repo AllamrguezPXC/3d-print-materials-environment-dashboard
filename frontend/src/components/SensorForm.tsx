@@ -65,7 +65,7 @@ export function SensorForm({
         <Label htmlFor="sensor-serial">Serial number</Label>
         <Input
           id="sensor-serial"
-          placeholder={value.sensor_type === "mock" ? "MOCK-…" : "e.g. E25877"}
+          placeholder={value.sensor_type === "mock" ? "MOCK-…" : "e.g. E27297"}
           value={value.serial_number}
           onChange={(e) => onChange({ ...value, serial_number: e.target.value })}
         />

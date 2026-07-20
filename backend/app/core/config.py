@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # Used only by db/seed.py to create the initial real/mock sensor rows on
     # first run -- sensors are configured per-row (see app.models.sensor.Sensor)
     # and no longer selected via a global runtime mode.
-    dracal_serial_number: str = "E25877"
+    dracal_serial_number: str = "E27297"
     dracal_vcp_port: str = "COM3"
     # Path to Dracal's `dracal-usb-get` CLI tool, used by DracalCliSensorReader
     # for devices whose Windows driver exposes them as a generic USB device

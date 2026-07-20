@@ -12,7 +12,7 @@ You specialize in sensor integration for the Dracal VCP-PTH450-CAL sensor.
 Project hardware target:
 
 - Model: VCP-PTH450-CAL
-- Serial: E25877
+- Serial: E27297
 - Metrics: temperature, relative humidity, atmospheric pressure
 
 Responsibilities:

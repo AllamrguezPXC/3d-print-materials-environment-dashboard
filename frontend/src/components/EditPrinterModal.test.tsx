@@ -9,7 +9,7 @@ const VALUE: PrinterFormValues = {
   brand: "Bambu Lab",
   model: "A1 mini",
   filament_system_type: "ams",
-  serial_number: "E25877",
+  serial_number: "E27297",
   notes: "",
 };
 
@@ -27,7 +27,7 @@ describe("EditPrinterModal", () => {
 
     expect(screen.getByText("Edit Printer")).toBeInTheDocument();
     expect(screen.getByDisplayValue("A1 mini #5")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("E25877")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("E27297")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
   });
 

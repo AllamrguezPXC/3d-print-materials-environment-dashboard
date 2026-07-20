@@ -202,7 +202,7 @@ PRINTER_SEEDS: list[dict] = [
     {"name": "P1P #1", "brand": "Bambu Lab", "model": "P1P", "filament_system_type": "external_spool"},
 ]
 
-REAL_SENSOR_SERIAL = "E25877"
+REAL_SENSOR_SERIAL = "E27297"
 REAL_SENSOR_MODEL = "VCP-PTH450-CAL"
 
 

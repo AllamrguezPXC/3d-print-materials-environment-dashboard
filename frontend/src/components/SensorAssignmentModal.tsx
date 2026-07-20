@@ -184,7 +184,7 @@ export function SensorAssignmentModal({
                       <Input
                         id="new-sensor-serial"
                         className="w-32"
-                        placeholder={newSensor.sensor_type === "mock" ? "MOCK-…" : "e.g. E25877"}
+                        placeholder={newSensor.sensor_type === "mock" ? "MOCK-…" : "e.g. E27297"}
                         value={newSensor.serial_number}
                         onChange={(e) => setNewSensor({ ...newSensor, serial_number: e.target.value })}
                       />

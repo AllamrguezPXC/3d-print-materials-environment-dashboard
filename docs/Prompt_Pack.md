@@ -12,7 +12,7 @@ C:\Users\AllamRodriguez\Desktop\Programas\3D Print Materials Environment Data Mo
 
 Before implementing anything, read docs/Requirements.md, docs/Tasks.md, the existing .claude folder, and Inpiration CLAUDE.md.
 
-Goal: create a local React + FastAPI + SQLAlchemy + SQLite + pytest dashboard for live environmental monitoring of 3D printing filament storage/readiness using a Dracal VCP-PTH450-CAL sensor, serial E25877, with mock sensor mode.
+Goal: create a local React + FastAPI + SQLAlchemy + SQLite + pytest dashboard for live environmental monitoring of 3D printing filament storage/readiness using a Dracal VCP-PTH450-CAL sensor, serial E27297, with mock sensor mode.
 
 First produce a plan only. Do not write or overwrite files yet.
 
@@ -107,7 +107,7 @@ D,VCP-PTH450,E18890,,101182,Pa,24.8344,C,59.8779,%,*3FB5
 
 Requirements:
 - Extract product id, serial number, pressure_pa, temperature_c, relative_humidity_percent.
-- Validate configured serial E25877 when provided.
+- Validate configured serial E27297 when provided.
 - Return a SensorReadingDTO-compatible object.
 - Handle malformed lines with clear exceptions.
 - Write pytest tests first, including valid payload, malformed payload, and wrong serial.

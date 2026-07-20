@@ -2,11 +2,11 @@
 
 ## Objective
 
-Reemplazar el toggle global `SENSOR_MODE` (que hoy decide, para todo el proceso, si `GET /readings/current` y `POST /readings` leen de un único `SensorReader`) por configuración explícita por fila en la tabla `sensors`. `GET /readings/current` debe devolver una lista (una entrada por sensor activo, con error aislado si falla), `POST /readings` debe persistir por sensor, y nunca debe sintetizarse una lectura si no hay sensores configurados. Un sensor mock nunca debe poder reportar el serial real `E25877`.
+Reemplazar el toggle global `SENSOR_MODE` (que hoy decide, para todo el proceso, si `GET /readings/current` y `POST /readings` leen de un único `SensorReader`) por configuración explícita por fila en la tabla `sensors`. `GET /readings/current` debe devolver una lista (una entrada por sensor activo, con error aislado si falla), `POST /readings` debe persistir por sensor, y nunca debe sintetizarse una lectura si no hay sensores configurados. Un sensor mock nunca debe poder reportar el serial real `E27297`.
 
 ## Context
 
-Auditoría (3 agentes Explore) confirmó: (1) bug de identidad — el único `MockSensorReader` global se siembra con el serial real `E25877`; (2) el modelo `Sensor` y su CRUD YA existen y el seed YA crea filas idempotentes (1 real + 3 mock `MOCK-000x`), pero el runtime de `/readings/current` y `/readings` POST ignora esa tabla salvo enriquecimiento best-effort; (3) sin sensores configurados, hoy siempre se inventa una lectura — nunca hay un estado "vacío" real. Plan completo y aprobado en modo Plan: ver historial de la conversación (plan guardado en `.claude/plans/lee-docs-requirements-md-docs-tasks-md-d-adaptive-firefly.md`).
+Auditoría (3 agentes Explore) confirmó: (1) bug de identidad — el único `MockSensorReader` global se siembra con el serial real `E27297`; (2) el modelo `Sensor` y su CRUD YA existen y el seed YA crea filas idempotentes (1 real + 3 mock `MOCK-000x`), pero el runtime de `/readings/current` y `/readings` POST ignora esa tabla salvo enriquecimiento best-effort; (3) sin sensores configurados, hoy siempre se inventa una lectura — nunca hay un estado "vacío" real. Plan completo y aprobado en modo Plan: ver historial de la conversación (plan guardado en `.claude/plans/lee-docs-requirements-md-docs-tasks-md-d-adaptive-firefly.md`).
 
 ## Scope
 
@@ -48,7 +48,7 @@ Fuera: `GET /readings?from=&to=` (ya soporta `sensor_id`/`location_id`, no cambi
 
 ## Completion Criteria
 
-- [x] Fase A: validación de `/sensors` (tipo, E25877-en-mock, prefijo MOCK-, puerto dracal, duplicado) implementada y testeada
+- [x] Fase A: validación de `/sensors` (tipo, E27297-en-mock, prefijo MOCK-, puerto dracal, duplicado) implementada y testeada
 - [x] Fase B+C: factory por sensor + `GET /readings/current` devuelve lista con aislamiento de errores
 - [x] Fase D: `POST /readings` (body vacío) captura/persiste por sensor activo, sin fallback de datos inventados
 - [x] Fase E: `SENSOR_MODE` eliminado de config/env/tests; suite backend completa en verde (110 tests)

@@ -46,14 +46,14 @@ def test_build_current_readings_excludes_inactive_sensors(client):
 
 
 def test_build_current_readings_isolates_per_sensor_read_error(client):
-    # The seeded real Dracal sensor (serial E25877, port COM3) has no actual
+    # The seeded real Dracal sensor (serial E27297, port COM3) has no actual
     # hardware attached in CI/dev -- reading it raises a SerialException
     # (an OSError subclass), which must be captured on its own entry without
     # preventing the mock sensors' entries from succeeding.
     with SessionLocal() as session:
         result = build_current_readings(session)
 
-        real_entry = next(e for e in result.sensors if e.sensor.serial_number == "E25877")
+        real_entry = next(e for e in result.sensors if e.sensor.serial_number == "E27297")
         assert real_entry.error is not None
         assert real_entry.temperature_c is None
 

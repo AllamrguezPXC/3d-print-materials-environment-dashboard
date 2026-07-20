@@ -10,7 +10,7 @@ Two related rounds of fixes to the "Assign sensor — P1S #1" modal (opened from
    the whole dialog, so there was no way to create-and-assign a new sensor to an already-covered
    module without leaving and reopening the flow.
 2. After fix 1 shipped, the user reported a second issue: when a long-labeled sensor (e.g.
-   `E25877 (currently at Primary Filament Storage Room)`) is selected in the "Reassign to a
+   `E27297 (currently at Primary Filament Storage Room)`) is selected in the "Reassign to a
    different sensor" dropdown, the select box and the "Assign" button visibly spilled out past the
    modal's right edge.
 
@@ -62,7 +62,7 @@ end instead.
 
 ## Root Cause 2 — overflow when a long select value is chosen
 
-A second live Playwright MCP reproduction (selecting `E25877 (currently at Primary Filament
+A second live Playwright MCP reproduction (selecting `E27297 (currently at Primary Filament
 Storage Room)` in the same modal) pixel-matched the user's second screenshot: the select trigger
 and the "Assign" button both rendered past the dialog's right edge.
 
@@ -111,7 +111,7 @@ dialog, since `SelectContent`'s dropdown list renders through a separate Radix p
      with the new message; clicked it, filled in a new mock sensor, submitted "Create & assign",
      and confirmed via `GET /sensors` that MOCK-0004 was unassigned (`location_id: null`) and the
      new sensor took its place at the same location — exactly the intended swap.
-   - Fix 2: reproduced the exact reported overflow (selected `E25877 (currently at Primary
+   - Fix 2: reproduced the exact reported overflow (selected `E27297 (currently at Primary
      Filament Storage Room)`) before the fix, confirming via direct DOM measurement that the
      trigger/button rendered past the dialog's right edge; after the fix, measured again and
      confirmed `triggerRect.right <= dialogRect.right` (contained), with a before/after screenshot

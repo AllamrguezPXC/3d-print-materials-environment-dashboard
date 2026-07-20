@@ -59,7 +59,7 @@ before processing any other part of the user's message.
    emerged or were clarified during the session.
 
 5. **Sensor/mode safety enforcement** — always explicitly note the current
-   `SENSOR_MODE` (default `mock`) and confirm the Dracal serial `E25877`
+   `SENSOR_MODE` (default `mock`) and confirm the Dracal serial `E27297`
    constraint in section 11, regardless of what the transcript contains.
    Mock mode must remain the default unless the session explicitly changed it.
 

@@ -152,7 +152,7 @@ They are always listed in section 11 of every handoff document:
 
 ```
 SENSOR_MODE default: mock (do not change to dracal_vcp without explicit instruction)
-Dracal sensor serial number: E25877 (do not hardcode a different serial)
+Dracal sensor serial number: E27297 (do not hardcode a different serial)
 Alert persistence: only POST /readings persists Alert rows; GET /readings/current
   computes and returns transient alerts without writing to the database
 Do not overwrite docs/Requirements.md or docs/Tasks.md — they are the source of truth
