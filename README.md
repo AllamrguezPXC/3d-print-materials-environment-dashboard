@@ -10,6 +10,10 @@ checklist. `CLAUDE.md` documents the Claude Code conventions used to build this 
 `EVIDENCE.md` / `evidence/` document that Claude Code workflow (Plan Mode, TDD, security review,
 custom skills/hooks, GitHub integration).
 
+New to this repo? Start with
+[`docs/Guia_Incorporacion_Desarrollador.md`](docs/Guia_Incorporacion_Desarrollador.md) (Spanish) —
+a progressive onboarding walkthrough of the whole stack, architecture, and day-to-day workflow.
+
 ## Stack
 
 - **Backend**: Python 3.11+, FastAPI, SQLAlchemy 2.x, SQLite, Pydantic v2, pytest
